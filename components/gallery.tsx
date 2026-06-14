@@ -280,7 +280,7 @@ export function Gallery({
                 }}
               />
               <span className="photo-shade" />
-              <span className="watermark">HOME STUDIO</span>
+              <span className="watermark-pattern" aria-hidden="true" />
               <span className="photo-number">
                 Foto {String(photo.number).padStart(2, "0")}
               </span>
