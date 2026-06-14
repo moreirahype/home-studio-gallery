@@ -9,31 +9,15 @@ const payloadSchema = z.object({
   contactId: z.string().min(1).optional(),
   contactName: z.string().min(1).optional(),
   phone: z.string().min(8).optional(),
-  sourceImageUrl: z.string().url().optional(),
-  foto_cliente: z.string().url().optional(),
-  contextFinal: z.string().min(3).optional(),
-  contexto_final: z.string().min(3).optional(),
+  sourceImageUrl: z.string().optional(),
+  foto_cliente: z.string().optional(),
+  contextFinal: z.string().optional(),
+  contexto_final: z.string().optional(),
   nicheId: z.string().min(1).optional().default("geral"),
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
   paidAmount: z.coerce.number().positive().optional().default(4.9),
   receiptId: z.string().min(1).optional(),
-}).superRefine((payload, context) => {
-  if (!payload.sourceImageUrl && !payload.foto_cliente) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Informe sourceImageUrl ou foto_cliente.",
-      path: ["foto_cliente"],
-    });
-  }
-
-  if (!payload.contextFinal && !payload.contexto_final) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Informe contextFinal ou contexto_final.",
-      path: ["contexto_final"],
-    });
-  }
 });
 
 export async function POST(request: NextRequest) {
@@ -55,11 +39,36 @@ export async function POST(request: NextRequest) {
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
   const appUrl = process.env.APP_URL ?? request.nextUrl.origin;
-  const sourceImageUrl = parsed.data.sourceImageUrl ?? parsed.data.foto_cliente;
-  const contextFinal = parsed.data.contextFinal ?? parsed.data.contexto_final;
-  const nicheId = parsed.data.nicho ?? parsed.data.nicheId;
-  const generationPrompts = buildGenerationPrompts(contextFinal!);
   const isTestMode = process.env.TEST_MODE === "true";
+  const receivedSourceImage =
+    parsed.data.sourceImageUrl?.trim() || parsed.data.foto_cliente?.trim();
+  const receivedContext =
+    parsed.data.contextFinal?.trim() || parsed.data.contexto_final?.trim();
+  const sourceImageUrl =
+    receivedSourceImage ||
+    (isTestMode
+      ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200"
+      : "");
+  const contextFinal =
+    receivedContext ||
+    (isTestMode ? "Ensaio premium para homologação" : "");
+
+  if (!sourceImageUrl || !URL.canParse(sourceImageUrl)) {
+    return NextResponse.json(
+      { ok: false, error: "foto_cliente precisa conter uma URL pública válida." },
+      { status: 400 },
+    );
+  }
+
+  if (contextFinal.length < 3) {
+    return NextResponse.json(
+      { ok: false, error: "contexto_final precisa estar preenchido." },
+      { status: 400 },
+    );
+  }
+
+  const nicheId = parsed.data.nicho ?? parsed.data.nicheId;
+  const generationPrompts = buildGenerationPrompts(contextFinal);
   const galleryUrl = new URL(
     `/g/${isTestMode ? "demo" : galleryToken}`,
     appUrl,
