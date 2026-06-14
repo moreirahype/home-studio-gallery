@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 const MAX_PHOTOS = 20;
-const SINGLE_PHOTO_PRICE = 9.9;
+const ENTRY_PRICE = 4.9;
 
 const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
   id: `photo-${index + 1}`,
@@ -13,30 +13,30 @@ const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
 
 const pricesByQuantity = [
   0,
-  9.9,
+  4.9,
+  8.9,
+  11.9,
+  14.9,
   17.9,
-  24.9,
-  31.9,
+  20.9,
+  23.9,
+  26.9,
+  28.9,
+  29.9,
+  32.9,
   34.9,
+  36.9,
+  38.9,
   39.9,
+  42.9,
   44.9,
+  46.9,
+  48.9,
   49.9,
-  53.9,
-  54.9,
-  58.9,
-  62.9,
-  66.9,
-  68.9,
-  69.9,
-  72.9,
-  75.9,
-  77.9,
-  78.9,
-  79.9,
 ];
 
 const milestones = [
-  { quantity: 1, label: "Avulsa" },
+  { quantity: 1, label: "Já incluída" },
   { quantity: 3, label: "Trio" },
   { quantity: 5, label: "Favoritas" },
   { quantity: 10, label: "Ensaio" },
@@ -51,13 +51,14 @@ const money = new Intl.NumberFormat("pt-BR", {
 
 function getPricing(count: number) {
   const total = pricesByQuantity[count] ?? pricesByQuantity[MAX_PHOTOS];
-  const fullPrice = count * SINGLE_PHOTO_PRICE;
+  const fullPrice = count * ENTRY_PRICE;
   const savings = Math.max(0, fullPrice - total);
   const discount = count ? Math.round((savings / fullPrice) * 100) : 0;
   const unitPrice = count ? total / count : 0;
+  const dueNow = count ? Math.max(0, total - ENTRY_PRICE) : 0;
   const nextMilestone = milestones.find((milestone) => milestone.quantity > count);
 
-  return { total, fullPrice, savings, discount, unitPrice, nextMilestone };
+  return { total, fullPrice, savings, discount, unitPrice, dueNow, nextMilestone };
 }
 
 function AddIcon() {
@@ -108,13 +109,14 @@ export function Gallery({ token }: { token: string }) {
           <h1>Quais fotos contam melhor a sua história?</h1>
           <p>
             Toque nas suas favoritas. Quanto mais você escolher, menor fica o
-            valor por foto. O melhor desconto é aplicado automaticamente.
+            valor por foto. A primeira já está incluída nos R$ 4,90 que você
+            pagou.
           </p>
         </div>
         <div className="gallery-status">
           <span>{token === "demo" ? "Galeria demonstrativa" : "Sua galeria"}</span>
           <strong>20 fotos disponíveis</strong>
-          <small>Alta resolução e sem marca d&apos;água após o pagamento</small>
+          <small>Escolha uma incluída ou monte seu pacote com desconto</small>
         </div>
       </header>
 
@@ -122,7 +124,7 @@ export function Gallery({ token }: { token: string }) {
         <div className="deal-heading">
           <div>
             <span className="section-kicker">DESCONTO PROGRESSIVO</span>
-            <h2 id="deal-title">Você escolhe. O preço melhora.</h2>
+            <h2 id="deal-title">Sua primeira foto já está garantida.</h2>
           </div>
           <button className="text-button" onClick={selectAll} type="button">
             Quero todas
@@ -146,7 +148,11 @@ export function Gallery({ token }: { token: string }) {
                 <span className="milestone-count">{milestone.quantity}</span>
                 <span className="milestone-label">{milestone.label}</span>
                 <strong>{money.format(milestonePricing.total)}</strong>
-                <small>{money.format(milestonePricing.unitPrice)}/foto</small>
+                <small>
+                  {milestone.quantity === 1
+                    ? "paga na entrada"
+                    : `${money.format(milestonePricing.unitPrice)}/foto`}
+                </small>
               </div>
             );
           })}
@@ -162,7 +168,7 @@ export function Gallery({ token }: { token: string }) {
               {photosToNextDeal === 1 ? "foto" : "fotos"} e desbloqueie o pacote{" "}
               <strong>{pricing.nextMilestone.label}</strong>. Você leva{" "}
               {pricing.nextMilestone.quantity} por apenas{" "}
-              <strong>{money.format(nextPrice.total - pricing.total)} a mais</strong>.
+              <strong>{money.format(nextPrice.dueNow - pricing.dueNow)} a mais</strong>.
             </p>
           </div>
         )}
@@ -230,17 +236,30 @@ export function Gallery({ token }: { token: string }) {
             )}
           </div>
           <div className="checkout-pricing">
-            <strong>{money.format(pricing.total)}</strong>
+            <strong>
+              {selected.length === 1 ? "Incluída" : money.format(pricing.dueNow)}
+            </strong>
             {selected.length > 0 && (
               <span>
-                {money.format(pricing.unitPrice)}/foto
-                {pricing.savings > 0 && <> · economia de {money.format(pricing.savings)}</>}
+                {selected.length === 1 ? (
+                  <>Você já pagou R$ 4,90</>
+                ) : (
+                  <>
+                    Total {money.format(pricing.total)} · R$ 4,90 já pagos
+                  </>
+                )}
               </span>
             )}
           </div>
         </div>
         <button className="primary-button checkout-button" disabled={!selected.length} type="button">
-          <span>{selected.length ? "Continuar para o Pix" : "Escolha suas fotos"}</span>
+          <span>
+            {selected.length === 1
+              ? "Baixar foto incluída"
+              : selected.length > 1
+                ? "Pagar adicionais no Pix"
+                : "Escolha suas fotos"}
+          </span>
           {selected.length > 0 && <span aria-hidden="true">→</span>}
         </button>
       </aside>

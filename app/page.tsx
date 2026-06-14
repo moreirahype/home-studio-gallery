@@ -5,10 +5,10 @@ export default function Home() {
     <main className="landing">
       <div className="landing-card">
         <span className="eyebrow">HOME STUDIO</span>
-        <h1>Suas melhores fotos estão quase prontas.</h1>
+        <h1>Seu ensaio por apenas R$ 4,90.</h1>
         <p>
-          Esta é a base da nova experiência: geração automática, escolha das
-          favoritas e liberação após o Pix.
+          Receba uma galeria com 20 opções, escolha sua foto incluída e compre
+          outras favoritas com desconto progressivo.
         </p>
         <Link className="primary-button" href="/g/demo">
           Abrir galeria demonstrativa

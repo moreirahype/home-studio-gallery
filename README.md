@@ -65,13 +65,14 @@ Resposta esperada:
 
 | Quantidade | Total | Valor médio |
 | --- | ---: | ---: |
-| 1 foto | R$ 9,90 | R$ 9,90 |
-| 3 fotos | R$ 24,90 | R$ 8,30 |
-| 5 fotos | R$ 34,90 | R$ 6,98 |
-| 10 fotos | R$ 54,90 | R$ 5,49 |
-| 15 fotos | R$ 69,90 | R$ 4,66 |
-| 20 fotos | R$ 79,90 | R$ 4,00 |
+| 1 foto | R$ 4,90 | R$ 4,90 |
+| 3 fotos | R$ 11,90 | R$ 3,97 |
+| 5 fotos | R$ 17,90 | R$ 3,58 |
+| 10 fotos | R$ 29,90 | R$ 2,99 |
+| 15 fotos | R$ 39,90 | R$ 2,66 |
+| 20 fotos | R$ 49,90 | R$ 2,50 |
 
 As quantidades intermediárias também têm preços próprios, sempre crescentes. O
 cliente não escolhe um pacote manualmente: o sistema aplica o melhor valor para
-a quantidade selecionada.
+a quantidade selecionada. Como os R$ 4,90 da entrada já foram pagos, a galeria
+inclui a primeira foto e cobra no Pix apenas a diferença do pacote escolhido.
