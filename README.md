@@ -52,8 +52,26 @@ Resposta esperada:
 
 ## Estado atual
 
-- Galeria responsiva demonstrativa
-- Seleção de até 20 fotos e preços por pacote
+- Galeria responsiva e mobile-first
+- Seleção numerada de até 20 fotos
+- Desconto progressivo aplicado automaticamente
+- Incentivo contextual para o próximo pacote
+- Resumo fixo com economia, desconto e valor por foto
 - Contratos iniciais dos três webhooks
 - Migração inicial do Supabase
 - Persistência, geração real, marca d'água e Pix ainda serão conectados
+
+## Régua inicial de preços
+
+| Quantidade | Total | Valor médio |
+| --- | ---: | ---: |
+| 1 foto | R$ 9,90 | R$ 9,90 |
+| 3 fotos | R$ 24,90 | R$ 8,30 |
+| 5 fotos | R$ 34,90 | R$ 6,98 |
+| 10 fotos | R$ 54,90 | R$ 5,49 |
+| 15 fotos | R$ 69,90 | R$ 4,66 |
+| 20 fotos | R$ 79,90 | R$ 4,00 |
+
+As quantidades intermediárias também têm preços próprios, sempre crescentes. O
+cliente não escolhe um pacote manualmente: o sistema aplica o melhor valor para
+a quantidade selecionada.
