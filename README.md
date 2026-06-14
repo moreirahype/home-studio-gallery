@@ -66,11 +66,11 @@ Resposta esperada:
 | Quantidade | Total | Valor médio |
 | --- | ---: | ---: |
 | 1 foto | R$ 4,90 | R$ 4,90 |
-| 3 fotos | R$ 11,90 | R$ 3,97 |
-| 5 fotos | R$ 17,90 | R$ 3,58 |
-| 10 fotos | R$ 29,90 | R$ 2,99 |
-| 15 fotos | R$ 39,90 | R$ 2,66 |
-| 20 fotos | R$ 49,90 | R$ 2,50 |
+| 3 fotos | R$ 13,90 | R$ 4,63 |
+| 5 fotos | R$ 21,90 | R$ 4,38 |
+| 10 fotos | R$ 39,90 | R$ 3,99 |
+| 15 fotos | R$ 54,90 | R$ 3,66 |
+| 20 fotos | R$ 69,90 | R$ 3,50 |
 
 As quantidades intermediárias também têm preços próprios, sempre crescentes. O
 cliente não escolhe um pacote manualmente: o sistema aplica o melhor valor para
