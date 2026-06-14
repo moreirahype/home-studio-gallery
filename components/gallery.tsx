@@ -289,7 +289,11 @@ export function Gallery({
                 }}
               />
               <span className="photo-shade" />
-              <span className="watermark-pattern" aria-hidden="true" />
+              <span className="watermark-pattern" aria-hidden="true">
+                {Array.from({ length: 5 }, (_, index) => (
+                  <span key={index}>HOME STUDIO</span>
+                ))}
+              </span>
               <span className="photo-number">
                 Foto {String(photo.number).padStart(2, "0")}
               </span>

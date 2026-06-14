@@ -440,14 +440,41 @@ p {
 .watermark-pattern {
   position: absolute;
   z-index: 1;
-  inset: -18%;
+  inset: 0;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='150' viewBox='0 0 320 150'%3E%3Cg transform='rotate(-28 160 75)'%3E%3Ctext x='18' y='58' fill='white' fill-opacity='.42' font-family='Arial,sans-serif' font-size='13' font-weight='700' letter-spacing='2.5'%3EHOME STUDIO%3C/text%3E%3Ctext x='176' y='126' fill='white' fill-opacity='.36' font-family='Arial,sans-serif' font-size='12' font-weight='700' letter-spacing='2.3'%3EHOME STUDIO%3C/text%3E%3C/g%3E%3C/svg%3E");
-  background-position: center;
-  background-repeat: repeat;
-  background-size: 252px 118px;
+  overflow: hidden;
+}
+
+.watermark-pattern span {
+  position: absolute;
+  left: 50%;
+  color: rgb(255 255 255 / 42%);
+  font-size: clamp(0.58rem, 0.9vw, 0.76rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 20%));
-  opacity: 0.92;
+  transform: translate(-50%, -50%) rotate(-28deg);
+  white-space: nowrap;
+}
+
+.watermark-pattern span:nth-child(1) {
+  top: 12%;
+}
+
+.watermark-pattern span:nth-child(2) {
+  top: 30%;
+}
+
+.watermark-pattern span:nth-child(3) {
+  top: 48%;
+}
+
+.watermark-pattern span:nth-child(4) {
+  top: 66%;
+}
+
+.watermark-pattern span:nth-child(5) {
+  top: 84%;
 }
 
 .photo-number,
@@ -795,10 +822,6 @@ p {
   .photo-number {
     bottom: 12px;
     left: 12px;
-  }
-
-  .watermark-pattern {
-    background-size: 210px 98px;
   }
 
   .checkout-bar {
