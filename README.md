@@ -26,6 +26,17 @@ npm run dev
 
 Abra `http://localhost:3000/g/demo` para visualizar a primeira versão da galeria.
 
+Para testar outras ofertas sem banco, use os parâmetros da demonstração:
+
+```text
+/g/demo?paidAmount=6.90&includedPhotos=1
+/g/demo?paidAmount=13.90&includedPhotos=3
+```
+
+A curva inteira é escalada automaticamente para que o valor e a quantidade
+informados sejam o crédito inicial da compra. Em produção, os mesmos dados
+serão lidos do projeto salvo pelo token e não da URL.
+
 ## Webhook inicial do ZapData
 
 Use um único bloco HTTP depois da aprovação do OCR. Envie
@@ -114,3 +125,7 @@ As quantidades intermediárias também têm preços próprios, sempre crescentes
 cliente não escolhe um pacote manualmente: o sistema aplica o melhor valor para
 a quantidade selecionada. Como os R$ 4,90 da entrada já foram pagos, a galeria
 inclui a primeira foto e cobra no Pix apenas a diferença do pacote escolhido.
+
+Os R$ 4,90 são apenas a oferta padrão. `paidAmount` e `includedPhotos` enviados
+pelo ZapData passam a ser a fonte oficial para calcular o crédito e escalar a
+curva de desconto de cada cliente.

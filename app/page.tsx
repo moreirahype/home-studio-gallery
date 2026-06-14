@@ -5,13 +5,13 @@ export default function Home() {
     <main className="landing">
       <div className="landing-card">
         <span className="eyebrow">HOME STUDIO</span>
-        <h1>Seu ensaio por apenas R$ 4,90.</h1>
+        <h1>Sua galeria está pronta.</h1>
         <p>
-          Receba uma galeria com 20 opções, escolha sua foto incluída e compre
-          outras favoritas com desconto progressivo.
+          Suas fotos já estão esperando por você. Escolha suas favoritas e
+          aproveite condições especiais para levar mais momentos.
         </p>
         <Link className="primary-button" href="/g/demo">
-          Abrir galeria demonstrativa
+          Ver minha galeria
         </Link>
       </div>
     </main>

@@ -16,7 +16,7 @@ const payloadSchema = z.object({
   nicheId: z.string().min(1).optional().default("geral"),
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
-  paidAmount: z.coerce.number().min(4.9).optional().default(4.9),
+  paidAmount: z.coerce.number().positive().optional().default(4.9),
   receiptId: z.string().min(1),
 }).superRefine((payload, context) => {
   if (!payload.sourceImageUrl && !payload.foto_cliente) {

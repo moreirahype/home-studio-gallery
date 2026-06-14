@@ -4,7 +4,7 @@ alter table projects
   add column included_photos smallint not null default 1
     check (included_photos between 1 and 20),
   add column paid_amount_cents integer not null default 490
-    check (paid_amount_cents >= 490);
+    check (paid_amount_cents > 0);
 
 update projects
 set context_final = prompt
