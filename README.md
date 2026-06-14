@@ -44,17 +44,16 @@ Use um único bloco HTTP depois da aprovação do OCR. Envie
 
 ```json
 {
-  "contactId": "contato-123",
-  "contactName": "Cliente",
-  "phone": "5511999999999",
   "foto_cliente": "https://url-temporaria-da-foto",
   "contexto_final": "Ensaio profissional em estúdio",
   "nicheId": "executivo",
   "includedPhotos": 1,
-  "paidAmount": 4.90,
-  "receiptId": "identificador-unico-do-comprovante"
+  "paidAmount": 4.90
 }
 ```
+
+`contactId`, `contactName`, `phone` e `receiptId` também podem ser enviados e
+serão usados na persistência quando o fluxo sair da homologação.
 
 Não é necessário criar um webhook para cada prompt ou nicho. O
 `contexto_final` entra no prompt-base e o backend acrescenta 20 instruções

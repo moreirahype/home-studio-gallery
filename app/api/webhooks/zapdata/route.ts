@@ -6,9 +6,9 @@ import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
 
 const payloadSchema = z.object({
-  contactId: z.string().min(1),
-  contactName: z.string().min(1),
-  phone: z.string().min(8),
+  contactId: z.string().min(1).optional(),
+  contactName: z.string().min(1).optional(),
+  phone: z.string().min(8).optional(),
   sourceImageUrl: z.string().url().optional(),
   foto_cliente: z.string().url().optional(),
   contextFinal: z.string().min(3).optional(),
@@ -17,7 +17,7 @@ const payloadSchema = z.object({
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
   paidAmount: z.coerce.number().positive().optional().default(4.9),
-  receiptId: z.string().min(1),
+  receiptId: z.string().min(1).optional(),
 }).superRefine((payload, context) => {
   if (!payload.sourceImageUrl && !payload.foto_cliente) {
     context.addIssue({
