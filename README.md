@@ -93,6 +93,14 @@ Somente o valor pago dentro da galeria deve ser enviado ao BI depois que o
 Mercado Pago retornar o pagamento como aprovado. A entrada de R$ 4,90 continua
 chegando pelo fluxo atual e não é repetida.
 
+As transações são registradas com:
+
+```text
+atendente=Galeria
+origem=Home Studio Gallery
+valor=apenas o saldo pago no upsell
+```
+
 Configure na galeria:
 
 ```text
