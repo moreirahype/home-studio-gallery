@@ -2,15 +2,38 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { unauthorized } from "@/lib/http";
+import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
 
 const payloadSchema = z.object({
   contactId: z.string().min(1),
   contactName: z.string().min(1),
   phone: z.string().min(8),
-  sourceImageUrl: z.string().url(),
-  prompt: z.string().min(3),
+  sourceImageUrl: z.string().url().optional(),
+  foto_cliente: z.string().url().optional(),
+  contextFinal: z.string().min(3).optional(),
+  contexto_final: z.string().min(3).optional(),
+  nicheId: z.string().min(1).optional().default("geral"),
+  nicho: z.string().min(1).optional(),
+  includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
+  paidAmount: z.coerce.number().min(4.9).optional().default(4.9),
   receiptId: z.string().min(1),
+}).superRefine((payload, context) => {
+  if (!payload.sourceImageUrl && !payload.foto_cliente) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Informe sourceImageUrl ou foto_cliente.",
+      path: ["foto_cliente"],
+    });
+  }
+
+  if (!payload.contextFinal && !payload.contexto_final) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Informe contextFinal ou contexto_final.",
+      path: ["contexto_final"],
+    });
+  }
 });
 
 export async function POST(request: NextRequest) {
@@ -32,12 +55,23 @@ export async function POST(request: NextRequest) {
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
   const appUrl = process.env.APP_URL ?? request.nextUrl.origin;
+  const sourceImageUrl = parsed.data.sourceImageUrl ?? parsed.data.foto_cliente;
+  const contextFinal = parsed.data.contextFinal ?? parsed.data.contexto_final;
+  const nicheId = parsed.data.nicho ?? parsed.data.nicheId;
+  const generationPrompts = buildGenerationPrompts(contextFinal!);
 
-  // TODO: persist the project and enqueue 20 Kie.ai jobs.
+  // TODO: persist the project, download sourceImageUrl and enqueue generationPrompts.
   return NextResponse.json({
     ok: true,
     projectId,
     status: "queued",
     galleryUrl: `${appUrl}/g/${galleryToken}`,
+    includedPhotos: parsed.data.includedPhotos,
+    generationPlan: {
+      count: generationPrompts.length,
+      nicheId,
+      sourceImageUrl,
+      contextFinal,
+    },
   });
 }

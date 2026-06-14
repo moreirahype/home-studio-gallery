@@ -13,6 +13,8 @@ automática dos arquivos comprados.
 6. O cliente escolhe as fotos na galeria.
 7. O backend cria uma cobrança Pix no Mercado Pago.
 8. Após confirmação e consulta do pagamento, libera links temporários.
+9. O upsell aprovado é enviado ao Home Studio BI com origem
+   `Home Studio Gallery`.
 
 ## Desenvolvimento
 
@@ -26,18 +28,28 @@ Abra `http://localhost:3000/g/demo` para visualizar a primeira versão da galeri
 
 ## Webhook inicial do ZapData
 
-Envie `x-webhook-secret` no cabeçalho e o seguinte JSON:
+Use um único bloco HTTP depois da aprovação do OCR. Envie
+`x-webhook-secret` no cabeçalho e o seguinte JSON:
 
 ```json
 {
   "contactId": "contato-123",
   "contactName": "Cliente",
   "phone": "5511999999999",
-  "sourceImageUrl": "https://url-temporaria-da-foto",
-  "prompt": "Ensaio profissional em estúdio",
+  "foto_cliente": "https://url-temporaria-da-foto",
+  "contexto_final": "Ensaio profissional em estúdio",
+  "nicheId": "executivo",
+  "includedPhotos": 1,
+  "paidAmount": 4.90,
   "receiptId": "identificador-unico-do-comprovante"
 }
 ```
+
+Não é necessário criar um webhook para cada prompt ou nicho. O
+`contexto_final` entra no prompt-base e o backend acrescenta 20 instruções
+diferentes de cena, composição, pose e câmera. Se algum nicho precisar de
+regras estruturais próprias, envie também `nicho` e mantenha essa diferença no
+backend, sem duplicar o fluxo do ZapData.
 
 Resposta esperada:
 
@@ -59,7 +71,33 @@ Resposta esperada:
 - Resumo fixo com economia, desconto e valor por foto
 - Contratos iniciais dos três webhooks
 - Migração inicial do Supabase
+- Um único webhook atende todos os nichos usando `contexto_final`
+- Plano centralizado com 20 variações reais de cena e composição
+- Contrato para registrar somente upsells aprovados no Home Studio BI
 - Persistência, geração real, marca d'água e Pix ainda serão conectados
+
+## Home Studio BI
+
+Somente o valor pago dentro da galeria deve ser enviado ao BI depois que o
+Mercado Pago retornar o pagamento como aprovado. A entrada de R$ 4,90 continua
+chegando pelo fluxo atual e não é repetida.
+
+Configure na galeria:
+
+```text
+HSBI_WEBHOOK_URL=https://script.google.com/macros/s/SEU_ID/exec
+HSBI_WEBHOOK_SECRET=uma-chave-forte
+```
+
+No Apps Script do BI, crie a propriedade:
+
+```text
+GALLERY_WEBHOOK_SECRET=mesma-chave-forte
+```
+
+Cada upsell usa o identificador do pagamento do Mercado Pago como ID da
+transação e a origem `Home Studio Gallery`. Assim, reenvios do webhook não
+duplicam o faturamento.
 
 ## Régua inicial de preços
 
