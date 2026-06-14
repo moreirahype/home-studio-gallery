@@ -59,13 +59,31 @@ export async function POST(request: NextRequest) {
   const contextFinal = parsed.data.contextFinal ?? parsed.data.contexto_final;
   const nicheId = parsed.data.nicho ?? parsed.data.nicheId;
   const generationPrompts = buildGenerationPrompts(contextFinal!);
+  const isTestMode = process.env.TEST_MODE === "true";
+  const galleryUrl = new URL(
+    `/g/${isTestMode ? "demo" : galleryToken}`,
+    appUrl,
+  );
+
+  if (isTestMode) {
+    galleryUrl.searchParams.set(
+      "paidAmount",
+      String(parsed.data.paidAmount),
+    );
+    galleryUrl.searchParams.set(
+      "includedPhotos",
+      String(parsed.data.includedPhotos),
+    );
+    galleryUrl.searchParams.set("test", "1");
+  }
 
   // TODO: persist the project, download sourceImageUrl and enqueue generationPrompts.
   return NextResponse.json({
     ok: true,
     projectId,
     status: "queued",
-    galleryUrl: `${appUrl}/g/${galleryToken}`,
+    galleryUrl: galleryUrl.toString(),
+    testMode: isTestMode,
     includedPhotos: parsed.data.includedPhotos,
     generationPlan: {
       count: generationPrompts.length,

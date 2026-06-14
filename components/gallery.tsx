@@ -90,9 +90,11 @@ function AddIcon() {
 export function Gallery({
   token,
   offer: offerInput,
+  testMode = false,
 }: {
   token: string;
   offer?: Partial<GalleryOffer>;
+  testMode?: boolean;
 }) {
   const offer = useMemo(() => normalizeOffer(offerInput), [offerInput]);
   const prices = useMemo(() => createPriceCurve(offer), [offer]);
@@ -101,6 +103,8 @@ export function Gallery({
     [offer.includedPhotos],
   );
   const [selected, setSelected] = useState<string[]>([]);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [testPaymentApproved, setTestPaymentApproved] = useState(false);
 
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
@@ -147,6 +151,11 @@ export function Gallery({
     setSelected(samplePhotos.map((photo) => photo.id));
   }
 
+  function handlePrimaryAction() {
+    if (!selected.length) return;
+    setCheckoutOpen(true);
+  }
+
   return (
     <main className="gallery-shell">
       <nav className="gallery-nav" aria-label="Galeria">
@@ -155,7 +164,7 @@ export function Gallery({
         </a>
         <div className="nav-meta">
           <span className="status-dot" />
-          Galeria pronta
+          {testMode ? "Modo de teste" : "Galeria pronta"}
         </div>
       </nav>
 
@@ -339,10 +348,13 @@ export function Gallery({
         <button
           className="primary-button checkout-button"
           disabled={!selected.length}
+          onClick={handlePrimaryAction}
           type="button"
         >
           <span>
-            {selectionIsIncluded
+            {testPaymentApproved
+              ? "Baixar fotos liberadas"
+              : selectionIsIncluded
               ? selected.length === 1
                 ? "Baixar foto incluída"
                 : "Baixar fotos incluídas"
@@ -353,6 +365,102 @@ export function Gallery({
           {selected.length > 0 && <span aria-hidden="true">→</span>}
         </button>
       </aside>
+
+      {checkoutOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            aria-labelledby="checkout-title"
+            aria-modal="true"
+            className="checkout-modal"
+            role="dialog"
+          >
+            <button
+              aria-label="Fechar"
+              className="modal-close"
+              onClick={() => setCheckoutOpen(false)}
+              type="button"
+            >
+              ×
+            </button>
+
+            {!testMode ? (
+              <>
+                <span className="modal-badge warning">Integração pendente</span>
+                <h2 id="checkout-title">Pagamento em configuração.</h2>
+                <p>
+                  A interface está pronta, mas o Mercado Pago ainda precisa ser
+                  conectado antes de aceitar pagamentos reais.
+                </p>
+                <button
+                  className="primary-button modal-primary"
+                  onClick={() => setCheckoutOpen(false)}
+                  type="button"
+                >
+                  Entendi
+                </button>
+              </>
+            ) : testPaymentApproved ? (
+              <>
+                <span className="modal-badge success">Pagamento aprovado</span>
+                <h2 id="checkout-title">Suas fotos foram liberadas.</h2>
+                <p>
+                  No fluxo real, os arquivos originais sem marca d&apos;água
+                  aparecerão aqui para download.
+                </p>
+                <button
+                  className="primary-button modal-primary"
+                  onClick={() => setCheckoutOpen(false)}
+                  type="button"
+                >
+                  Concluir teste
+                </button>
+              </>
+            ) : selectionIsIncluded ? (
+              <>
+                <span className="modal-badge">Crédito reconhecido</span>
+                <h2 id="checkout-title">
+                  {selected.length === 1
+                    ? "Sua foto está incluída."
+                    : "Suas fotos estão incluídas."}
+                </h2>
+                <p>
+                  No fluxo real, estas fotos serão liberadas imediatamente,
+                  sem uma nova cobrança.
+                </p>
+                <button
+                  className="primary-button modal-primary"
+                  onClick={() => setTestPaymentApproved(true)}
+                  type="button"
+                >
+                  Simular liberação
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="modal-badge warning">Simulação de Pix</span>
+                <h2 id="checkout-title">{money.format(pricing.dueNow)}</h2>
+                <p>
+                  Este é apenas um teste. Em produção, o QR Code e o Pix Copia
+                  e Cola serão gerados pelo Mercado Pago.
+                </p>
+                <div className="fake-pix-code" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <strong>PIX</strong>
+                </div>
+                <button
+                  className="primary-button modal-primary"
+                  onClick={() => setTestPaymentApproved(true)}
+                  type="button"
+                >
+                  Simular pagamento aprovado
+                </button>
+              </>
+            )}
+          </section>
+        </div>
+      )}
     </main>
   );
 }

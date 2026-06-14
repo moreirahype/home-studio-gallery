@@ -8,6 +8,7 @@ export default async function GalleryPage({
   searchParams: Promise<{
     paidAmount?: string;
     includedPhotos?: string;
+    test?: string;
   }>;
 }) {
   const { token } = await params;
@@ -21,5 +22,11 @@ export default async function GalleryPage({
       : undefined;
 
   // Production galleries will load this offer from the project stored by token.
-  return <Gallery offer={demoOffer} token={token} />;
+  return (
+    <Gallery
+      offer={demoOffer}
+      testMode={token === "demo" && query.test === "1"}
+      token={token}
+    />
+  );
 }

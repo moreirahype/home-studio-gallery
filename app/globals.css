@@ -561,6 +561,124 @@ p {
   color: var(--ink);
 }
 
+.modal-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(18 14 12 / 70%);
+  backdrop-filter: blur(10px);
+}
+
+.checkout-modal {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 38px;
+  border-radius: 24px;
+  background: var(--cream);
+  box-shadow: 0 30px 100px rgb(0 0 0 / 32%);
+  text-align: center;
+}
+
+.checkout-modal h2 {
+  margin: 16px 0 12px;
+}
+
+.checkout-modal p {
+  margin: 0 auto 24px;
+  font-size: 0.9rem;
+}
+
+.modal-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.modal-badge {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eadfd3;
+  color: #665140;
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.modal-badge.warning {
+  background: #f5dfba;
+  color: #7c5019;
+}
+
+.modal-badge.success {
+  background: #dcecdf;
+  color: #2e6a3d;
+}
+
+.modal-primary {
+  width: 100%;
+}
+
+.fake-pix-code {
+  position: relative;
+  display: grid;
+  width: 148px;
+  height: 148px;
+  place-items: center;
+  margin: 0 auto 24px;
+  overflow: hidden;
+  border: 12px solid white;
+  background:
+    repeating-linear-gradient(90deg, var(--ink) 0 7px, transparent 7px 13px),
+    repeating-linear-gradient(0deg, transparent 0 8px, var(--ink) 8px 13px),
+    white;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.fake-pix-code span {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 7px solid var(--ink);
+  background: white;
+}
+
+.fake-pix-code span:nth-child(1) {
+  top: 5px;
+  left: 5px;
+}
+
+.fake-pix-code span:nth-child(2) {
+  top: 5px;
+  right: 5px;
+}
+
+.fake-pix-code span:nth-child(3) {
+  bottom: 5px;
+  left: 5px;
+}
+
+.fake-pix-code strong {
+  position: relative;
+  padding: 5px;
+  background: white;
+  font-size: 0.7rem;
+}
+
 @media (max-width: 900px) {
   .gallery-header {
     grid-template-columns: 1fr;
@@ -715,6 +833,11 @@ p {
     max-width: 98px;
     font-size: 0.76rem;
     line-height: 1.15;
+  }
+
+  .checkout-modal {
+    padding: 34px 24px 24px;
+    border-radius: 20px;
   }
 }
 
