@@ -4,6 +4,7 @@ import { z } from "zod";
 import { unauthorized } from "@/lib/http";
 import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const payloadSchema = z.object({
   contactId: z.string().min(1).optional(),
@@ -70,23 +71,57 @@ export async function POST(request: NextRequest) {
   const nicheId = parsed.data.nicho ?? parsed.data.nicheId;
   const generationPrompts = buildGenerationPrompts(contextFinal);
   const galleryUrl = new URL(
-    `/g/${isTestMode ? "demo" : galleryToken}`,
+    `/g/${galleryToken}`,
     appUrl,
   );
 
   if (isTestMode) {
-    galleryUrl.searchParams.set(
-      "paidAmount",
-      String(parsed.data.paidAmount),
-    );
-    galleryUrl.searchParams.set(
-      "includedPhotos",
-      String(parsed.data.includedPhotos),
-    );
     galleryUrl.searchParams.set("test", "1");
   }
 
-  // TODO: persist the project, download sourceImageUrl and enqueue generationPrompts.
+  const supabase = getSupabaseAdmin();
+  const { error: projectError } = await supabase.from("projects").insert({
+    id: projectId,
+    gallery_token: galleryToken,
+    zapdata_contact_id: parsed.data.contactId ?? null,
+    customer_name: parsed.data.contactName ?? null,
+    phone: parsed.data.phone ?? null,
+    source_image_url: sourceImageUrl,
+    context_final: contextFinal,
+    niche_id: nicheId,
+    receipt_id: parsed.data.receiptId ?? null,
+    included_photos: parsed.data.includedPhotos,
+    paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
+    status: "queued",
+  });
+
+  if (projectError) {
+    return NextResponse.json(
+      { ok: false, error: `Falha ao criar galeria: ${projectError.message}` },
+      { status: 500 },
+    );
+  }
+
+  const { error: photosError } = await supabase.from("photos").insert(
+    generationPrompts.map(({ position, prompt }) => ({
+      project_id: projectId,
+      position,
+      generation_prompt: prompt,
+      status: "queued",
+    })),
+  );
+
+  if (photosError) {
+    await supabase.from("projects").delete().eq("id", projectId);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Falha ao preparar as imagens: ${photosError.message}`,
+      },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     projectId,

@@ -1,4 +1,6 @@
 import { Gallery, type GalleryOffer } from "@/components/gallery";
+import { getProjectByToken } from "@/lib/projects";
+import { notFound } from "next/navigation";
 
 export default async function GalleryPage({
   params,
@@ -13,19 +15,27 @@ export default async function GalleryPage({
 }) {
   const { token } = await params;
   const query = await searchParams;
-  const demoOffer: Partial<GalleryOffer> | undefined =
-    token === "demo"
-      ? {
-          paidAmount: Number(query.paidAmount) || 4.9,
-          includedPhotos: Number(query.includedPhotos) || 1,
-        }
-      : undefined;
+  const isDemo = token === "demo";
+  const project = isDemo ? null : await getProjectByToken(token);
 
-  // Production galleries will load this offer from the project stored by token.
+  if (!isDemo && !project) {
+    notFound();
+  }
+
+  const offer: Partial<GalleryOffer> = project
+    ? {
+        paidAmount: project.paid_amount_cents / 100,
+        includedPhotos: project.included_photos,
+      }
+    : {
+        paidAmount: Number(query.paidAmount) || 4.9,
+        includedPhotos: Number(query.includedPhotos) || 1,
+      };
+
   return (
     <Gallery
-      offer={demoOffer}
-      testMode={token === "demo" && query.test === "1"}
+      offer={offer}
+      testMode={query.test === "1"}
       token={token}
     />
   );
