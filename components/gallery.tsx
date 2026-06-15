@@ -150,6 +150,19 @@ export function Gallery({
   >([]);
   const [checkoutError, setCheckoutError] = useState("");
   const [releasing, setReleasing] = useState(false);
+  const videoPhotos = useMemo(() => {
+    const chosenPhotos = selected
+      .map((photoId) => photos.find((photo) => photo.id === photoId))
+      .filter((photo): photo is (typeof photos)[number] => Boolean(photo))
+      .slice(0, 3);
+
+    if (!chosenPhotos.length) return [];
+
+    return Array.from(
+      { length: 3 },
+      (_, index) => chosenPhotos[index % chosenPhotos.length],
+    );
+  }, [photos, selected]);
 
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
@@ -598,13 +611,44 @@ export function Gallery({
                 </span>
                 <h2 id="checkout-title">
                   {selectionIsIncluded
-                    ? "Deixe suas fotos ainda mais marcantes."
+                    ? "Veja suas fotos ganharem movimento."
                     : `${selected.length} fotos selecionadas`}
                 </h2>
-                  <p>
-                  Receba um único Reel vertical de aproximadamente 12 a 15
-                  segundos, pronto para Reels, Stories e WhatsApp.
-                  </p>
+                <p>
+                  Transformamos suas fotos em um vídeo vertical de cerca de 15
+                  segundos, com movimentos, transições e música, pronto para
+                  compartilhar.
+                </p>
+                <div className="video-offer-preview">
+                  <div
+                    aria-label="Prévia das fotos usadas no vídeo"
+                    className="video-photo-strip"
+                  >
+                    {videoPhotos.map((photo, index) => {
+                      const tone =
+                        "tone" in photo && typeof photo.tone === "number"
+                          ? photo.tone
+                          : 0;
+
+                      return (
+                        <span
+                          key={`${photo.id}-${index}`}
+                          style={{
+                            background: photo.previewUrl
+                              ? `center / cover no-repeat url("${photo.previewUrl}")`
+                              : `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
+                          }}
+                        />
+                      );
+                    })}
+                    <strong aria-hidden="true">▶</strong>
+                  </div>
+                  <div className="video-benefits">
+                    <span>1 vídeo vertical de aproximadamente 15 segundos</span>
+                    <span>Trilha instrumental incluída</span>
+                    <span>Pronto para Instagram, Stories e WhatsApp</span>
+                  </div>
+                </div>
                 <button
                   aria-pressed={videoAdded}
                   className={`addon-card ${videoAdded ? "selected" : ""}`}
@@ -612,13 +656,14 @@ export function Gallery({
                   type="button"
                 >
                   <span className="addon-check">{videoAdded ? "✓" : "+"}</span>
-                    <span className="addon-copy">
-                    <strong>Transformar em um Reel</strong>
+                  <span className="addon-copy">
+                    <strong>Quero transformar minhas fotos em vídeo</strong>
                     <small>
                       {selected.length === 1
-                        ? "Criamos 3 movimentos diferentes da foto selecionada"
-                        : `Usamos as ${Math.min(3, selected.length)} primeiras fotos selecionadas`}
-                      , com movimento e transições
+                        ? "Sua foto ganhará 3 movimentos diferentes"
+                        : `Usaremos até ${Math.min(3, selected.length)} das fotos escolhidas`}
+                      . Você também poderá silenciar ou trocar a música ao
+                      publicar.
                     </small>
                   </span>
                   <strong>{money.format(offer.videoPrice)}</strong>

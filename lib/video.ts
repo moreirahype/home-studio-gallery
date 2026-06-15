@@ -70,7 +70,7 @@ export async function startVideoJob({
 
   if (jobError || !job) {
     throw new Error(
-      `Falha ao criar o Reel: ${jobError?.message ?? "registro ausente"}`,
+      `Falha ao criar o vídeo: ${jobError?.message ?? "registro ausente"}`,
     );
   }
 
@@ -139,7 +139,13 @@ export async function assembleVideo(videoJobId: string) {
     }
 
     const listPath = path.join(workdir, "clips.txt");
-    const outputPath = path.join(workdir, "reel.mp4");
+    const outputPath = path.join(workdir, "video.mp4");
+    const musicPath = path.join(
+      process.cwd(),
+      "assets",
+      "audio",
+      "tech-house-vibes.mp3",
+    );
     await writeFile(
       listPath,
       clipPaths
@@ -154,17 +160,35 @@ export async function assembleVideo(videoJobId: string) {
       "0",
       "-i",
       listPath,
+      "-stream_loop",
+      "-1",
+      "-ss",
+      "8",
+      "-i",
+      musicPath,
+      "-filter_complex",
+      "[1:a]volume=0.16,afade=t=in:st=0:d=0.8,afade=t=out:st=13:d=1.5[audio]",
+      "-map",
+      "0:v:0",
+      "-map",
+      "[audio]",
       "-c:v",
       "libx264",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
       "-pix_fmt",
       "yuv420p",
       "-movflags",
       "+faststart",
-      "-an",
+      "-t",
+      "15",
+      "-shortest",
       outputPath,
     ]);
     const output = await readFile(outputPath);
-    const storagePath = `${videoJobId}/reel.mp4`;
+    const storagePath = `${videoJobId}/video.mp4`;
     const upload = await supabase.storage
       .from("videos")
       .upload(storagePath, output, {

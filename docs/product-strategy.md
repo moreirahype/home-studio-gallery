@@ -7,11 +7,11 @@
    - Inclui 1 foto.
    - Fotos adicionais usam desconto progressivo.
 2. Complemento no checkout: vídeo vertical por R$ 14,90
-   - Um Reel final.
+   - Um vídeo vertical de aproximadamente 15 segundos.
    - Usa até 3 fotos escolhidas pelo cliente.
-- Cada foto vira um clipe curto; os clipes são unidos com transições.
-- O Reel é entregue sem música para o cliente escolher uma faixa em alta no
-  Instagram ou TikTok sem risco de direitos autorais.
+   - Cada foto ganha movimento e os trechos são unidos com transições.
+   - Inclui uma trilha instrumental licenciada, com volume suave.
+   - O cliente pode manter, silenciar ou substituir a música ao publicar.
 3. Pós-compra: novo ensaio por R$ 7,90
    - 10 opções e 1 foto incluída.
    - Novo tema e nova referência opcional.
@@ -31,6 +31,7 @@
 - Se houver 2 fotos, uma delas recebe uma segunda variação de movimento.
 - Saída: um vídeo final de aproximadamente 12 a 18 segundos.
 - Gerações: até 3 clipes curtos em paralelo.
+- Música: faixa instrumental licenciada, adicionada automaticamente.
 - Prazo comercial sugerido: até 15 minutos.
 - Preço inicial: R$ 14,90.
 

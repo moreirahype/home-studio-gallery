@@ -687,6 +687,71 @@ p {
     transform 160ms ease;
 }
 
+.video-offer-preview {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 15px;
+  align-items: center;
+  margin: 0 0 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--paper);
+  text-align: left;
+}
+
+.video-photo-strip {
+  position: relative;
+  display: grid;
+  height: 106px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  overflow: hidden;
+  border-radius: 11px;
+  background: var(--ink);
+}
+
+.video-photo-strip > span {
+  min-width: 0;
+}
+
+.video-photo-strip > strong {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  margin: auto;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: rgb(255 253 248 / 90%);
+  color: var(--ink);
+  font-size: 0.75rem;
+  box-shadow: 0 5px 20px rgb(0 0 0 / 25%);
+}
+
+.video-benefits {
+  display: grid;
+  gap: 7px;
+}
+
+.video-benefits span {
+  position: relative;
+  padding-left: 17px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.video-benefits span::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--accent);
+  content: "✓";
+  font-weight: 900;
+}
+
 .addon-card:hover {
   transform: translateY(-1px);
 }
@@ -1240,6 +1305,16 @@ p {
   .checkout-modal {
     padding: 34px 24px 24px;
     border-radius: 20px;
+  }
+
+  .video-offer-preview {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 12px;
+    padding: 11px;
+  }
+
+  .video-photo-strip {
+    height: 94px;
   }
 }
 
