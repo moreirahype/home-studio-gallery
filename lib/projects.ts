@@ -6,30 +6,10 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
   const { data, error } = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, included_photos, paid_amount_cents, generation_count, status, customer_name",
+      "id, gallery_token, included_photos, paid_amount_cents, status, customer_name",
     )
     .eq("gallery_token", galleryToken)
     .maybeSingle();
-
-  if (error?.code === "42703" || error?.message.includes("generation_count")) {
-    const fallback = await supabase
-      .from("projects")
-      .select(
-        "id, gallery_token, included_photos, paid_amount_cents, status, customer_name",
-      )
-      .eq("gallery_token", galleryToken)
-      .maybeSingle();
-
-    if (fallback.error) {
-      throw new Error(
-        `Não foi possível carregar a galeria: ${fallback.error.message}`,
-      );
-    }
-
-    return fallback.data
-      ? { ...fallback.data, generation_count: 15, photos: [] }
-      : fallback.data;
-  }
 
   if (error) {
     throw new Error(`Não foi possível carregar a galeria: ${error.message}`);
@@ -67,6 +47,10 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
 
   return {
     ...data,
+    generation_count: Math.max(
+      data.included_photos,
+      photos?.length || 15,
+    ),
     photos: readyPhotos.map((photo, index) => ({
       id: photo.id,
       number: photo.position,
