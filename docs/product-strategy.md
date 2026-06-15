@@ -11,13 +11,17 @@
    - Usa até 3 fotos escolhidas pelo cliente.
    - Cada foto ganha movimento e os trechos são unidos com transições.
    - Inclui uma trilha instrumental licenciada, com volume suave.
-   - O cliente pode manter, silenciar ou substituir a música ao publicar.
 3. Pós-compra: novo ensaio por R$ 7,90
    - 10 opções e 1 foto incluída.
    - Novo tema e nova referência opcional.
    - Repete o upsell de fotos adicionais.
    - Pode receber novamente a oferta de vídeo.
-4. Recompra pelo PWA
+4. Downsell após recusar o novo ensaio
+   - Ensaio express por R$ 4,90.
+   - 5 opções e 1 foto incluída.
+   - Aparece somente após a recusa da oferta principal.
+   - Tem escopo menor para não desvalorizar o ensaio de 10 opções.
+5. Recompra pelo PWA
    - Novo ensaio com 10 opções por R$ 7,90.
    - Primeiro lembrete 7 dias após a ativação.
    - Próximos lembretes a cada 14 dias.
@@ -27,6 +31,8 @@
 - Modelo inicial: `bytedance/v1-pro-fast-image-to-video`.
 - Formato: vertical 9:16.
 - Entrada: as primeiras 3 fotos selecionadas.
+- O cliente pode alterar essas fotos em um controle opcional no checkout.
+- A escolha não cria uma etapa obrigatória antes do pagamento.
 - Se houver apenas 1 foto, são criados 3 movimentos diferentes dela.
 - Se houver 2 fotos, uma delas recebe uma segunda variação de movimento.
 - Saída: um vídeo final de aproximadamente 12 a 18 segundos.

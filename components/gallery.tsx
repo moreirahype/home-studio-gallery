@@ -41,6 +41,7 @@ export type GalleryOffer = {
   gallerySize: number;
   videoPrice: number;
   newShootPrice: number;
+  expressShootPrice: number;
 };
 
 export type GalleryPhoto = {
@@ -64,6 +65,7 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
   );
   const videoPrice = Math.max(0, offer?.videoPrice ?? 14.9);
   const newShootPrice = Math.max(0, offer?.newShootPrice ?? 7.9);
+  const expressShootPrice = Math.max(0, offer?.expressShootPrice ?? 4.9);
 
   return {
     includedPhotos,
@@ -71,6 +73,7 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     gallerySize,
     videoPrice,
     newShootPrice,
+    expressShootPrice,
   };
 }
 
@@ -118,11 +121,13 @@ function AddIcon() {
 
 export function Gallery({
   token,
+  expressOfferToken,
   offer: offerInput,
   galleryPhotos,
   testMode = false,
 }: {
   token: string;
+  expressOfferToken: string;
   offer?: Partial<GalleryOffer>;
   galleryPhotos?: GalleryPhoto[];
   testMode?: boolean;
@@ -144,6 +149,11 @@ export function Gallery({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [testPaymentApproved, setTestPaymentApproved] = useState(false);
   const [videoAdded, setVideoAdded] = useState(false);
+  const [videoPhotoIds, setVideoPhotoIds] = useState<string[]>([]);
+  const [videoPickerOpen, setVideoPickerOpen] = useState(false);
+  const [postPurchaseOffer, setPostPurchaseOffer] = useState<
+    "main" | "downsell"
+  >("main");
   const [pixReady, setPixReady] = useState(false);
   const [downloadLinks, setDownloadLinks] = useState<
     { photoId: string; number: number; url: string }[]
@@ -151,7 +161,7 @@ export function Gallery({
   const [checkoutError, setCheckoutError] = useState("");
   const [releasing, setReleasing] = useState(false);
   const videoPhotos = useMemo(() => {
-    const chosenPhotos = selected
+    const chosenPhotos = videoPhotoIds
       .map((photoId) => photos.find((photo) => photo.id === photoId))
       .filter((photo): photo is (typeof photos)[number] => Boolean(photo))
       .slice(0, 3);
@@ -162,7 +172,7 @@ export function Gallery({
       { length: 3 },
       (_, index) => chosenPhotos[index % chosenPhotos.length],
     );
-  }, [photos, selected]);
+  }, [photos, videoPhotoIds]);
 
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
@@ -215,11 +225,28 @@ export function Gallery({
     if (!selected.length) return;
     setTestPaymentApproved(false);
     setPixReady(false);
+    setVideoPhotoIds(selected.slice(0, 3));
+    setVideoPickerOpen(false);
+    setPostPurchaseOffer("main");
     setCheckoutOpen(true);
   }
 
   function approveTestPayment() {
+    setPostPurchaseOffer("main");
     setTestPaymentApproved(true);
+  }
+
+  function toggleVideoPhoto(id: string) {
+    setVideoPhotoIds((current) => {
+      if (current.includes(id)) {
+        return current.length === 1
+          ? current
+          : current.filter((photoId) => photoId !== id);
+      }
+
+      if (current.length === 3) return [...current.slice(1), id];
+      return [...current, id];
+    });
   }
 
   async function releaseIncludedPhotos() {
@@ -550,34 +577,65 @@ export function Gallery({
                     <small>Os links expiram em 15 minutos.</small>
                   </div>
                 )}
-                <div className="post-purchase-offer">
-                  <span>NOVO TEMA, NOVO ENSAIO</span>
-                  <strong>
-                    Crie 10 novas opções por{" "}
-                    {money.format(offer.newShootPrice)}
-                  </strong>
-                  <small>
-                    Escolha 1 foto incluída e leve outras que amar. É o mesmo
-                    formato simples deste ensaio, agora com um novo tema.
-                  </small>
-                  <button
-                    className="primary-button modal-primary"
-                    onClick={() => {
-                      setCheckoutOpen(false);
-                      window.location.href = `/novo?source=${token}`;
-                    }}
-                    type="button"
-                  >
-                    Quero um novo ensaio
-                  </button>
-                  <button
-                    className="text-button muted"
-                    onClick={() => setCheckoutOpen(false)}
-                    type="button"
-                  >
-                    Agora não
-                  </button>
-                </div>
+                {postPurchaseOffer === "main" ? (
+                  <div className="post-purchase-offer">
+                    <span>NOVO TEMA, NOVO ENSAIO</span>
+                    <strong>
+                      Crie 10 novas opções por{" "}
+                      {money.format(offer.newShootPrice)}
+                    </strong>
+                    <small>
+                      Escolha outro estilo, receba 10 novas fotos para escolher
+                      e leve 1 delas incluída.
+                    </small>
+                    <button
+                      className="primary-button modal-primary"
+                      onClick={() => {
+                        setCheckoutOpen(false);
+                        window.location.href = `/novo?source=${token}`;
+                      }}
+                      type="button"
+                    >
+                      Quero meu novo ensaio
+                    </button>
+                    <button
+                      className="text-button muted"
+                      onClick={() => setPostPurchaseOffer("downsell")}
+                      type="button"
+                    >
+                      Agora não
+                    </button>
+                  </div>
+                ) : (
+                  <div className="post-purchase-offer downsell-offer">
+                    <span>OFERTA ÚNICA DE AGORA</span>
+                    <strong>
+                      Que tal um ensaio express por{" "}
+                      {money.format(offer.expressShootPrice)}?
+                    </strong>
+                    <small>
+                      Receba 5 novas opções em outro tema e escolha 1 foto
+                      incluída. Esta condição fica disponível por 30 minutos.
+                    </small>
+                    <button
+                      className="primary-button modal-primary"
+                      onClick={() => {
+                        setCheckoutOpen(false);
+                        window.location.href = `/novo?source=${token}&offer=express&code=${encodeURIComponent(expressOfferToken)}`;
+                      }}
+                      type="button"
+                    >
+                      Sim, quero por {money.format(offer.expressShootPrice)}
+                    </button>
+                    <button
+                      className="text-button muted"
+                      onClick={() => setCheckoutOpen(false)}
+                      type="button"
+                    >
+                      Encerrar
+                    </button>
+                  </div>
+                )}
                 <PwaInstall projectToken={token} />
               </>
             ) : pixReady ? (
@@ -661,13 +719,64 @@ export function Gallery({
                     <small>
                       {selected.length === 1
                         ? "Sua foto ganhará 3 movimentos diferentes"
-                        : `Usaremos até ${Math.min(3, selected.length)} das fotos escolhidas`}
-                      . Você também poderá silenciar ou trocar a música ao
-                      publicar.
+                        : `Usaremos ${Math.min(3, videoPhotoIds.length)} das fotos escolhidas para criar as cenas`}
                     </small>
                   </span>
                   <strong>{money.format(offer.videoPrice)}</strong>
                 </button>
+                {videoAdded && selected.length > 1 && (
+                  <div className="video-photo-choice">
+                    <button
+                      className="text-button muted"
+                      onClick={() => setVideoPickerOpen((current) => !current)}
+                      type="button"
+                    >
+                      {videoPickerOpen
+                        ? "Concluir escolha"
+                        : "Alterar fotos usadas no vídeo"}
+                    </button>
+                    {videoPickerOpen && (
+                      <>
+                        <small>
+                          Escolha até 3 fotos. Já deixamos as primeiras
+                          selecionadas.
+                        </small>
+                        <div className="video-picker-grid">
+                          {selected.map((photoId) => {
+                            const photo = photos.find(
+                              (item) => item.id === photoId,
+                            );
+                            if (!photo) return null;
+                            const active = videoPhotoIds.includes(photoId);
+                            const tone =
+                              "tone" in photo &&
+                              typeof photo.tone === "number"
+                                ? photo.tone
+                                : 0;
+
+                            return (
+                              <button
+                                aria-label={`${active ? "Remover" : "Usar"} foto ${photo.number} no vídeo`}
+                                aria-pressed={active}
+                                className={active ? "selected" : ""}
+                                key={photo.id}
+                                onClick={() => toggleVideoPhoto(photo.id)}
+                                style={{
+                                  background: photo.previewUrl
+                                    ? `center / cover no-repeat url("${photo.previewUrl}")`
+                                    : `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
+                                }}
+                                type="button"
+                              >
+                                <span>{active ? "✓" : "+"}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="modal-total">
                   <span>
                     {pricing.dueNow > 0

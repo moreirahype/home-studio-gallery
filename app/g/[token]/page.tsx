@@ -1,5 +1,6 @@
 import { Gallery, type GalleryOffer } from "@/components/gallery";
 import { getProjectByToken } from "@/lib/projects";
+import { createExpressOfferToken } from "@/lib/offers";
 import { notFound } from "next/navigation";
 
 export default async function GalleryPage({
@@ -29,6 +30,8 @@ export default async function GalleryPage({
         gallerySize: project.generation_count,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 14.9,
         newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 7.9,
+        expressShootPrice:
+          Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,
       }
     : {
         paidAmount: Number(query.paidAmount) || 7.9,
@@ -36,10 +39,13 @@ export default async function GalleryPage({
         gallerySize: 15,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 14.9,
         newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 7.9,
+        expressShootPrice:
+          Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,
       };
 
   return (
     <Gallery
+      expressOfferToken={createExpressOfferToken(token)}
       galleryPhotos={project?.photos}
       offer={offer}
       testMode={query.test === "1"}

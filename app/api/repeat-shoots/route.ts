@@ -2,12 +2,15 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { verifyExpressOfferToken } from "@/lib/offers";
 
 const fieldsSchema = z.object({
   sourceToken: z.string().optional(),
   theme: z.string().min(2),
   occasion: z.string().max(240).optional(),
   styleNotes: z.string().max(1000).optional(),
+  offer: z.enum(["standard", "express"]).default("standard"),
+  offerToken: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -17,6 +20,8 @@ export async function POST(request: NextRequest) {
     theme: formData.get("theme")?.toString(),
     occasion: formData.get("occasion")?.toString(),
     styleNotes: formData.get("styleNotes")?.toString(),
+    offer: formData.get("offer")?.toString(),
+    offerToken: formData.get("offerToken")?.toString(),
   });
   const reference = formData.get("reference");
 
@@ -35,6 +40,21 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin();
+  const isExpress = parsed.data.offer === "express";
+  if (
+    isExpress &&
+    !verifyExpressOfferToken(
+      parsed.data.offerToken,
+      parsed.data.sourceToken,
+    )
+  ) {
+    return NextResponse.json(
+      { ok: false, error: "Esta oferta especial expirou." },
+      { status: 403 },
+    );
+  }
+  const photoCount = isExpress ? 5 : 10;
+  const paidAmountCents = isExpress ? 490 : 790;
   let sourceProjectId: string | null = null;
 
   if (parsed.data.sourceToken) {
@@ -70,9 +90,9 @@ export async function POST(request: NextRequest) {
     theme: parsed.data.theme,
     occasion: parsed.data.occasion || null,
     style_notes: parsed.data.styleNotes || null,
-    photo_count: 10,
+    photo_count: photoCount,
     included_photos: 1,
-    paid_amount_cents: 790,
+    paid_amount_cents: paidAmountCents,
     status: "pending_payment",
   });
 
@@ -87,8 +107,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     repeatShootId: requestId,
-    amount: 7.9,
-    photoCount: 10,
+    amount: paidAmountCents / 100,
+    photoCount,
     includedPhotos: 1,
     status: "pending_payment",
   });

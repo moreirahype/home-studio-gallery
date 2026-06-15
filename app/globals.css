@@ -832,6 +832,62 @@ p {
     #f8eee7;
 }
 
+.downsell-offer {
+  border-color: rgb(189 139 70 / 48%);
+  background:
+    radial-gradient(circle at 90% 0, rgb(189 139 70 / 28%), transparent 42%),
+    #f7eadb;
+}
+
+.video-photo-choice {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin: -5px 0 16px;
+}
+
+.video-photo-choice > small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.video-picker-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.video-picker-grid > button {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.video-picker-grid > button.selected {
+  border-color: var(--accent);
+}
+
+.video-picker-grid > button span {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(23 19 16 / 72%);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
 .post-purchase-offer > span {
   color: var(--accent);
   font-size: 0.61rem;

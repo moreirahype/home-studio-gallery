@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PwaInstall } from "@/components/pwa-install";
 
+const money = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
 const themes = [
   "Profissional",
   "Luxo",
@@ -13,7 +18,17 @@ const themes = [
   "Aniversário",
 ];
 
-export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
+export function NewShootForm({
+  sourceToken,
+  expressOffer = false,
+  offerToken,
+}: {
+  sourceToken?: string;
+  expressOffer?: boolean;
+  offerToken?: string;
+}) {
+  const photoCount = expressOffer ? 5 : 10;
+  const price = expressOffer ? 4.9 : 7.9;
   const [theme, setTheme] = useState("");
   const [occasion, setOccasion] = useState("");
   const [style, setStyle] = useState("");
@@ -45,6 +60,8 @@ export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
     formData.set("theme", theme);
     formData.set("occasion", occasion);
     formData.set("styleNotes", style);
+    formData.set("offer", expressOffer ? "express" : "standard");
+    if (offerToken) formData.set("offerToken", offerToken);
     if (sourceToken) formData.set("sourceToken", sourceToken);
 
     const response = await fetch("/api/repeat-shoots", {
@@ -70,8 +87,8 @@ export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
           <span className="modal-badge success">Pedido preparado</span>
           <h1>Seu próximo ensaio começa aqui.</h1>
           <p>
-            Na integração final, o pagamento de R$ 7,90 iniciará a geração de
-            10 opções. Quando
+            Na integração final, o pagamento de {money.format(price)} iniciará
+            a geração de {photoCount} opções. Quando
             ficarem prontas, você escolhe 1 foto incluída e pode levar outras
             que gostar.
           </p>
@@ -98,7 +115,9 @@ export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
       </nav>
 
       <header className="new-shoot-hero">
-        <span className="eyebrow">10 OPÇÕES E 1 FOTO INCLUÍDA POR R$ 7,90</span>
+        <span className="eyebrow">
+          {photoCount} OPÇÕES E 1 FOTO INCLUÍDA POR {money.format(price)}
+        </span>
         <h1>Como você quer aparecer no seu próximo ensaio?</h1>
         <p>
           Não precisa saber escrever prompt. Conte do seu jeito e nós
@@ -168,10 +187,10 @@ export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
 
         <div className="new-shoot-total">
           <div>
-            <strong>10 opções, 1 foto incluída</strong>
+            <strong>{photoCount} opções, 1 foto incluída</strong>
             <span>Outras fotos são opcionais</span>
           </div>
-          <strong>R$ 7,90</strong>
+          <strong>{money.format(price)}</strong>
         </div>
 
         <button
