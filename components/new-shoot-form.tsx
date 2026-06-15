@@ -70,8 +70,10 @@ export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
           <span className="modal-badge success">Pedido preparado</span>
           <h1>Seu próximo ensaio começa aqui.</h1>
           <p>
-            Na integração final, o pagamento de R$ 29,90 iniciará a geração de
-            10 fotos completas e liberadas, sem nova seleção paga.
+            Na integração final, o pagamento de R$ 7,90 iniciará a geração de
+            10 opções. Quando
+            ficarem prontas, você escolhe 1 foto incluída e pode levar outras
+            que gostar.
           </p>
           <PwaInstall />
           <button
@@ -96,7 +98,7 @@ export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
       </nav>
 
       <header className="new-shoot-hero">
-        <span className="eyebrow">10 FOTOS COMPLETAS POR R$ 29,90</span>
+        <span className="eyebrow">10 OPÇÕES E 1 FOTO INCLUÍDA POR R$ 7,90</span>
         <h1>Como você quer aparecer no seu próximo ensaio?</h1>
         <p>
           Não precisa saber escrever prompt. Conte do seu jeito e nós
@@ -166,10 +168,10 @@ export function NewShootForm({ sourceToken }: { sourceToken?: string }) {
 
         <div className="new-shoot-total">
           <div>
-            <strong>10 fotos liberadas</strong>
-            <span>Novo tema, sem mensalidade</span>
+            <strong>10 opções, 1 foto incluída</strong>
+            <span>Outras fotos são opcionais</span>
           </div>
-          <strong>R$ 29,90</strong>
+          <strong>R$ 7,90</strong>
         </div>
 
         <button

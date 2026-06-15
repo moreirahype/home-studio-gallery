@@ -86,7 +86,7 @@ Resposta esperada:
 - Plano centralizado com 20 variações reais de cena e composição
 - Contrato para registrar somente upsells aprovados no Home Studio BI
 - Oferta complementar de vídeo no checkout
-- Oferta pós-compra de um novo ensaio completo com 10 fotos
+- Oferta pós-compra de um novo ensaio com 10 opções e 1 foto incluída
 - Instalação como PWA no Android e iPhone
 - Notificações de recompra programadas
 - Formulário amigável para enviar referência e descrever um novo tema
@@ -143,7 +143,7 @@ Os R$ 7,90 são apenas a oferta padrão. `paidAmount`, `includedPhotos` e
 pelo ZapData passam a ser a fonte oficial para calcular o crédito e escalar a
 curva de desconto de cada cliente.
 
-O vídeo vertical custa R$ 14,90 por padrão e o novo ensaio custa R$ 29,90.
+O vídeo vertical custa R$ 14,90 por padrão e o novo ensaio custa R$ 7,90.
 Esses valores podem ser alterados com `VIDEO_UPSELL_PRICE` e
 `NEW_SHOOT_UPSELL_PRICE`.
 

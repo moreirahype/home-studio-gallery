@@ -56,7 +56,7 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     ),
   );
   const videoPrice = Math.max(0, offer?.videoPrice ?? 14.9);
-  const newShootPrice = Math.max(0, offer?.newShootPrice ?? 29.9);
+  const newShootPrice = Math.max(0, offer?.newShootPrice ?? 7.9);
 
   return {
     includedPhotos,
@@ -459,11 +459,12 @@ export function Gallery({
                 <div className="post-purchase-offer">
                   <span>NOVO TEMA, NOVO ENSAIO</span>
                   <strong>
-                    Leve 10 novas fotos por {money.format(offer.newShootPrice)}
+                    Crie 10 novas opções por{" "}
+                    {money.format(offer.newShootPrice)}
                   </strong>
                   <small>
-                    Envie uma referência, descreva o que deseja de forma simples
-                    e receba o ensaio completo.
+                    Escolha 1 foto incluída e leve outras que amar. É o mesmo
+                    formato simples deste ensaio, agora com um novo tema.
                   </small>
                   <button
                     className="primary-button modal-primary"
@@ -519,10 +520,10 @@ export function Gallery({
                     ? "Deixe suas fotos ainda mais marcantes."
                     : `${selected.length} fotos selecionadas`}
                 </h2>
-                <p>
-                  Adicione um vídeo vertical pronto para Reels, Stories e
-                  WhatsApp usando as fotos que você escolheu.
-                </p>
+                  <p>
+                  Receba um único Reel vertical de aproximadamente 12 a 15
+                  segundos, pronto para Reels, Stories e WhatsApp.
+                  </p>
                 <button
                   aria-pressed={videoAdded}
                   className={`addon-card ${videoAdded ? "selected" : ""}`}
@@ -530,10 +531,13 @@ export function Gallery({
                   type="button"
                 >
                   <span className="addon-check">{videoAdded ? "✓" : "+"}</span>
-                  <span className="addon-copy">
-                    <strong>Transformar em vídeo</strong>
+                    <span className="addon-copy">
+                    <strong>Transformar em um Reel</strong>
                     <small>
-                      Edição automática com movimento, música e formato vertical
+                      {selected.length === 1
+                        ? "Criamos 3 movimentos diferentes da foto selecionada"
+                        : `Usamos as ${Math.min(3, selected.length)} primeiras fotos selecionadas`}
+                      , com música e transições
                     </small>
                   </span>
                   <strong>{money.format(offer.videoPrice)}</strong>

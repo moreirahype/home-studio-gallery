@@ -23,11 +23,23 @@ create table if not exists public.repeat_shoots (
   occasion text,
   style_notes text,
   photo_count smallint not null default 10 check (photo_count between 1 and 20),
+  included_photos smallint not null default 1
+    check (included_photos between 1 and 20),
+  paid_amount_cents integer not null default 790
+    check (paid_amount_cents > 0),
   status text not null default 'draft'
     check (status in ('draft', 'pending_payment', 'paid', 'generating', 'ready', 'failed')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.repeat_shoots
+  add column if not exists included_photos smallint not null default 1
+  check (included_photos between 1 and 20);
+
+alter table public.repeat_shoots
+  add column if not exists paid_amount_cents integer not null default 790
+  check (paid_amount_cents > 0);
 
 create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),

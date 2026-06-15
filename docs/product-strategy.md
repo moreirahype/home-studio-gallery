@@ -10,13 +10,13 @@
    - Um Reel final.
    - Usa até 3 fotos escolhidas pelo cliente.
    - Cada foto vira um clipe curto; os clipes são unidos com transições.
-3. Pós-compra: novo ensaio completo por R$ 29,90
-   - 10 fotos liberadas.
+3. Pós-compra: novo ensaio por R$ 7,90
+   - 10 opções e 1 foto incluída.
    - Novo tema e nova referência opcional.
-   - Não repete o upsell foto a foto.
+   - Repete o upsell de fotos adicionais.
    - Pode receber novamente a oferta de vídeo.
 4. Recompra pelo PWA
-   - Novo ensaio completo por R$ 29,90.
+   - Novo ensaio com 10 opções por R$ 7,90.
    - Primeiro lembrete 7 dias após a ativação.
    - Próximos lembretes a cada 14 dias.
 
@@ -24,7 +24,9 @@
 
 - Modelo inicial: `bytedance/v1-pro-fast-image-to-video`.
 - Formato: vertical 9:16.
-- Entrada: até 3 fotos selecionadas.
+- Entrada: as primeiras 3 fotos selecionadas.
+- Se houver apenas 1 foto, são criados 3 movimentos diferentes dela.
+- Se houver 2 fotos, uma delas recebe uma segunda variação de movimento.
 - Saída: um vídeo final de aproximadamente 12 a 18 segundos.
 - Gerações: até 3 clipes curtos em paralelo.
 - Prazo comercial sugerido: até 15 minutos.
@@ -60,7 +62,7 @@ Medir separadamente:
 Primeiro teste recomendado:
 
 - vídeo: R$ 14,90 versus R$ 19,90;
-- novo ensaio: R$ 29,90 fixo;
+- novo ensaio: R$ 7,90 fixo;
 - não alterar simultaneamente o preço de entrada;
 - escolher o vencedor por margem por 100 compradores, não apenas por taxa de
   conversão do complemento.

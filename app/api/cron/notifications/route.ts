@@ -6,7 +6,7 @@ import { safeCompare } from "@/lib/security";
 const campaigns = [
   {
     title: "Seu próximo ensaio pode ser completamente diferente",
-    body: "Escolha um novo tema e receba 10 fotos completas por R$ 29,90.",
+    body: "Escolha um novo tema, receba 10 opções e leve 1 foto por R$ 7,90.",
   },
   {
     title: "Uma nova versão sua está esperando",
@@ -14,7 +14,7 @@ const campaigns = [
   },
   {
     title: "Fotos novas para o seu perfil",
-    body: "Crie 10 imagens em um novo tema sem sair de casa.",
+    body: "Crie 10 opções em um novo tema e escolha sua favorita.",
   },
 ];
 

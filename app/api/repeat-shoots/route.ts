@@ -71,6 +71,8 @@ export async function POST(request: NextRequest) {
     occasion: parsed.data.occasion || null,
     style_notes: parsed.data.styleNotes || null,
     photo_count: 10,
+    included_photos: 1,
+    paid_amount_cents: 790,
     status: "pending_payment",
   });
 
@@ -85,8 +87,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     repeatShootId: requestId,
-    amount: 29.9,
+    amount: 7.9,
     photoCount: 10,
+    includedPhotos: 1,
     status: "pending_payment",
   });
 }
