@@ -290,7 +290,7 @@ export function Gallery({
               />
               <span className="photo-shade" />
               <span className="watermark-pattern" aria-hidden="true">
-                {Array.from({ length: 5 }, (_, index) => (
+                {Array.from({ length: 12 }, (_, index) => (
                   <span key={index}>HOME STUDIO</span>
                 ))}
               </span>

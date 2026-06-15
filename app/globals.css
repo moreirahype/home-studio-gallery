@@ -441,40 +441,28 @@ p {
   position: absolute;
   z-index: 1;
   inset: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  align-items: center;
+  justify-items: center;
   pointer-events: none;
   overflow: hidden;
 }
 
 .watermark-pattern span {
-  position: absolute;
-  left: 50%;
   color: rgb(255 255 255 / 42%);
-  font-size: clamp(0.58rem, 0.9vw, 0.76rem);
+  font-size: clamp(0.44rem, 0.72vw, 0.68rem);
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 20%));
-  transform: translate(-50%, -50%) rotate(-28deg);
+  transform: rotate(-28deg);
   white-space: nowrap;
 }
 
-.watermark-pattern span:nth-child(1) {
-  top: 12%;
-}
-
-.watermark-pattern span:nth-child(2) {
-  top: 30%;
-}
-
-.watermark-pattern span:nth-child(3) {
-  top: 48%;
-}
-
-.watermark-pattern span:nth-child(4) {
-  top: 66%;
-}
-
-.watermark-pattern span:nth-child(5) {
-  top: 84%;
+.watermark-pattern span:nth-child(4n + 2),
+.watermark-pattern span:nth-child(4n + 3) {
+  transform: translateY(42%) rotate(-28deg);
 }
 
 .photo-number,
