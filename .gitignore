@@ -4,6 +4,7 @@ out
 .env
 .env.local
 .env.*.local
+.generation-secret.tmp
 npm-debug.log*
 .DS_Store
 
