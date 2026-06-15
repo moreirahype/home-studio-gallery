@@ -40,6 +40,7 @@ export default async function GalleryPage({
 
   return (
     <Gallery
+      galleryPhotos={project?.photos}
       offer={offer}
       testMode={query.test === "1"}
       token={token}

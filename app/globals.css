@@ -382,6 +382,25 @@ p {
   gap: 12px;
 }
 
+.gallery-processing {
+  grid-column: 1 / -1;
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  padding: 35px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--cream);
+  text-align: center;
+}
+
+.gallery-processing p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
 .photo-card {
   position: relative;
   aspect-ratio: 4 / 5;

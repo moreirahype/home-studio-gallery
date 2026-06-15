@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { unauthorized } from "@/lib/http";
+import { startProjectGeneration } from "@/lib/generation";
 import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -143,6 +144,40 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let generation:
+    | { started: { photoId: string; position: number; taskId: string }[]; failed: number }
+    | undefined;
+  const canAutoGenerate =
+    process.env.KIE_AUTO_GENERATE === "true" &&
+    Boolean(receivedSourceImage) &&
+    Boolean(receivedContext);
+
+  if (canAutoGenerate) {
+    try {
+      generation = await startProjectGeneration({
+        projectId,
+        appUrl,
+      });
+    } catch (error) {
+      await supabase
+        .from("projects")
+        .update({ status: "failed" })
+        .eq("id", projectId);
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Falha ao iniciar as imagens.",
+          projectId,
+          galleryUrl: galleryUrl.toString(),
+        },
+        { status: 502 },
+      );
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     projectId,
@@ -150,6 +185,8 @@ export async function POST(request: NextRequest) {
     galleryUrl: galleryUrl.toString(),
     testMode: isTestMode,
     includedPhotos: parsed.data.includedPhotos,
+    generationStarted: Boolean(generation?.started.length),
+    generationTasks: generation?.started.length ?? 0,
     generationPlan: {
       count: generationPrompts.length,
       nicheId,

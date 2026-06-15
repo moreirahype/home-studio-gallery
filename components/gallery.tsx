@@ -12,6 +12,7 @@ const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
   id: `photo-${index + 1}`,
   number: index + 1,
   tone: (index * 19 + 8) % 360,
+  previewUrl: "",
 }));
 
 // Canonical curve for the default R$ 7,90 / 1-photo offer.
@@ -40,6 +41,12 @@ export type GalleryOffer = {
   gallerySize: number;
   videoPrice: number;
   newShootPrice: number;
+};
+
+export type GalleryPhoto = {
+  id: string;
+  number: number;
+  previewUrl: string;
 };
 
 function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
@@ -112,10 +119,12 @@ function AddIcon() {
 export function Gallery({
   token,
   offer: offerInput,
+  galleryPhotos,
   testMode = false,
 }: {
   token: string;
   offer?: Partial<GalleryOffer>;
+  galleryPhotos?: GalleryPhoto[];
   testMode?: boolean;
 }) {
   const offer = useMemo(() => normalizeOffer(offerInput), [offerInput]);
@@ -125,8 +134,11 @@ export function Gallery({
     [offer.gallerySize, offer.includedPhotos],
   );
   const photos = useMemo(
-    () => samplePhotos.slice(0, offer.gallerySize),
-    [offer.gallerySize],
+    () =>
+      galleryPhotos === undefined
+        ? samplePhotos.slice(0, offer.gallerySize)
+        : galleryPhotos,
+    [galleryPhotos, offer.gallerySize],
   );
   const [selected, setSelected] = useState<string[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -226,7 +238,12 @@ export function Gallery({
         </div>
         <div className="gallery-status">
           <span>{token === "demo" ? "Galeria demonstrativa" : "Sua galeria"}</span>
-          <strong>{offer.gallerySize} fotos disponíveis</strong>
+          <strong>
+            {galleryPhotos === undefined
+              ? offer.gallerySize
+              : galleryPhotos.length}{" "}
+            fotos disponíveis
+          </strong>
           <small>
             Crédito de {money.format(offer.paidAmount)} já reconhecido
           </small>
@@ -314,9 +331,21 @@ export function Gallery({
       </div>
 
       <section className="photo-grid" aria-label="Fotos disponíveis">
+        {galleryPhotos !== undefined && photos.length === 0 && (
+          <div className="gallery-processing">
+            <span className="status-dot" />
+            <strong>Estamos preparando seu ensaio.</strong>
+            <p>
+              As fotos aparecerão aqui conforme forem finalizadas. Você pode
+              voltar usando este mesmo link.
+            </p>
+          </div>
+        )}
         {photos.map((photo) => {
           const selectionPosition = selected.indexOf(photo.id);
           const isSelected = selectionPosition >= 0;
+          const tone =
+            "tone" in photo && typeof photo.tone === "number" ? photo.tone : 0;
 
           return (
             <button
@@ -330,7 +359,9 @@ export function Gallery({
               <span
                 className="photo-placeholder"
                 style={{
-                  background: `linear-gradient(145deg, hsl(${photo.tone} 34% 25%), hsl(${photo.tone + 42} 46% 68%))`,
+                  background: photo.previewUrl
+                    ? `center / cover no-repeat url("${photo.previewUrl}")`
+                    : `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
                 }}
               />
               <span className="photo-shade" />
