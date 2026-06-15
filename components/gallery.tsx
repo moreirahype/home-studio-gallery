@@ -145,6 +145,11 @@ export function Gallery({
   const [testPaymentApproved, setTestPaymentApproved] = useState(false);
   const [videoAdded, setVideoAdded] = useState(false);
   const [pixReady, setPixReady] = useState(false);
+  const [downloadLinks, setDownloadLinks] = useState<
+    { photoId: string; number: number; url: string }[]
+  >([]);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [releasing, setReleasing] = useState(false);
 
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
@@ -204,13 +209,42 @@ export function Gallery({
     setTestPaymentApproved(true);
   }
 
-  function continueCheckout() {
+  async function releaseIncludedPhotos() {
+    if (token === "demo") {
+      approveTestPayment();
+      return;
+    }
+
+    setReleasing(true);
+    setCheckoutError("");
+    const response = await fetch("/api/downloads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ galleryToken: token, photoIds: selected }),
+    });
+    const result = (await response.json()) as {
+      ok: boolean;
+      error?: string;
+      downloads?: { photoId: string; number: number; url: string }[];
+    };
+    setReleasing(false);
+
+    if (!response.ok || !result.ok || !result.downloads) {
+      setCheckoutError(result.error ?? "Não foi possível liberar as fotos.");
+      return;
+    }
+
+    setDownloadLinks(result.downloads);
+    setTestPaymentApproved(true);
+  }
+
+  async function continueCheckout() {
     if (checkoutAmount > 0) {
       setPixReady(true);
       return;
     }
 
-    approveTestPayment();
+    await releaseIncludedPhotos();
   }
 
   return (
@@ -465,7 +499,7 @@ export function Gallery({
               ×
             </button>
 
-            {!testMode ? (
+            {!testMode && checkoutAmount > 0 ? (
               <>
                 <span className="modal-badge warning">Integração pendente</span>
                 <h2 id="checkout-title">Pagamento em configuração.</h2>
@@ -489,6 +523,20 @@ export function Gallery({
                   Os arquivos escolhidos ficarão disponíveis para download e o
                   vídeo será produzido quando estiver no pedido.
                 </p>
+                {downloadLinks.length > 0 && (
+                  <div className="download-list">
+                    {downloadLinks.map((download) => (
+                      <a
+                        className="primary-button"
+                        href={download.url}
+                        key={download.photoId}
+                      >
+                        Baixar foto {String(download.number).padStart(2, "0")}
+                      </a>
+                    ))}
+                    <small>Os links expiram em 15 minutos.</small>
+                  </div>
+                )}
                 <div className="post-purchase-offer">
                   <span>NOVO TEMA, NOVO ENSAIO</span>
                   <strong>
@@ -589,13 +637,17 @@ export function Gallery({
                 </div>
                 <button
                   className="primary-button modal-primary"
+                  disabled={releasing}
                   onClick={continueCheckout}
                   type="button"
                 >
-                  {checkoutAmount > 0
+                  {releasing
+                    ? "Liberando..."
+                    : checkoutAmount > 0
                     ? "Continuar para o Pix"
                     : "Liberar minhas fotos"}
                 </button>
+                {checkoutError && <p className="form-error">{checkoutError}</p>}
               </>
             )}
           </section>

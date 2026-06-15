@@ -791,6 +791,21 @@ p {
   justify-self: center;
 }
 
+.download-list {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.download-list .primary-button {
+  min-height: 48px;
+}
+
+.download-list small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
 .install-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
