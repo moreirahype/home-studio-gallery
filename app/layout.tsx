@@ -13,8 +13,23 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Home Studio | Sua galeria",
-  description: "Escolha suas fotos favoritas e receba os arquivos em alta resolução.",
+  applicationName: "Home Studio",
+  title: {
+    default: "Home Studio | Ensaios com IA",
+    template: "%s | Home Studio",
+  },
+  description:
+    "Crie ensaios fotográficos com IA, escolha suas fotos e transforme-as em vídeos.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Home Studio",
+  },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

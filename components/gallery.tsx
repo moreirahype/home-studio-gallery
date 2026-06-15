@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PwaInstall } from "@/components/pwa-install";
 
 const MAX_PHOTOS = 20;
 const DEFAULT_GALLERY_SIZE = 15;
@@ -54,7 +55,7 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
       Math.round(offer?.gallerySize ?? DEFAULT_GALLERY_SIZE),
     ),
   );
-  const videoPrice = Math.max(0, offer?.videoPrice ?? 19.9);
+  const videoPrice = Math.max(0, offer?.videoPrice ?? 14.9);
   const newShootPrice = Math.max(0, offer?.newShootPrice ?? 29.9);
 
   return {
@@ -131,10 +132,6 @@ export function Gallery({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [testPaymentApproved, setTestPaymentApproved] = useState(false);
   const [videoAdded, setVideoAdded] = useState(false);
-  const [checkoutMode, setCheckoutMode] = useState<"photos" | "new-shoot">(
-    "photos",
-  );
-  const [newShootPurchased, setNewShootPurchased] = useState(false);
   const [pixReady, setPixReady] = useState(false);
 
   function getPricing(count: number) {
@@ -170,9 +167,7 @@ export function Gallery({
   const selectionIsIncluded =
     selected.length > 0 && selected.length <= offer.includedPhotos;
   const checkoutAmount =
-    checkoutMode === "new-shoot"
-      ? offer.newShootPrice
-      : pricing.dueNow + (videoAdded ? offer.videoPrice : 0);
+    pricing.dueNow + (videoAdded ? offer.videoPrice : 0);
 
   function togglePhoto(id: string) {
     setSelected((current) =>
@@ -188,23 +183,12 @@ export function Gallery({
 
   function handlePrimaryAction() {
     if (!selected.length) return;
-    setCheckoutMode("photos");
     setTestPaymentApproved(false);
     setPixReady(false);
     setCheckoutOpen(true);
   }
 
-  function startNewShootCheckout() {
-    setCheckoutMode("new-shoot");
-    setTestPaymentApproved(false);
-    setPixReady(true);
-  }
-
   function approveTestPayment() {
-    if (checkoutMode === "new-shoot") {
-      setNewShootPurchased(true);
-    }
-
     setTestPaymentApproved(true);
   }
 
@@ -467,63 +451,47 @@ export function Gallery({
             ) : testPaymentApproved ? (
               <>
                 <span className="modal-badge success">Pagamento aprovado</span>
-                {newShootPurchased ? (
-                  <>
-                    <h2 id="checkout-title">Seu novo ensaio foi reservado.</h2>
-                    <p>
-                      O próximo passo será escolher um novo tema pelo WhatsApp,
-                      usando a mesma foto de referência.
-                    </p>
-                    <button
-                      className="primary-button modal-primary"
-                      onClick={() => setCheckoutOpen(false)}
-                      type="button"
-                    >
-                      Concluir
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <h2 id="checkout-title">Suas fotos foram liberadas.</h2>
-                    <p>
-                      Os arquivos escolhidos ficarão disponíveis para download
-                      e o vídeo será produzido quando estiver no pedido.
-                    </p>
-                    <div className="post-purchase-offer">
-                      <span>NOVO TEMA, NOVO ENSAIO</span>
-                      <strong>
-                        Crie outra coleção por {money.format(offer.newShootPrice)}
-                      </strong>
-                      <small>
-                        Aproveite a mesma referência e escolha uma proposta
-                        completamente diferente.
-                      </small>
-                      <button
-                        className="primary-button modal-primary"
-                        onClick={startNewShootCheckout}
-                        type="button"
-                      >
-                        Quero um novo ensaio
-                      </button>
-                      <button
-                        className="text-button muted"
-                        onClick={() => setCheckoutOpen(false)}
-                        type="button"
-                      >
-                        Agora não
-                      </button>
-                    </div>
-                  </>
-                )}
+                <h2 id="checkout-title">Suas fotos foram liberadas.</h2>
+                <p>
+                  Os arquivos escolhidos ficarão disponíveis para download e o
+                  vídeo será produzido quando estiver no pedido.
+                </p>
+                <div className="post-purchase-offer">
+                  <span>NOVO TEMA, NOVO ENSAIO</span>
+                  <strong>
+                    Leve 10 novas fotos por {money.format(offer.newShootPrice)}
+                  </strong>
+                  <small>
+                    Envie uma referência, descreva o que deseja de forma simples
+                    e receba o ensaio completo.
+                  </small>
+                  <button
+                    className="primary-button modal-primary"
+                    onClick={() => {
+                      setCheckoutOpen(false);
+                      window.location.href = `/novo?source=${token}`;
+                    }}
+                    type="button"
+                  >
+                    Quero um novo ensaio
+                  </button>
+                  <button
+                    className="text-button muted"
+                    onClick={() => setCheckoutOpen(false)}
+                    type="button"
+                  >
+                    Agora não
+                  </button>
+                </div>
+                <PwaInstall projectToken={token} />
               </>
             ) : pixReady ? (
               <>
                 <span className="modal-badge warning">Simulação de Pix</span>
                 <h2 id="checkout-title">{money.format(checkoutAmount)}</h2>
                 <p>
-                  {checkoutMode === "new-shoot"
-                    ? "Este Pix confirma um segundo ensaio com outro tema."
-                    : "Em produção, o QR Code e o Pix Copia e Cola serão gerados pelo Mercado Pago."}
+                  Em produção, o QR Code e o Pix Copia e Cola serão gerados pelo
+                  Mercado Pago.
                 </p>
                 <div className="fake-pix-code" aria-hidden="true">
                   <span />

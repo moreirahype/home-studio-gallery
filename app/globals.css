@@ -772,6 +772,239 @@ p {
   justify-self: center;
 }
 
+.install-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  text-align: left;
+}
+
+.install-card.compact {
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+
+.install-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--font-display), serif;
+  font-weight: 700;
+}
+
+.install-card strong,
+.install-card span {
+  display: block;
+}
+
+.install-card p {
+  margin: 3px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.install-card small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.install-card .primary-button {
+  grid-column: 1 / -1;
+  min-height: 46px;
+}
+
+.new-shoot-shell {
+  min-height: 100vh;
+  padding: 0 max(20px, calc((100vw - 920px) / 2)) 80px;
+  background:
+    radial-gradient(circle at 92% 8%, rgb(189 139 70 / 20%), transparent 28%),
+    radial-gradient(circle at 8% 60%, rgb(163 67 46 / 12%), transparent 30%),
+    var(--paper);
+}
+
+.new-shoot-hero {
+  padding: clamp(54px, 9vw, 94px) 0 38px;
+}
+
+.new-shoot-hero h1,
+.success-state h1 {
+  max-width: 760px;
+  font-size: clamp(2.8rem, 8vw, 5.2rem);
+}
+
+.new-shoot-hero p {
+  margin-bottom: 0;
+}
+
+.new-shoot-card {
+  display: grid;
+  gap: 25px;
+  padding: clamp(24px, 5vw, 46px);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: rgb(255 253 248 / 92%);
+  box-shadow: 0 24px 80px rgb(54 39 29 / 9%);
+}
+
+.new-shoot-card.success-state {
+  max-width: 700px;
+  margin: 70px auto 0;
+  text-align: center;
+}
+
+.new-shoot-card.success-state h1,
+.new-shoot-card.success-state p {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.upload-field {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 22px;
+  border: 1px dashed rgb(163 67 46 / 45%);
+  border-radius: 18px;
+  background: #fbf3ed;
+  cursor: pointer;
+}
+
+.upload-field span,
+.theme-fieldset legend,
+.text-field span {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.upload-field small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.upload-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.theme-fieldset {
+  padding: 0;
+  border: 0;
+}
+
+.theme-fieldset legend {
+  margin-bottom: 12px;
+}
+
+.theme-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theme-options button {
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.theme-options button.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.text-field {
+  display: grid;
+  gap: 9px;
+}
+
+.text-field input,
+.text-field textarea {
+  width: 100%;
+  padding: 14px 15px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.prompt-preview {
+  padding: 17px;
+  border-left: 3px solid var(--gold);
+  background: #f2eadf;
+}
+
+.prompt-preview span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.prompt-preview p {
+  margin: 5px 0 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.new-shoot-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.new-shoot-total div strong,
+.new-shoot-total div span {
+  display: block;
+}
+
+.new-shoot-total div span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.new-shoot-total > strong {
+  font-family: var(--font-display), serif;
+  font-size: 1.7rem;
+}
+
+.new-shoot-submit {
+  width: 100%;
+}
+
+.form-error {
+  margin: -12px 0 0;
+  color: #9a3025;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .fake-pix-code {
   position: relative;
   display: grid;
