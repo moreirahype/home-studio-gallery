@@ -648,6 +648,130 @@ p {
   width: 100%;
 }
 
+.addon-card {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 18px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #f8f2e9;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.addon-card:hover {
+  transform: translateY(-1px);
+}
+
+.addon-card.selected {
+  border-color: var(--accent);
+  background: #f7e8e2;
+  box-shadow: 0 0 0 2px rgb(163 67 46 / 9%);
+}
+
+.addon-check {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  font-weight: 900;
+}
+
+.addon-card.selected .addon-check {
+  background: var(--accent);
+}
+
+.addon-copy strong,
+.addon-copy small {
+  display: block;
+}
+
+.addon-copy strong {
+  margin-bottom: 3px;
+  font-size: 0.82rem;
+}
+
+.addon-copy small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.addon-card > strong {
+  font-family: var(--font-display), serif;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.modal-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.modal-total span {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.modal-total strong {
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+.post-purchase-offer {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid rgb(163 67 46 / 22%);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 90% 0, rgb(189 139 70 / 18%), transparent 42%),
+    #f8eee7;
+}
+
+.post-purchase-offer > span {
+  color: var(--accent);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.post-purchase-offer > strong {
+  font-family: var(--font-display), serif;
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+
+.post-purchase-offer > small {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.post-purchase-offer .text-button {
+  justify-self: center;
+}
+
 .fake-pix-code {
   position: relative;
   display: grid;

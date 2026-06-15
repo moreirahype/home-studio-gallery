@@ -5,9 +5,9 @@ automática dos arquivos comprados.
 
 ## Fluxo planejado
 
-1. O ZapData valida o comprovante da compra inicial de R$ 4,90.
+1. O ZapData valida o comprovante da compra inicial.
 2. O ZapData chama `POST /api/webhooks/zapdata`.
-3. O backend cria o projeto e agenda 20 gerações no Kie.ai.
+3. O backend cria o projeto e agenda as gerações configuradas no Kie.ai.
 4. O callback do Kie.ai envia os resultados para `POST /api/webhooks/kie`.
 5. O backend armazena os originais de forma privada e gera prévias com marca d'água.
 6. O cliente escolhe as fotos na galeria.
@@ -48,7 +48,8 @@ Use um único bloco HTTP depois da aprovação do OCR. Envie
   "contexto_final": "Ensaio profissional em estúdio",
   "nicheId": "executivo",
   "includedPhotos": 1,
-  "paidAmount": 4.90
+  "paidAmount": 7.90,
+  "generationCount": 15
 }
 ```
 
@@ -75,7 +76,7 @@ Resposta esperada:
 ## Estado atual
 
 - Galeria responsiva e mobile-first
-- Seleção numerada de até 20 fotos
+- Seleção numerada de até 20 fotos, com 15 por padrão
 - Desconto progressivo aplicado automaticamente
 - Incentivo contextual para o próximo pacote
 - Resumo fixo com economia, desconto e valor por foto
@@ -84,12 +85,14 @@ Resposta esperada:
 - Um único webhook atende todos os nichos usando `contexto_final`
 - Plano centralizado com 20 variações reais de cena e composição
 - Contrato para registrar somente upsells aprovados no Home Studio BI
+- Oferta complementar de vídeo no checkout
+- Oferta pós-compra de um novo ensaio com outro tema
 - Persistência, geração real, marca d'água e Pix ainda serão conectados
 
 ## Home Studio BI
 
 Somente o valor pago dentro da galeria deve ser enviado ao BI depois que o
-Mercado Pago retornar o pagamento como aprovado. A entrada de R$ 4,90 continua
+Mercado Pago retornar o pagamento como aprovado. A entrada do front continua
 chegando pelo fluxo atual e não é repetida.
 
 As transações são registradas com:
@@ -121,18 +124,22 @@ duplicam o faturamento.
 
 | Quantidade | Total | Valor médio |
 | --- | ---: | ---: |
-| 1 foto | R$ 4,90 | R$ 4,90 |
-| 3 fotos | R$ 13,90 | R$ 4,63 |
-| 5 fotos | R$ 21,90 | R$ 4,38 |
-| 10 fotos | R$ 39,90 | R$ 3,99 |
-| 15 fotos | R$ 54,90 | R$ 3,66 |
-| 20 fotos | R$ 69,90 | R$ 3,50 |
+| 1 foto | R$ 7,90 | R$ 7,90 |
+| 3 fotos | R$ 22,80 | R$ 7,60 |
+| 5 fotos | R$ 32,80 | R$ 6,56 |
+| 10 fotos | R$ 52,80 | R$ 5,28 |
+| 15 fotos | R$ 67,80 | R$ 4,52 |
 
 As quantidades intermediárias também têm preços próprios, sempre crescentes. O
 cliente não escolhe um pacote manualmente: o sistema aplica o melhor valor para
-a quantidade selecionada. Como os R$ 4,90 da entrada já foram pagos, a galeria
+a quantidade selecionada. Como os R$ 7,90 da entrada já foram pagos, a galeria
 inclui a primeira foto e cobra no Pix apenas a diferença do pacote escolhido.
 
-Os R$ 4,90 são apenas a oferta padrão. `paidAmount` e `includedPhotos` enviados
+Os R$ 7,90 são apenas a oferta padrão. `paidAmount`, `includedPhotos` e
+`generationCount` enviados
 pelo ZapData passam a ser a fonte oficial para calcular o crédito e escalar a
 curva de desconto de cada cliente.
+
+O vídeo vertical custa R$ 19,90 por padrão e o novo ensaio custa R$ 29,90.
+Esses valores podem ser alterados com `VIDEO_UPSELL_PRICE` e
+`NEW_SHOOT_UPSELL_PRICE`.

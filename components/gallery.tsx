@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 
 const MAX_PHOTOS = 20;
-const DEFAULT_PAID_AMOUNT = 4.9;
+const DEFAULT_GALLERY_SIZE = 15;
+const DEFAULT_PAID_AMOUNT = 7.9;
 const DEFAULT_INCLUDED_PHOTOS = 1;
 
 const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
@@ -12,10 +13,10 @@ const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
   tone: (index * 19 + 8) % 360,
 }));
 
-// Canonical curve for the default R$ 4,90 / 1-photo offer.
+// Canonical curve for the default R$ 7,90 / 1-photo offer.
 const basePricesByQuantity = [
-  0, 4.9, 9.4, 13.9, 17.9, 21.9, 25.9, 29.9, 33.4, 36.9, 39.9,
-  43.4, 46.9, 49.9, 52.4, 54.9, 58.4, 61.9, 64.9, 67.4, 69.9,
+  0, 7.9, 15.8, 22.8, 27.8, 32.8, 37.3, 41.3, 45.3, 49.3, 52.8,
+  56.3, 59.3, 62.3, 65.3, 67.8, 71.3, 74.3, 77.3, 80.3, 82.8,
 ];
 
 const standardMilestones = [
@@ -35,6 +36,9 @@ const money = new Intl.NumberFormat("pt-BR", {
 export type GalleryOffer = {
   paidAmount: number;
   includedPhotos: number;
+  gallerySize: number;
+  videoPrice: number;
+  newShootPrice: number;
 };
 
 function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
@@ -43,8 +47,23 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     Math.max(1, Math.round(offer?.includedPhotos ?? DEFAULT_INCLUDED_PHOTOS)),
   );
   const paidAmount = Math.max(0.01, offer?.paidAmount ?? DEFAULT_PAID_AMOUNT);
+  const gallerySize = Math.min(
+    MAX_PHOTOS,
+    Math.max(
+      includedPhotos,
+      Math.round(offer?.gallerySize ?? DEFAULT_GALLERY_SIZE),
+    ),
+  );
+  const videoPrice = Math.max(0, offer?.videoPrice ?? 19.9);
+  const newShootPrice = Math.max(0, offer?.newShootPrice ?? 29.9);
 
-  return { includedPhotos, paidAmount };
+  return {
+    includedPhotos,
+    paidAmount,
+    gallerySize,
+    videoPrice,
+    newShootPrice,
+  };
 }
 
 function createPriceCurve(offer: GalleryOffer) {
@@ -58,9 +77,11 @@ function createPriceCurve(offer: GalleryOffer) {
   });
 }
 
-function createMilestones(includedPhotos: number) {
+function createMilestones(includedPhotos: number, gallerySize: number) {
   const milestones = standardMilestones.filter(
-    (milestone) => milestone.quantity >= includedPhotos,
+    (milestone) =>
+      milestone.quantity >= includedPhotos &&
+      milestone.quantity <= gallerySize,
   );
 
   if (!milestones.some((milestone) => milestone.quantity === includedPhotos)) {
@@ -99,12 +120,22 @@ export function Gallery({
   const offer = useMemo(() => normalizeOffer(offerInput), [offerInput]);
   const prices = useMemo(() => createPriceCurve(offer), [offer]);
   const milestones = useMemo(
-    () => createMilestones(offer.includedPhotos),
-    [offer.includedPhotos],
+    () => createMilestones(offer.includedPhotos, offer.gallerySize),
+    [offer.gallerySize, offer.includedPhotos],
+  );
+  const photos = useMemo(
+    () => samplePhotos.slice(0, offer.gallerySize),
+    [offer.gallerySize],
   );
   const [selected, setSelected] = useState<string[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [testPaymentApproved, setTestPaymentApproved] = useState(false);
+  const [videoAdded, setVideoAdded] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<"photos" | "new-shoot">(
+    "photos",
+  );
+  const [newShootPurchased, setNewShootPurchased] = useState(false);
+  const [pixReady, setPixReady] = useState(false);
 
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
@@ -138,6 +169,10 @@ export function Gallery({
     : 0;
   const selectionIsIncluded =
     selected.length > 0 && selected.length <= offer.includedPhotos;
+  const checkoutAmount =
+    checkoutMode === "new-shoot"
+      ? offer.newShootPrice
+      : pricing.dueNow + (videoAdded ? offer.videoPrice : 0);
 
   function togglePhoto(id: string) {
     setSelected((current) =>
@@ -148,12 +183,38 @@ export function Gallery({
   }
 
   function selectAll() {
-    setSelected(samplePhotos.map((photo) => photo.id));
+    setSelected(photos.map((photo) => photo.id));
   }
 
   function handlePrimaryAction() {
     if (!selected.length) return;
+    setCheckoutMode("photos");
+    setTestPaymentApproved(false);
+    setPixReady(false);
     setCheckoutOpen(true);
+  }
+
+  function startNewShootCheckout() {
+    setCheckoutMode("new-shoot");
+    setTestPaymentApproved(false);
+    setPixReady(true);
+  }
+
+  function approveTestPayment() {
+    if (checkoutMode === "new-shoot") {
+      setNewShootPurchased(true);
+    }
+
+    setTestPaymentApproved(true);
+  }
+
+  function continueCheckout() {
+    if (checkoutAmount > 0) {
+      setPixReady(true);
+      return;
+    }
+
+    approveTestPayment();
   }
 
   return (
@@ -181,7 +242,7 @@ export function Gallery({
         </div>
         <div className="gallery-status">
           <span>{token === "demo" ? "Galeria demonstrativa" : "Sua galeria"}</span>
-          <strong>20 fotos disponíveis</strong>
+          <strong>{offer.gallerySize} fotos disponíveis</strong>
           <small>
             Crédito de {money.format(offer.paidAmount)} já reconhecido
           </small>
@@ -217,7 +278,7 @@ export function Gallery({
                 className={`milestone ${reached ? "reached" : ""} ${isNext ? "next" : ""}`}
                 key={milestone.quantity}
               >
-                {milestone.quantity === MAX_PHOTOS && (
+                {milestone.quantity === offer.gallerySize && (
                   <span className="best-value">Melhor valor</span>
                 )}
                 <span className="milestone-count">{milestone.quantity}</span>
@@ -269,7 +330,7 @@ export function Gallery({
       </div>
 
       <section className="photo-grid" aria-label="Fotos disponíveis">
-        {samplePhotos.map((photo) => {
+        {photos.map((photo) => {
           const selectionPosition = selected.indexOf(photo.id);
           const isSelected = selectionPosition >= 0;
 
@@ -406,46 +467,63 @@ export function Gallery({
             ) : testPaymentApproved ? (
               <>
                 <span className="modal-badge success">Pagamento aprovado</span>
-                <h2 id="checkout-title">Suas fotos foram liberadas.</h2>
-                <p>
-                  No fluxo real, os arquivos originais sem marca d&apos;água
-                  aparecerão aqui para download.
-                </p>
-                <button
-                  className="primary-button modal-primary"
-                  onClick={() => setCheckoutOpen(false)}
-                  type="button"
-                >
-                  Concluir teste
-                </button>
+                {newShootPurchased ? (
+                  <>
+                    <h2 id="checkout-title">Seu novo ensaio foi reservado.</h2>
+                    <p>
+                      O próximo passo será escolher um novo tema pelo WhatsApp,
+                      usando a mesma foto de referência.
+                    </p>
+                    <button
+                      className="primary-button modal-primary"
+                      onClick={() => setCheckoutOpen(false)}
+                      type="button"
+                    >
+                      Concluir
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h2 id="checkout-title">Suas fotos foram liberadas.</h2>
+                    <p>
+                      Os arquivos escolhidos ficarão disponíveis para download
+                      e o vídeo será produzido quando estiver no pedido.
+                    </p>
+                    <div className="post-purchase-offer">
+                      <span>NOVO TEMA, NOVO ENSAIO</span>
+                      <strong>
+                        Crie outra coleção por {money.format(offer.newShootPrice)}
+                      </strong>
+                      <small>
+                        Aproveite a mesma referência e escolha uma proposta
+                        completamente diferente.
+                      </small>
+                      <button
+                        className="primary-button modal-primary"
+                        onClick={startNewShootCheckout}
+                        type="button"
+                      >
+                        Quero um novo ensaio
+                      </button>
+                      <button
+                        className="text-button muted"
+                        onClick={() => setCheckoutOpen(false)}
+                        type="button"
+                      >
+                        Agora não
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
-            ) : selectionIsIncluded ? (
-              <>
-                <span className="modal-badge">Crédito reconhecido</span>
-                <h2 id="checkout-title">
-                  {selected.length === 1
-                    ? "Sua foto está incluída."
-                    : "Suas fotos estão incluídas."}
-                </h2>
-                <p>
-                  No fluxo real, estas fotos serão liberadas imediatamente,
-                  sem uma nova cobrança.
-                </p>
-                <button
-                  className="primary-button modal-primary"
-                  onClick={() => setTestPaymentApproved(true)}
-                  type="button"
-                >
-                  Simular liberação
-                </button>
-              </>
-            ) : (
+            ) : pixReady ? (
               <>
                 <span className="modal-badge warning">Simulação de Pix</span>
-                <h2 id="checkout-title">{money.format(pricing.dueNow)}</h2>
+                <h2 id="checkout-title">{money.format(checkoutAmount)}</h2>
                 <p>
-                  Este é apenas um teste. Em produção, o QR Code e o Pix Copia
-                  e Cola serão gerados pelo Mercado Pago.
+                  {checkoutMode === "new-shoot"
+                    ? "Este Pix confirma um segundo ensaio com outro tema."
+                    : "Em produção, o QR Code e o Pix Copia e Cola serão gerados pelo Mercado Pago."}
                 </p>
                 <div className="fake-pix-code" aria-hidden="true">
                   <span />
@@ -455,10 +533,63 @@ export function Gallery({
                 </div>
                 <button
                   className="primary-button modal-primary"
-                  onClick={() => setTestPaymentApproved(true)}
+                  onClick={approveTestPayment}
                   type="button"
                 >
                   Simular pagamento aprovado
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="modal-badge">
+                  {selectionIsIncluded
+                    ? "Crédito reconhecido"
+                    : "Revise seu pedido"}
+                </span>
+                <h2 id="checkout-title">
+                  {selectionIsIncluded
+                    ? "Deixe suas fotos ainda mais marcantes."
+                    : `${selected.length} fotos selecionadas`}
+                </h2>
+                <p>
+                  Adicione um vídeo vertical pronto para Reels, Stories e
+                  WhatsApp usando as fotos que você escolheu.
+                </p>
+                <button
+                  aria-pressed={videoAdded}
+                  className={`addon-card ${videoAdded ? "selected" : ""}`}
+                  onClick={() => setVideoAdded((current) => !current)}
+                  type="button"
+                >
+                  <span className="addon-check">{videoAdded ? "✓" : "+"}</span>
+                  <span className="addon-copy">
+                    <strong>Transformar em vídeo</strong>
+                    <small>
+                      Edição automática com movimento, música e formato vertical
+                    </small>
+                  </span>
+                  <strong>{money.format(offer.videoPrice)}</strong>
+                </button>
+                <div className="modal-total">
+                  <span>
+                    {pricing.dueNow > 0
+                      ? `Fotos adicionais: ${money.format(pricing.dueNow)}`
+                      : "Fotos escolhidas já incluídas"}
+                  </span>
+                  <strong>
+                    {checkoutAmount > 0
+                      ? `Pagar ${money.format(checkoutAmount)}`
+                      : "Sem valor adicional"}
+                  </strong>
+                </div>
+                <button
+                  className="primary-button modal-primary"
+                  onClick={continueCheckout}
+                  type="button"
+                >
+                  {checkoutAmount > 0
+                    ? "Continuar para o Pix"
+                    : "Liberar minhas fotos"}
                 </button>
               </>
             )}

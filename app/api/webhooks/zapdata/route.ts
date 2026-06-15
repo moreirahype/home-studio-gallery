@@ -17,7 +17,8 @@ const payloadSchema = z.object({
   nicheId: z.string().min(1).optional().default("geral"),
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
-  paidAmount: z.coerce.number().positive().optional().default(4.9),
+  paidAmount: z.coerce.number().positive().optional().default(7.9),
+  generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
   receiptId: z.string().min(1).optional(),
 });
 
@@ -69,7 +70,10 @@ export async function POST(request: NextRequest) {
   }
 
   const nicheId = parsed.data.nicho ?? parsed.data.nicheId;
-  const generationPrompts = buildGenerationPrompts(contextFinal);
+  const generationPrompts = buildGenerationPrompts(contextFinal).slice(
+    0,
+    parsed.data.generationCount,
+  );
   const galleryUrl = new URL(
     `/g/${galleryToken}`,
     appUrl,
@@ -92,6 +96,7 @@ export async function POST(request: NextRequest) {
     receipt_id: parsed.data.receiptId ?? null,
     included_photos: parsed.data.includedPhotos,
     paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
+    generation_count: parsed.data.generationCount,
     status: "queued",
   });
 

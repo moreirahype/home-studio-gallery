@@ -26,10 +26,16 @@ export default async function GalleryPage({
     ? {
         paidAmount: project.paid_amount_cents / 100,
         includedPhotos: project.included_photos,
+        gallerySize: project.generation_count,
+        videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
+        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 29.9,
       }
     : {
-        paidAmount: Number(query.paidAmount) || 4.9,
+        paidAmount: Number(query.paidAmount) || 7.9,
         includedPhotos: Number(query.includedPhotos) || 1,
+        gallerySize: 15,
+        videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
+        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 29.9,
       };
 
   return (

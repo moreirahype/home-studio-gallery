@@ -51,8 +51,10 @@ create table if not exists public.projects (
   receipt_id text unique,
   included_photos smallint not null default 1
     check (included_photos between 1 and 20),
-  paid_amount_cents integer not null default 490
+  paid_amount_cents integer not null default 790
     check (paid_amount_cents > 0),
+  generation_count smallint not null default 15
+    check (generation_count between 1 and 20),
   status public.project_status not null default 'queued',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -88,10 +90,25 @@ create table if not exists public.orders (
   updated_at timestamptz not null default now()
 );
 
+alter table public.projects
+  add column if not exists generation_count smallint not null default 15
+  check (generation_count between 1 and 20);
+
 create table if not exists public.order_photos (
   order_id uuid not null references public.orders(id) on delete cascade,
   photo_id uuid not null references public.photos(id) on delete restrict,
   primary key (order_id, photo_id)
+);
+
+create table if not exists public.order_items (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  kind text not null check (kind in ('photos', 'video', 'new_shoot')),
+  description text not null,
+  quantity smallint not null default 1 check (quantity > 0),
+  amount_cents integer not null check (amount_cents >= 0),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
 );
 
 create index if not exists photos_project_id_idx
@@ -99,6 +116,9 @@ create index if not exists photos_project_id_idx
 
 create index if not exists orders_project_id_idx
   on public.orders(project_id);
+
+create index if not exists order_items_order_id_idx
+  on public.order_items(order_id);
 
 create index if not exists projects_gallery_token_idx
   on public.projects(gallery_token);
@@ -134,6 +154,7 @@ alter table public.projects enable row level security;
 alter table public.photos enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_photos enable row level security;
+alter table public.order_items enable row level security;
 
 insert into storage.buckets (id, name, public, file_size_limit)
 values

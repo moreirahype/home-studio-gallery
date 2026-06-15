@@ -6,7 +6,7 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
   const { data, error } = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, included_photos, paid_amount_cents, status, customer_name",
+      "id, gallery_token, included_photos, paid_amount_cents, generation_count, status, customer_name",
     )
     .eq("gallery_token", galleryToken)
     .maybeSingle();
