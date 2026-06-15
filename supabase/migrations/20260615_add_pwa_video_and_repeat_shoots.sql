@@ -5,9 +5,26 @@ create table if not exists public.video_jobs (
   model text not null default 'bytedance/v1-pro-fast-image-to-video',
   source_photo_ids uuid[] not null default '{}',
   task_ids text[] not null default '{}',
+  clip_paths text[] not null default '{}',
   output_path text,
   status text not null default 'queued'
     check (status in ('queued', 'generating', 'ready', 'failed')),
+  error_message text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.video_jobs
+  add column if not exists clip_paths text[] not null default '{}';
+
+create table if not exists public.video_clips (
+  id uuid primary key default gen_random_uuid(),
+  video_job_id uuid not null references public.video_jobs(id) on delete cascade,
+  task_id text not null unique,
+  source_photo_id uuid references public.photos(id) on delete set null,
+  path text,
+  status text not null default 'generating'
+    check (status in ('generating', 'ready', 'failed')),
   error_message text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -58,6 +75,9 @@ create table if not exists public.push_subscriptions (
 create index if not exists video_jobs_project_id_idx
   on public.video_jobs(project_id);
 
+create index if not exists video_clips_video_job_id_idx
+  on public.video_clips(video_job_id);
+
 create index if not exists repeat_shoots_source_project_id_idx
   on public.repeat_shoots(source_project_id);
 
@@ -65,5 +85,14 @@ create index if not exists push_subscriptions_due_idx
   on public.push_subscriptions(active, next_notification_at);
 
 alter table public.video_jobs enable row level security;
+alter table public.video_clips enable row level security;
 alter table public.repeat_shoots enable row level security;
 alter table public.push_subscriptions enable row level security;
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values
+  ('video-clips', 'video-clips', false, 52428800),
+  ('videos', 'videos', false, 157286400)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit;

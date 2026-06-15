@@ -9,7 +9,9 @@
 2. Complemento no checkout: vídeo vertical por R$ 14,90
    - Um Reel final.
    - Usa até 3 fotos escolhidas pelo cliente.
-   - Cada foto vira um clipe curto; os clipes são unidos com transições.
+- Cada foto vira um clipe curto; os clipes são unidos com transições.
+- O Reel é entregue sem música para o cliente escolher uma faixa em alta no
+  Instagram ou TikTok sem risco de direitos autorais.
 3. Pós-compra: novo ensaio por R$ 7,90
    - 10 opções e 1 foto incluída.
    - Novo tema e nova referência opcional.

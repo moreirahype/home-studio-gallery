@@ -1,0 +1,183 @@
+import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
+import ffmpegPath from "ffmpeg-static";
+import { createVideoTask } from "@/lib/kie";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+const execFileAsync = promisify(execFile);
+const MOVEMENT_PROMPTS = [
+  "Subtle cinematic camera push-in. Natural blinking and breathing. Preserve the person's face, body, clothes and environment exactly. No morphing, no talking, no exaggerated movement.",
+  "Slow elegant parallax and a gentle camera orbit. Preserve identity perfectly. Natural micro-movements only. No face distortion, no body changes and no new objects.",
+  "Premium editorial motion with a soft camera pull-back and realistic fabric movement. Keep the face and appearance identical. No morphing, no speech and no dramatic gesture.",
+];
+
+export async function startVideoJob({
+  projectId,
+  photoIds,
+  orderId,
+  appUrl,
+}: {
+  projectId: string;
+  photoIds: string[];
+  orderId?: string;
+  appUrl: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data: photos, error } = await supabase
+    .from("photos")
+    .select("id, original_path, position")
+    .eq("project_id", projectId)
+    .in("id", photoIds)
+    .eq("status", "ready")
+    .order("position");
+
+  if (error || !photos?.length) {
+    throw new Error("Nenhuma foto pronta para o vídeo.");
+  }
+
+  const sources = Array.from(
+    { length: 3 },
+    (_, index) => photos[index % Math.min(photos.length, 3)],
+  );
+  const signed = await supabase.storage
+    .from("photo-originals")
+    .createSignedUrls(
+      sources.map((photo) => photo.original_path as string),
+      60 * 60,
+    );
+
+  if (signed.error) {
+    throw new Error(`Falha ao preparar fotos: ${signed.error.message}`);
+  }
+
+  const { data: job, error: jobError } = await supabase
+    .from("video_jobs")
+    .insert({
+      project_id: projectId,
+      order_id: orderId ?? null,
+      model:
+        process.env.KIE_VIDEO_MODEL ??
+        "bytedance/v1-pro-fast-image-to-video",
+      source_photo_ids: sources.map((photo) => photo.id),
+      status: "generating",
+    })
+    .select("id")
+    .single();
+
+  if (jobError || !job) {
+    throw new Error(
+      `Falha ao criar o Reel: ${jobError?.message ?? "registro ausente"}`,
+    );
+  }
+
+  const callbackSecret = process.env.KIE_CALLBACK_SECRET;
+  if (!callbackSecret) throw new Error("KIE_CALLBACK_SECRET não configurada.");
+  const callbackUrl = new URL("/api/webhooks/kie", appUrl);
+  callbackUrl.searchParams.set("secret", callbackSecret);
+
+  const taskIds: string[] = [];
+
+  for (let index = 0; index < sources.length; index += 1) {
+    const imageUrl = signed.data[index]?.signedUrl;
+    if (!imageUrl) throw new Error("URL temporária da foto não foi criada.");
+    const taskId = await createVideoTask({
+      prompt: MOVEMENT_PROMPTS[index],
+      imageUrl,
+      callbackUrl: callbackUrl.toString(),
+    });
+    taskIds.push(taskId);
+    await supabase.from("video_clips").insert({
+      video_job_id: job.id,
+      task_id: taskId,
+      source_photo_id: sources[index].id,
+      status: "generating",
+    });
+  }
+
+  await supabase
+    .from("video_jobs")
+    .update({ task_ids: taskIds })
+    .eq("id", job.id);
+
+  return { videoJobId: job.id, taskIds };
+}
+
+export async function assembleVideo(videoJobId: string) {
+  if (!ffmpegPath) throw new Error("FFmpeg não disponível.");
+  const supabase = getSupabaseAdmin();
+  const { data: clips, error } = await supabase
+    .from("video_clips")
+    .select("path, created_at")
+    .eq("video_job_id", videoJobId)
+    .eq("status", "ready")
+    .order("created_at");
+
+  if (error || clips?.length !== 3) return false;
+
+  const workdir = path.join(tmpdir(), `home-studio-${randomUUID()}`);
+  await mkdir(workdir, { recursive: true });
+
+  try {
+    const clipPaths: string[] = [];
+
+    for (let index = 0; index < clips.length; index += 1) {
+      const storagePath = clips[index].path as string;
+      const downloaded = await supabase.storage
+        .from("video-clips")
+        .download(storagePath);
+      if (downloaded.error) throw new Error(downloaded.error.message);
+      const localPath = path.join(workdir, `clip-${index}.mp4`);
+      await writeFile(
+        localPath,
+        Buffer.from(await downloaded.data.arrayBuffer()),
+      );
+      clipPaths.push(localPath);
+    }
+
+    const listPath = path.join(workdir, "clips.txt");
+    const outputPath = path.join(workdir, "reel.mp4");
+    await writeFile(
+      listPath,
+      clipPaths
+        .map((clipPath) => `file '${clipPath.replaceAll("'", "'\\''")}'`)
+        .join("\n"),
+    );
+    await execFileAsync(ffmpegPath, [
+      "-y",
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      listPath,
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-movflags",
+      "+faststart",
+      "-an",
+      outputPath,
+    ]);
+    const output = await readFile(outputPath);
+    const storagePath = `${videoJobId}/reel.mp4`;
+    const upload = await supabase.storage
+      .from("videos")
+      .upload(storagePath, output, {
+        contentType: "video/mp4",
+        upsert: true,
+      });
+    if (upload.error) throw new Error(upload.error.message);
+    await supabase
+      .from("video_jobs")
+      .update({ output_path: storagePath, status: "ready" })
+      .eq("id", videoJobId);
+    return true;
+  } finally {
+    await rm(workdir, { recursive: true, force: true });
+  }
+}

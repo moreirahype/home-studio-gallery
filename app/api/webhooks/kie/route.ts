@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getTaskDetails } from "@/lib/kie";
 import { createWatermarkedPreview } from "@/lib/photo-processing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { assembleVideo } from "@/lib/video";
 import { unauthorized } from "@/lib/http";
 import { safeCompare } from "@/lib/security";
 
@@ -16,6 +17,8 @@ const callbackSchema = z
     data: z.unknown().optional(),
   })
   .passthrough();
+
+export const maxDuration = 300;
 
 function extractTaskId(payload: z.infer<typeof callbackSchema>) {
   if (payload.taskId) return payload.taskId;
@@ -45,6 +48,70 @@ function parseResultUrls(value?: string) {
   } catch {
     return [];
   }
+}
+
+async function handleVideoTask(taskId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: clip } = await supabase
+    .from("video_clips")
+    .select("id, video_job_id")
+    .eq("task_id", taskId)
+    .maybeSingle();
+
+  if (!clip) return null;
+
+  const task = await getTaskDetails(taskId);
+  const resultUrl = parseResultUrls(task.resultJson)[0];
+
+  if (task.state === "fail") {
+    await supabase
+      .from("video_clips")
+      .update({
+        status: "failed",
+        error_message: task.failMsg || "A KIE não concluiu o clipe.",
+      })
+      .eq("id", clip.id);
+    await supabase
+      .from("video_jobs")
+      .update({ status: "failed", error_message: task.failMsg })
+      .eq("id", clip.video_job_id);
+    return { ok: true, taskId, state: task.state, kind: "video" };
+  }
+
+  if (task.state !== "success" || !resultUrl) {
+    return {
+      ok: true,
+      taskId,
+      state: task.state || "generating",
+      kind: "video",
+    };
+  }
+
+  const response = await fetch(resultUrl, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Download do clipe respondeu HTTP ${response.status}.`);
+  }
+  const clipPath = `${clip.video_job_id}/${taskId}.mp4`;
+  const upload = await supabase.storage
+    .from("video-clips")
+    .upload(clipPath, Buffer.from(await response.arrayBuffer()), {
+      contentType: "video/mp4",
+      upsert: true,
+    });
+  if (upload.error) throw new Error(upload.error.message);
+  await supabase
+    .from("video_clips")
+    .update({ path: clipPath, status: "ready", error_message: null })
+    .eq("id", clip.id);
+  const assembled = await assembleVideo(clip.video_job_id);
+
+  return {
+    ok: true,
+    taskId,
+    state: task.state,
+    kind: "video",
+    assembled,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -77,6 +144,21 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (!photo) {
+    try {
+      const videoResult = await handleVideoTask(taskId);
+      if (videoResult) return NextResponse.json(videoResult);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          taskId,
+          error:
+            error instanceof Error ? error.message : "Falha ao processar clipe.",
+        },
+        { status: 500 },
+      );
+    }
+
     return NextResponse.json(
       { ok: false, error: "Tarefa não encontrada." },
       { status: 404 },

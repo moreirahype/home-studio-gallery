@@ -85,3 +85,50 @@ export async function getTaskDetails(taskId: string) {
 
   return result.data;
 }
+
+export async function createVideoTask({
+  prompt,
+  imageUrl,
+  callbackUrl,
+}: {
+  prompt: string;
+  imageUrl: string;
+  callbackUrl: string;
+}) {
+  const apiKey = process.env.KIE_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("KIE_API_KEY não configurada.");
+  }
+
+  const response = await fetch(`${KIE_API_URL}/jobs/createTask`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model:
+        process.env.KIE_VIDEO_MODEL ??
+        "bytedance/v1-pro-fast-image-to-video",
+      callBackUrl: callbackUrl,
+      input: {
+        prompt,
+        image_url: imageUrl,
+        resolution: "720p",
+        duration: "5",
+        nsfw_checker: true,
+      },
+    }),
+  });
+  const result = (await response.json()) as CreateTaskResponse;
+  const taskId = result.data?.taskId;
+
+  if (!response.ok || result.code !== 200 || !taskId) {
+    throw new Error(
+      `KIE recusou o vídeo: ${result.msg || `HTTP ${response.status}`}`,
+    );
+  }
+
+  return taskId;
+}

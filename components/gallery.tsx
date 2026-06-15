@@ -618,7 +618,7 @@ export function Gallery({
                       {selected.length === 1
                         ? "Criamos 3 movimentos diferentes da foto selecionada"
                         : `Usamos as ${Math.min(3, selected.length)} primeiras fotos selecionadas`}
-                      , com música e transições
+                      , com movimento e transições
                     </small>
                   </span>
                   <strong>{money.format(offer.videoPrice)}</strong>
