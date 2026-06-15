@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin();
-  const { error: projectError } = await supabase.from("projects").insert({
+  const projectPayload = {
     id: projectId,
     gallery_token: galleryToken,
     zapdata_contact_id: parsed.data.contactId ?? null,
@@ -98,7 +98,23 @@ export async function POST(request: NextRequest) {
     paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
     generation_count: parsed.data.generationCount,
     status: "queued",
-  });
+  };
+  let { error: projectError } = await supabase
+    .from("projects")
+    .insert(projectPayload);
+
+  if (
+    projectError?.code === "42703" ||
+    projectError?.message.includes("generation_count")
+  ) {
+    const { generation_count: generationCount, ...legacyProjectPayload } =
+      projectPayload;
+    void generationCount;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(legacyProjectPayload);
+    projectError = fallbackInsert.error;
+  }
 
   if (projectError) {
     return NextResponse.json(
