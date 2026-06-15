@@ -13,7 +13,7 @@
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "sharp": "^0.35.1",
+    "sharp": "0.34.5",
     "web-push": "^3.6.7",
     "zod": "^3.25.0"
   },
@@ -29,5 +29,9 @@
   },
   "overrides": {
     "postcss": "^8.5.10"
+  },
+  "optionalDependencies": {
+    "@img/sharp-libvips-linux-x64": "^1.2.4",
+    "@img/sharp-linux-x64": "^0.34.5"
   }
 }
