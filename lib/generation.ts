@@ -13,7 +13,7 @@ export async function startProjectGeneration({
   const supabase = getSupabaseAdmin();
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id, source_image_url")
+    .select("id, source_image_url, context_final")
     .eq("id", projectId)
     .single();
 
@@ -50,6 +50,7 @@ export async function startProjectGeneration({
       const taskId = await createImageTask({
         prompt: photo.generation_prompt,
         sourceImageUrl: project.source_image_url,
+        contextFinal: project.context_final,
         callbackUrl: callbackUrl.toString(),
       });
       const { error } = await supabase

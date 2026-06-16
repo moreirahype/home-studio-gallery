@@ -22,16 +22,29 @@ type TaskDetailsResponse = {
 export async function createImageTask({
   prompt,
   sourceImageUrl,
+  contextFinal,
   callbackUrl,
 }: {
   prompt: string;
   sourceImageUrl: string;
+  contextFinal: string;
   callbackUrl: string;
 }) {
   const apiKey = process.env.KIE_API_KEY;
 
   if (!apiKey) {
     throw new Error("KIE_API_KEY não configurada.");
+  }
+
+  const model =
+    process.env.KIE_IMAGE_MODEL ??
+    process.env.KIE_MODEL ??
+    "gpt-image-2-image-to-image";
+
+  if (model.includes("text-to-image")) {
+    throw new Error(
+      `KIE_MODEL precisa ser image-to-image/edit para usar foto de referencia. Valor atual: ${model}`,
+    );
   }
 
   const response = await fetch(`${KIE_API_URL}/jobs/createTask`, {
@@ -41,12 +54,18 @@ export async function createImageTask({
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.KIE_MODEL ?? "gpt-image-2-image-to-image",
+      model,
       callBackUrl: callbackUrl,
       input: {
-        prompt,
+        prompt: `${prompt}
+
+Mandatory reference instructions:
+- Use the image in input_urls as the person's identity reference.
+- Keep the same face, facial structure, skin tone, age, expression style and recognizable identity.
+- Do not invent a different person.
+- Theme/context requested by the client: ${contextFinal}`,
         input_urls: [sourceImageUrl],
-        aspect_ratio: "3:4",
+        aspect_ratio: "auto",
       },
     }),
   });

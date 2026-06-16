@@ -5,6 +5,7 @@ import { unauthorized } from "@/lib/http";
 import { startProjectGeneration } from "@/lib/generation";
 import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
+import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const payloadSchema = z.object({
@@ -59,6 +60,18 @@ export async function POST(request: NextRequest) {
   if (!sourceImageUrl || !URL.canParse(sourceImageUrl)) {
     return NextResponse.json(
       { ok: false, error: "foto_cliente precisa conter uma URL pública válida." },
+      { status: 400 },
+    );
+  }
+
+  const sourceImageValidation = await validatePublicImageUrl(sourceImageUrl);
+  if (!sourceImageValidation.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: sourceImageValidation.error,
+        sourceImageUrl,
+      },
       { status: 400 },
     );
   }
