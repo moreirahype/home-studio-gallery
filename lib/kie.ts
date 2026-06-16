@@ -19,6 +19,43 @@ type TaskDetailsResponse = {
   };
 };
 
+function buildImageInput({
+  model,
+  prompt,
+  sourceImageUrl,
+  contextFinal,
+}: {
+  model: string;
+  prompt: string;
+  sourceImageUrl: string;
+  contextFinal: string;
+}) {
+  const finalPrompt = `${prompt}
+
+STRICT IDENTITY LOCK:
+- The uploaded/reference image is the identity source.
+- Preserve the exact same person. Same face shape, eyes, nose, mouth, jawline, skin tone, age, ethnicity, hairline and facial proportions.
+- Do not beautify into a different person. Do not change gender, age, facial structure or body type.
+- Change only clothing, environment, lighting, pose and styling as needed for the requested theme.
+- Client theme/context: ${contextFinal}`;
+
+  if (model === "nano-banana-pro") {
+    return {
+      prompt: finalPrompt,
+      image_input: [sourceImageUrl],
+      aspect_ratio: "auto",
+      resolution: "1K",
+      output_format: "png",
+    };
+  }
+
+  return {
+    prompt: finalPrompt,
+    input_urls: [sourceImageUrl],
+    aspect_ratio: "auto",
+  };
+}
+
 export async function createImageTask({
   prompt,
   sourceImageUrl,
@@ -56,17 +93,7 @@ export async function createImageTask({
     body: JSON.stringify({
       model,
       callBackUrl: callbackUrl,
-      input: {
-        prompt: `${prompt}
-
-Mandatory reference instructions:
-- Use the image in input_urls as the person's identity reference.
-- Keep the same face, facial structure, skin tone, age, expression style and recognizable identity.
-- Do not invent a different person.
-- Theme/context requested by the client: ${contextFinal}`,
-        input_urls: [sourceImageUrl],
-        aspect_ratio: "auto",
-      },
+      input: buildImageInput({ model, prompt, sourceImageUrl, contextFinal }),
     }),
   });
   const result = (await response.json()) as CreateTaskResponse;

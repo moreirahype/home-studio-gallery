@@ -4,10 +4,12 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 export async function startProjectGeneration({
   projectId,
   limit,
+  positions,
   appUrl,
 }: {
   projectId: string;
   limit?: number;
+  positions?: number[];
   appUrl: string;
 }) {
   const supabase = getSupabaseAdmin();
@@ -28,6 +30,7 @@ export async function startProjectGeneration({
     .eq("status", "queued")
     .order("position");
 
+  if (positions?.length) query = query.in("position", positions);
   if (limit) query = query.limit(limit);
 
   const { data: photos, error: photosError } = await query;

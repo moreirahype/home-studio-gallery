@@ -1,11 +1,13 @@
-const BASE_PROMPT = `Keep the person's face 100% identical to the uploaded reference image.
+const BASE_PROMPT = `Use the uploaded reference photo as the identity source.
 
-Preserve identity perfectly.
+The final image must show the same person from the reference photo.
+Preserve the exact face, facial proportions, age, skin tone, hairline, recognizable features and body type.
+Do not replace the person with a model. Do not create a lookalike. Do not over-beautify the face.
 
 Theme:
 {{context}}
 
-The clothing, styling, accessories, colors and environment must naturally match the requested theme.
+Change only clothing, styling, accessories, colors, pose, lighting and environment to match the requested theme.
 
 Create an ultra luxurious version of the requested photoshoot.
 
@@ -19,16 +21,16 @@ Exceptional photography quality.
 
 {{variation}}
 
-Ultra realistic photography.
+Ultra realistic photography of the same person.
 Luxury atmosphere.
 Premium styling.`;
 
 const SCENE_VARIATIONS = [
-  "Elegant full-body editorial portrait in a grand architectural setting.",
+  "Elegant editorial portrait in a grand architectural setting, keeping the face clearly visible.",
   "Refined close-up beauty portrait with soft cinematic lighting.",
   "Sophisticated seated pose in an exclusive designer interior.",
   "Confident walking portrait with a luxury campaign aesthetic.",
-  "Three-quarter portrait with dramatic window light and premium decor.",
+  "Three-quarter portrait with dramatic window light and premium decor, face unobstructed.",
   "Editorial portrait in a minimalist high-end studio with sculptural lighting.",
   "Natural candid moment in an elegant environment with subtle movement.",
   "Powerful symmetrical composition with a polished magazine-cover look.",

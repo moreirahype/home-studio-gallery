@@ -9,6 +9,8 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 const requestSchema = z.object({
   projectId: z.string().uuid().optional(),
   galleryToken: z.string().min(8).optional(),
+  force: z.boolean().optional().default(false),
+  positions: z.array(z.coerce.number().int().min(1).max(20)).optional(),
   count: z.coerce.number().int().min(1).max(15).optional().default(1),
 });
 
@@ -75,9 +77,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const positions = parsed.data.positions
+      ? [...new Set(parsed.data.positions)].sort((a, b) => a - b)
+      : undefined;
+
+    if (parsed.data.force) {
+      let update = supabase
+        .from("photos")
+        .update({
+          status: "queued",
+          kie_task_id: null,
+          error_message: null,
+        })
+        .eq("project_id", projectId);
+
+      if (positions?.length) update = update.in("position", positions);
+      const { error: resetError } = await update;
+
+      if (resetError) {
+        return NextResponse.json(
+          { ok: false, error: resetError.message },
+          { status: 500 },
+        );
+      }
+    }
+
     const result = await startProjectGeneration({
       projectId,
       limit: parsed.data.count,
+      positions,
       appUrl: process.env.APP_URL ?? request.nextUrl.origin,
     });
 
