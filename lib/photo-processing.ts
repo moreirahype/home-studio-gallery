@@ -15,7 +15,7 @@ function escapeXml(value: string) {
 
 export async function createWatermarkedPreview(
   original: Buffer,
-  label = "HOME STUDIO",
+  label = "HOMESTUDIO.IA",
 ) {
   const image = sharp(original).rotate();
   const metadata = await image.metadata();
@@ -36,13 +36,9 @@ export async function createWatermarkedPreview(
 
     return `<g transform="rotate(${rotation} ${x} ${y})">
       <text x="${x}" y="${y}" text-anchor="middle"
-        fill="rgba(0,0,0,0.28)" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"
+        fill="rgba(255,255,255,0.58)" stroke="rgba(0,0,0,0.24)" stroke-width="1.2"
         font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="800"
         letter-spacing="4">${escapedLabel}</text>
-      <text x="${x}" y="${y + fontSize * 0.82}" text-anchor="middle"
-        fill="rgba(255,255,255,0.56)" stroke="rgba(0,0,0,0.20)" stroke-width="1"
-        font-family="Arial, sans-serif" font-size="${Math.round(fontSize * 0.64)}"
-        font-weight="800" letter-spacing="5">PRÉVIA</text>
     </g>`;
   }).join("");
   const overlay = Buffer.from(
