@@ -9,6 +9,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 const requestSchema = z.object({
   projectId: z.string().uuid().optional(),
   galleryToken: z.string().min(8).optional(),
+  sourceImageUrl: z.string().url().optional(),
   force: z.boolean().optional().default(false),
   positions: z.array(z.coerce.number().int().min(1).max(20)).optional(),
   count: z.coerce.number().int().min(1).max(15).optional().default(1),
@@ -51,6 +52,31 @@ export async function POST(request: NextRequest) {
         { ok: false, error: "Galeria nao encontrada." },
         { status: 404 },
       );
+    }
+
+    if (parsed.data.sourceImageUrl) {
+      const sourceImageValidation = await validatePublicImageUrl(
+        parsed.data.sourceImageUrl,
+      );
+
+      if (!sourceImageValidation.ok) {
+        return NextResponse.json(
+          { ok: false, error: sourceImageValidation.error },
+          { status: 400 },
+        );
+      }
+
+      const { error: sourceUpdateError } = await supabase
+        .from("projects")
+        .update({ source_image_url: parsed.data.sourceImageUrl })
+        .eq("id", projectId);
+
+      if (sourceUpdateError) {
+        return NextResponse.json(
+          { ok: false, error: sourceUpdateError.message },
+          { status: 500 },
+        );
+      }
     }
 
     const { data: project, error: projectError } = await supabase
