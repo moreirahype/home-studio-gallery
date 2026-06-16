@@ -12,27 +12,32 @@ const notificationSchema = z
   .passthrough();
 
 export async function POST(request: NextRequest) {
-  const dataIdFromQuery = request.nextUrl.searchParams.get("data.id");
+  const dataIdFromQuery =
+    request.nextUrl.searchParams.get("data.id") ??
+    request.nextUrl.searchParams.get("id");
+  const parsed = notificationSchema.safeParse(await request.json());
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: "Notificacao invalida." },
+      { status: 400 },
+    );
+  }
+
+  const paymentId = parsed.data.data?.id ?? dataIdFromQuery;
   const signatureOk = verifyMercadoPagoSignature({
     signature: request.headers.get("x-signature"),
     requestId: request.headers.get("x-request-id"),
-    dataId: dataIdFromQuery,
+    dataId: paymentId?.toString() ?? null,
   });
 
   if (!signatureOk) {
     return NextResponse.json(
-      { ok: false, error: "Assinatura inválida." },
+      { ok: false, error: "Assinatura invalida." },
       { status: 401 },
     );
   }
 
-  const parsed = notificationSchema.safeParse(await request.json());
-
-  if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "Notificação inválida." }, { status: 400 });
-  }
-
-  const paymentId = parsed.data.data?.id ?? dataIdFromQuery;
   if (paymentId) {
     await settleMercadoPagoPayment(paymentId).catch(() => null);
   }
