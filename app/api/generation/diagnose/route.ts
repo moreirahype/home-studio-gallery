@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { unauthorized } from "@/lib/http";
+import { getKieImageModel } from "@/lib/kie";
 import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
       sourceImageUrl: project.source_image_url,
       sourceImagePublic: sourceImage.ok,
       sourceImageError: sourceImage.ok ? null : sourceImage.error,
+      imageModel: getKieImageModel(),
     },
     counts,
     photos: (photos ?? []).map((photo) => ({

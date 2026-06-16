@@ -19,6 +19,14 @@ type TaskDetailsResponse = {
   };
 };
 
+export function getKieImageModel() {
+  return (
+    process.env.KIE_IMAGE_MODEL ??
+    process.env.KIE_MODEL ??
+    "gpt-image-2-image-to-image"
+  );
+}
+
 function buildImageInput({
   model,
   prompt,
@@ -73,10 +81,7 @@ export async function createImageTask({
     throw new Error("KIE_API_KEY não configurada.");
   }
 
-  const model =
-    process.env.KIE_IMAGE_MODEL ??
-    process.env.KIE_MODEL ??
-    "gpt-image-2-image-to-image";
+  const model = getKieImageModel();
 
   if (model.includes("text-to-image")) {
     throw new Error(

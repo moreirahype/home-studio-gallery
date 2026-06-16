@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { unauthorized } from "@/lib/http";
 import { startProjectGeneration } from "@/lib/generation";
+import { getKieImageModel } from "@/lib/kie";
 import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
@@ -205,6 +206,7 @@ export async function POST(request: NextRequest) {
       nicheId,
       sourceImageUrl,
       contextFinal,
+      imageModel: getKieImageModel(),
     },
   });
 }
