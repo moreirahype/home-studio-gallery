@@ -160,6 +160,16 @@ export function Gallery({
   >([]);
   const [checkoutError, setCheckoutError] = useState("");
   const [releasing, setReleasing] = useState(false);
+  const [creatingPix, setCreatingPix] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [pixPayment, setPixPayment] = useState<{
+    orderId: string;
+    paymentId: string;
+    amount: number;
+    qrCode?: string;
+    qrCodeBase64?: string;
+    ticketUrl?: string;
+  } | null>(null);
   const videoPhotos = useMemo(() => {
     const chosenPhotos = videoPhotoIds
       .map((photoId) => photos.find((photo) => photo.id === photoId))
@@ -228,6 +238,8 @@ export function Gallery({
     setVideoPhotoIds(selected.slice(0, 3));
     setVideoPickerOpen(false);
     setPostPurchaseOffer("main");
+    setCheckoutError("");
+    setPixPayment(null);
     setCheckoutOpen(true);
   }
 
@@ -280,7 +292,87 @@ export function Gallery({
 
   async function continueCheckout() {
     if (checkoutAmount > 0) {
+      if (testMode || token === "demo") {
+        setPixReady(true);
+        return;
+      }
+
+      setCreatingPix(true);
+      setCheckoutError("");
+      const response = await fetch("/api/checkout/pix", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryToken: token,
+          photoIds: selected,
+          videoAdded,
+          videoPhotoIds,
+        }),
+      });
+      const result = (await response.json()) as {
+        ok: boolean;
+        error?: string;
+        orderId?: string;
+        paymentId?: string;
+        amount?: number;
+        qrCode?: string;
+        qrCodeBase64?: string;
+        ticketUrl?: string;
+      };
+      setCreatingPix(false);
+
+      if (!response.ok || !result.ok || !result.orderId || !result.paymentId) {
+        setCheckoutError(result.error ?? "Não foi possível gerar o Pix.");
+        return;
+      }
+
+      setPixPayment({
+        orderId: result.orderId,
+        paymentId: result.paymentId,
+        amount: result.amount ?? checkoutAmount,
+        qrCode: result.qrCode,
+        qrCodeBase64: result.qrCodeBase64,
+        ticketUrl: result.ticketUrl,
+      });
       setPixReady(true);
+      return;
+    }
+
+    await releaseIncludedPhotos();
+  }
+
+  async function checkPaymentAndRelease() {
+    if (!pixPayment) {
+      approveTestPayment();
+      return;
+    }
+
+    setCheckingPayment(true);
+    setCheckoutError("");
+    const response = await fetch("/api/checkout/status", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryToken: token,
+        orderId: pixPayment.orderId,
+      }),
+    });
+    const result = (await response.json()) as {
+      ok: boolean;
+      paid?: boolean;
+      error?: string;
+    };
+    setCheckingPayment(false);
+
+    if (!response.ok || !result.ok) {
+      setCheckoutError(result.error ?? "Não foi possível conferir o pagamento.");
+      return;
+    }
+
+    if (!result.paid) {
+      setCheckoutError(
+        "Ainda não encontrei o pagamento. Tente novamente em alguns segundos.",
+      );
       return;
     }
 
@@ -539,23 +631,7 @@ export function Gallery({
               ×
             </button>
 
-            {!testMode && checkoutAmount > 0 ? (
-              <>
-                <span className="modal-badge warning">Integração pendente</span>
-                <h2 id="checkout-title">Pagamento em configuração.</h2>
-                <p>
-                  A interface está pronta, mas o Mercado Pago ainda precisa ser
-                  conectado antes de aceitar pagamentos reais.
-                </p>
-                <button
-                  className="primary-button modal-primary"
-                  onClick={() => setCheckoutOpen(false)}
-                  type="button"
-                >
-                  Entendi
-                </button>
-              </>
-            ) : testPaymentApproved ? (
+            {testPaymentApproved ? (
               <>
                 <span className="modal-badge success">Pagamento aprovado</span>
                 <h2 id="checkout-title">Suas fotos foram liberadas.</h2>
@@ -640,25 +716,50 @@ export function Gallery({
               </>
             ) : pixReady ? (
               <>
-                <span className="modal-badge warning">Simulação de Pix</span>
-                <h2 id="checkout-title">{money.format(checkoutAmount)}</h2>
+                <span className="modal-badge warning">
+                  {pixPayment ? "Pix gerado" : "Simulação de Pix"}
+                </span>
+                <h2 id="checkout-title">
+                  {money.format(pixPayment?.amount ?? checkoutAmount)}
+                </h2>
                 <p>
-                  Em produção, o QR Code e o Pix Copia e Cola serão gerados pelo
-                  Mercado Pago.
+                  Pague com o QR Code ou use o Pix Copia e Cola. Assim que o
+                  pagamento for aprovado, suas fotos serão liberadas aqui.
                 </p>
-                <div className="fake-pix-code" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                  <strong>PIX</strong>
-                </div>
+                {pixPayment?.qrCodeBase64 ? (
+                  <img
+                    alt="QR Code Pix"
+                    className="pix-qr-image"
+                    src={`data:image/png;base64,${pixPayment.qrCodeBase64}`}
+                  />
+                ) : (
+                  <div className="fake-pix-code" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                    <strong>PIX</strong>
+                  </div>
+                )}
+                {pixPayment?.qrCode && (
+                  <button
+                    className="copy-pix-button"
+                    onClick={() =>
+                      navigator.clipboard.writeText(pixPayment.qrCode!)
+                    }
+                    type="button"
+                  >
+                    Copiar Pix Copia e Cola
+                  </button>
+                )}
                 <button
                   className="primary-button modal-primary"
-                  onClick={approveTestPayment}
+                  disabled={checkingPayment}
+                  onClick={checkPaymentAndRelease}
                   type="button"
                 >
-                  Simular pagamento aprovado
+                  {checkingPayment ? "Conferindo..." : "Já paguei, liberar fotos"}
                 </button>
+                {checkoutError && <p className="form-error">{checkoutError}</p>}
               </>
             ) : (
               <>
@@ -791,11 +892,13 @@ export function Gallery({
                 </div>
                 <button
                   className="primary-button modal-primary"
-                  disabled={releasing}
+                  disabled={releasing || creatingPix}
                   onClick={continueCheckout}
                   type="button"
                 >
-                  {releasing
+                  {creatingPix
+                    ? "Gerando Pix..."
+                    : releasing
                     ? "Liberando..."
                     : checkoutAmount > 0
                     ? "Continuar para o Pix"
