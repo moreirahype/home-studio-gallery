@@ -26,6 +26,11 @@ const payloadSchema = z.object({
   testMode: z.coerce.boolean().optional().default(false),
 });
 
+function previewValue(value?: string) {
+  if (!value) return null;
+  return value.length > 220 ? `${value.slice(0, 220)}...` : value;
+}
+
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
 
@@ -58,10 +63,20 @@ export async function POST(request: NextRequest) {
   const contextFinal =
     receivedContext ||
     (isTestMode && parsed.data.testMode ? "Ensaio premium para homologação" : "");
+  const receivedDebug = {
+    foto_cliente: previewValue(parsed.data.foto_cliente),
+    sourceImageUrl: previewValue(parsed.data.sourceImageUrl),
+    contexto_final: previewValue(parsed.data.contexto_final),
+    contextFinal: previewValue(parsed.data.contextFinal),
+  };
 
   if (!sourceImageUrl || !URL.canParse(sourceImageUrl)) {
     return NextResponse.json(
-      { ok: false, error: "foto_cliente precisa conter uma URL pública válida." },
+      {
+        ok: false,
+        error: "foto_cliente precisa conter uma URL pública válida.",
+        received: receivedDebug,
+      },
       { status: 400 },
     );
   }
@@ -73,6 +88,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: sourceImageValidation.error,
         sourceImageUrl,
+        received: receivedDebug,
       },
       { status: 400 },
     );
@@ -80,7 +96,11 @@ export async function POST(request: NextRequest) {
 
   if (contextFinal.length < 3) {
     return NextResponse.json(
-      { ok: false, error: "contexto_final precisa estar preenchido." },
+      {
+        ok: false,
+        error: "contexto_final precisa estar preenchido.",
+        received: receivedDebug,
+      },
       { status: 400 },
     );
   }
