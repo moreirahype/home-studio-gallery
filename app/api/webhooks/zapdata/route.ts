@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   const appUrl = process.env.APP_URL ?? request.nextUrl.origin;
   const isTestMode = process.env.TEST_MODE === "true";
   const receivedSourceImage =
-    parsed.data.sourceImageUrl?.trim() || parsed.data.foto_cliente?.trim();
+    parsed.data.foto_cliente?.trim() || parsed.data.sourceImageUrl?.trim();
   const receivedContext =
     parsed.data.contextFinal?.trim() || parsed.data.contexto_final?.trim();
   const sourceImageUrl =
