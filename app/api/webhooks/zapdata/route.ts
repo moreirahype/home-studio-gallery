@@ -23,6 +23,7 @@ const payloadSchema = z.object({
   paidAmount: z.coerce.number().positive().optional().default(7.9),
   generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
   receiptId: z.string().min(1).optional(),
+  testMode: z.coerce.boolean().optional().default(false),
 });
 
 export async function POST(request: NextRequest) {
@@ -51,12 +52,12 @@ export async function POST(request: NextRequest) {
     parsed.data.contextFinal?.trim() || parsed.data.contexto_final?.trim();
   const sourceImageUrl =
     receivedSourceImage ||
-    (isTestMode
+    (isTestMode && parsed.data.testMode
       ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200"
       : "");
   const contextFinal =
     receivedContext ||
-    (isTestMode ? "Ensaio premium para homologação" : "");
+    (isTestMode && parsed.data.testMode ? "Ensaio premium para homologação" : "");
 
   if (!sourceImageUrl || !URL.canParse(sourceImageUrl)) {
     return NextResponse.json(
