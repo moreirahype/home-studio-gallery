@@ -1,22 +1,53 @@
 import { cache } from "react";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
+type ProjectRow = {
+  id: string;
+  gallery_token: string;
+  included_photos: number;
+  paid_amount_cents: number;
+  status: string;
+  customer_name: string | null;
+  generation_count?: number;
+};
+
 export const getProjectByToken = cache(async (galleryToken: string) => {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  let data: ProjectRow | null = null;
+  let error: { code?: string; message: string } | null = null;
+  const primary = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, included_photos, paid_amount_cents, status, customer_name",
+      "id, gallery_token, included_photos, paid_amount_cents, status, customer_name, generation_count",
     )
     .eq("gallery_token", galleryToken)
     .maybeSingle();
+  data = primary.data;
+  error = primary.error;
+
+  if (error?.code === "42703" || error?.message.includes("generation_count")) {
+    const fallback = await supabase
+      .from("projects")
+      .select(
+        "id, gallery_token, included_photos, paid_amount_cents, status, customer_name",
+      )
+      .eq("gallery_token", galleryToken)
+      .maybeSingle();
+    data = fallback.data ? { ...fallback.data, generation_count: 15 } : null;
+    error = fallback.error;
+  }
 
   if (error) {
-    throw new Error(`Não foi possível carregar a galeria: ${error.message}`);
+    throw new Error(`Nao foi possivel carregar a galeria: ${error.message}`);
   }
 
   if (!data) return data;
 
+  return loadProjectPhotos(data);
+});
+
+async function loadProjectPhotos(data: ProjectRow) {
+  const supabase = getSupabaseAdmin();
   const { data: photos, error: photosError } = await supabase
     .from("photos")
     .select("id, position, preview_path, status")
@@ -24,7 +55,7 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
     .order("position");
 
   if (photosError) {
-    throw new Error(`Não foi possível carregar as fotos: ${photosError.message}`);
+    throw new Error(`Nao foi possivel carregar as fotos: ${photosError.message}`);
   }
 
   const readyPhotos = (photos ?? []).filter(
@@ -41,7 +72,7 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
 
   if (signedPreviews.error) {
     throw new Error(
-      `Não foi possível abrir as prévias: ${signedPreviews.error.message}`,
+      `Nao foi possivel abrir as previas: ${signedPreviews.error.message}`,
     );
   }
 
@@ -49,7 +80,7 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
     ...data,
     generation_count: Math.max(
       data.included_photos,
-      photos?.length || 15,
+      data.generation_count ?? photos?.length ?? 15,
     ),
     photos: readyPhotos.map((photo, index) => ({
       id: photo.id,
@@ -57,4 +88,4 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
       previewUrl: signedPreviews.data[index]?.signedUrl ?? "",
     })),
   };
-});
+}
