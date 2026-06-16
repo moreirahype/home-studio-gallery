@@ -1,6 +1,5 @@
 import { Gallery, type GalleryOffer } from "@/components/gallery";
 import { getProjectByToken } from "@/lib/projects";
-import { createExpressOfferToken } from "@/lib/offers";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +46,6 @@ export default async function GalleryPage({
 
   return (
     <Gallery
-      expressOfferToken={createExpressOfferToken(token)}
       galleryPhotos={project?.photos}
       offer={offer}
       testMode={query.test === "1"}

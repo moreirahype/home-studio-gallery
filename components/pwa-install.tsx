@@ -26,7 +26,9 @@ export function PwaInstall({ projectToken }: { projectToken?: string }) {
     setIsInstalled(
       window.matchMedia("(display-mode: standalone)").matches ||
         ("standalone" in navigator &&
-          Boolean((navigator as Navigator & { standalone?: boolean }).standalone)),
+          Boolean(
+            (navigator as Navigator & { standalone?: boolean }).standalone,
+          )),
     );
 
     navigator.serviceWorker?.register("/sw.js");
@@ -87,11 +89,14 @@ export function PwaInstall({ projectToken }: { projectToken?: string }) {
               onClick={enableNotifications}
               type="button"
             >
-              Ativar novidades
+              Ativar notificações e receber vantagens
             </button>
           )}
         {notificationsEnabled && (
-          <small>Notificações ativadas com sucesso.</small>
+          <small>
+            Notificações ativadas. Você receberá avisos de novos temas e
+            condições especiais.
+          </small>
         )}
       </div>
     );
@@ -99,27 +104,35 @@ export function PwaInstall({ projectToken }: { projectToken?: string }) {
 
   return (
     <div className="install-card">
-      <span className="install-icon">HS</span>
+      <span className="install-icon" aria-hidden="true">
+        <span>HS</span>
+      </span>
       <div>
-        <strong>Instale o Home Studio</strong>
+        <strong>Salve o Home Studio no celular</strong>
         <p>
-          Acesse seus ensaios como um aplicativo e receba novidades quando
-          ativarmos as notificações.
+          Fica como um app na tela inicial. Quem ativar notificações recebe
+          avisos de novos temas, descontos relâmpago e vantagens para próximos
+          ensaios.
         </p>
+      </div>
+      <div className="install-steps">
+        <div>
+          <span className="phone-step">iPhone</span>
+          <small>Toque em Compartilhar e em Adicionar à Tela de Início.</small>
+        </div>
+        <div>
+          <span className="phone-step">Android</span>
+          <small>Toque no menu do navegador e depois em Instalar app.</small>
+        </div>
       </div>
       {installPrompt ? (
         <button className="primary-button" onClick={install} type="button">
-          Instalar app
+          Instalar agora
         </button>
       ) : isIos ? (
-        <small>
-          No iPhone: toque em Compartilhar e depois em “Adicionar à Tela de
-          Início”.
-        </small>
+        <small>Depois de instalar, volte aqui para ativar as notificações.</small>
       ) : (
-        <small>
-          No Android: abra o menu do navegador e toque em “Instalar aplicativo”.
-        </small>
+        <small>Se o botão de instalar não aparecer, use o menu do navegador.</small>
       )}
     </div>
   );

@@ -21,14 +21,17 @@ const themes = [
 export function NewShootForm({
   sourceToken,
   expressOffer = false,
+  vipOffer = false,
   offerToken,
 }: {
   sourceToken?: string;
   expressOffer?: boolean;
+  vipOffer?: boolean;
   offerToken?: string;
 }) {
-  const photoCount = expressOffer ? 5 : 10;
-  const price = expressOffer ? 4.9 : 7.9;
+  const photoCount = vipOffer ? 15 : expressOffer ? 5 : 15;
+  const includedPhotos = vipOffer ? 3 : 1;
+  const price = vipOffer ? 14.9 : expressOffer ? 4.9 : 7.9;
   const [theme, setTheme] = useState("");
   const [occasion, setOccasion] = useState("");
   const [style, setStyle] = useState("");
@@ -60,7 +63,7 @@ export function NewShootForm({
     formData.set("theme", theme);
     formData.set("occasion", occasion);
     formData.set("styleNotes", style);
-    formData.set("offer", expressOffer ? "express" : "standard");
+    formData.set("offer", vipOffer ? "vip" : expressOffer ? "express" : "standard");
     if (offerToken) formData.set("offerToken", offerToken);
     if (sourceToken) formData.set("sourceToken", sourceToken);
 
@@ -88,9 +91,10 @@ export function NewShootForm({
           <h1>Seu próximo ensaio começa aqui.</h1>
           <p>
             Na integração final, o pagamento de {money.format(price)} iniciará
-            a geração de {photoCount} opções. Quando
-            ficarem prontas, você escolhe 1 foto incluída e pode levar outras
-            que gostar.
+            a geração de {photoCount} opções. Quando ficarem prontas, você
+            escolhe {includedPhotos}{" "}
+            {includedPhotos === 1 ? "foto incluída" : "fotos incluídas"} e pode
+            levar outras que gostar.
           </p>
           <PwaInstall />
           <button
@@ -116,7 +120,9 @@ export function NewShootForm({
 
       <header className="new-shoot-hero">
         <span className="eyebrow">
-          {photoCount} OPÇÕES E 1 FOTO INCLUÍDA POR {money.format(price)}
+          {photoCount} OPÇÕES E {includedPhotos}{" "}
+          {includedPhotos === 1 ? "FOTO INCLUÍDA" : "FOTOS INCLUÍDAS"} POR{" "}
+          {money.format(price)}
         </span>
         <h1>Como você quer aparecer no seu próximo ensaio?</h1>
         <p>
@@ -187,7 +193,10 @@ export function NewShootForm({
 
         <div className="new-shoot-total">
           <div>
-            <strong>{photoCount} opções, 1 foto incluída</strong>
+            <strong>
+              {photoCount} opções, {includedPhotos}{" "}
+              {includedPhotos === 1 ? "foto incluída" : "fotos incluídas"}
+            </strong>
             <span>Outras fotos são opcionais</span>
           </div>
           <strong>{money.format(price)}</strong>

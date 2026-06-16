@@ -121,13 +121,11 @@ function AddIcon() {
 
 export function Gallery({
   token,
-  expressOfferToken,
   offer: offerInput,
   galleryPhotos,
   testMode = false,
 }: {
   token: string;
-  expressOfferToken: string;
   offer?: Partial<GalleryOffer>;
   galleryPhotos?: GalleryPhoto[];
   testMode?: boolean;
@@ -152,7 +150,7 @@ export function Gallery({
   const [videoPhotoIds, setVideoPhotoIds] = useState<string[]>([]);
   const [videoPickerOpen, setVideoPickerOpen] = useState(false);
   const [postPurchaseOffer, setPostPurchaseOffer] = useState<
-    "main" | "downsell"
+    "main" | "install"
   >("main");
   const [pixReady, setPixReady] = useState(false);
   const [downloadLinks, setDownloadLinks] = useState<
@@ -655,28 +653,29 @@ export function Gallery({
                 )}
                 {postPurchaseOffer === "main" ? (
                   <div className="post-purchase-offer">
-                    <span>NOVO TEMA, NOVO ENSAIO</span>
+                    <span>PRÓXIMO ENSAIO COM MAIS FOTOS INCLUÍDAS</span>
                     <strong>
-                      Crie 10 novas opções por{" "}
-                      {money.format(offer.newShootPrice)}
+                      Novo ensaio VIP: 15 opções e 3 fotos incluídas por{" "}
+                      {money.format(14.9)}
                     </strong>
                     <small>
-                      Escolha outro estilo, receba 10 novas fotos para escolher
-                      e leve 1 delas incluída.
+                      Diferente da entrada de {money.format(offer.paidAmount)}:
+                      você recebe outro tema completo e já leva 3 fotos sem
+                      pagar adicionais.
                     </small>
                     <button
                       className="primary-button modal-primary"
                       onClick={() => {
                         setCheckoutOpen(false);
-                        window.location.href = `/novo?source=${token}`;
+                        window.location.href = `/novo?source=${token}&offer=vip`;
                       }}
                       type="button"
                     >
-                      Quero meu novo ensaio
+                      Quero meu próximo ensaio VIP
                     </button>
                     <button
                       className="text-button muted"
-                      onClick={() => setPostPurchaseOffer("downsell")}
+                      onClick={() => setPostPurchaseOffer("install")}
                       type="button"
                     >
                       Agora não
@@ -684,32 +683,13 @@ export function Gallery({
                   </div>
                 ) : (
                   <div className="post-purchase-offer downsell-offer">
-                    <span>OFERTA ÚNICA DE AGORA</span>
-                    <strong>
-                      Que tal um ensaio express por{" "}
-                      {money.format(offer.expressShootPrice)}?
-                    </strong>
+                    <span>GUARDE SUA VANTAGEM</span>
+                    <strong>Instale o app e ative notificações para receber descontos.</strong>
                     <small>
-                      Receba 5 novas opções em outro tema e escolha 1 foto
-                      incluída. Esta condição fica disponível por 30 minutos.
+                      Em vez de oferecer um ensaio menor e confuso, vamos te
+                      avisar quando tiver tema novo e condição especial para
+                      gerar outro ensaio.
                     </small>
-                    <button
-                      className="primary-button modal-primary"
-                      onClick={() => {
-                        setCheckoutOpen(false);
-                        window.location.href = `/novo?source=${token}&offer=express&code=${encodeURIComponent(expressOfferToken)}`;
-                      }}
-                      type="button"
-                    >
-                      Sim, quero por {money.format(offer.expressShootPrice)}
-                    </button>
-                    <button
-                      className="text-button muted"
-                      onClick={() => setCheckoutOpen(false)}
-                      type="button"
-                    >
-                      Encerrar
-                    </button>
                   </div>
                 )}
                 <PwaInstall projectToken={token} />
@@ -823,7 +803,11 @@ export function Gallery({
                         : `Usaremos ${Math.min(3, videoPhotoIds.length)} das fotos escolhidas para criar as cenas`}
                     </small>
                   </span>
-                  <strong>{money.format(offer.videoPrice)}</strong>
+                  <span className="addon-action">
+                    {videoAdded
+                      ? "Adicionado"
+                      : `Adicionar por ${money.format(offer.videoPrice)}`}
+                  </span>
                 </button>
                 {videoAdded && selected.length > 1 && (
                   <div className="video-photo-choice">

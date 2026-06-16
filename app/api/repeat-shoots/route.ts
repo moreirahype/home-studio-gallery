@@ -9,7 +9,7 @@ const fieldsSchema = z.object({
   theme: z.string().min(2),
   occasion: z.string().max(240).optional(),
   styleNotes: z.string().max(1000).optional(),
-  offer: z.enum(["standard", "express"]).default("standard"),
+  offer: z.enum(["standard", "express", "vip"]).default("standard"),
   offerToken: z.string().optional(),
 });
 
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const isExpress = parsed.data.offer === "express";
+  const isVip = parsed.data.offer === "vip";
   if (
     isExpress &&
     !verifyExpressOfferToken(
@@ -53,8 +54,9 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     );
   }
-  const photoCount = isExpress ? 5 : 10;
-  const paidAmountCents = isExpress ? 490 : 790;
+  const photoCount = isVip ? 15 : isExpress ? 5 : 15;
+  const includedPhotos = isVip ? 3 : 1;
+  const paidAmountCents = isVip ? 1490 : isExpress ? 490 : 790;
   let sourceProjectId: string | null = null;
 
   if (parsed.data.sourceToken) {
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
     occasion: parsed.data.occasion || null,
     style_notes: parsed.data.styleNotes || null,
     photo_count: photoCount,
-    included_photos: 1,
+    included_photos: includedPhotos,
     paid_amount_cents: paidAmountCents,
     status: "pending_payment",
   });
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
     repeatShootId: requestId,
     amount: paidAmountCents / 100,
     photoCount,
-    includedPhotos: 1,
+    includedPhotos,
     status: "pending_payment",
   });
 }

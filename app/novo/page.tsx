@@ -16,6 +16,7 @@ export default async function NewShootPage({
       expressOffer={expressOffer}
       offerToken={expressOffer ? query.code : undefined}
       sourceToken={query.source}
+      vipOffer={query.offer === "vip"}
     />
   );
 }

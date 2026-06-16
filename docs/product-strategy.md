@@ -11,18 +11,20 @@
    - Usa até 3 fotos escolhidas pelo cliente.
    - Cada foto ganha movimento e os trechos são unidos com transições.
    - Inclui uma trilha instrumental licenciada, com volume suave.
-3. Pós-compra: novo ensaio por R$ 7,90
-   - 10 opções e 1 foto incluída.
+3. Pós-compra: novo ensaio VIP por R$ 14,90
+   - 15 opções e 3 fotos incluídas.
    - Novo tema e nova referência opcional.
-   - Repete o upsell de fotos adicionais.
-   - Pode receber novamente a oferta de vídeo.
-4. Downsell após recusar o novo ensaio
-   - Ensaio express por R$ 4,90.
-   - 5 opções e 1 foto incluída.
-   - Aparece somente após a recusa da oferta principal.
-   - Tem escopo menor para não desvalorizar o ensaio de 10 opções.
+   - Não concorre com a entrada de R$ 7,90, porque entrega mais fotos já
+     liberadas.
+   - Repete o upsell de fotos adicionais e pode receber novamente a oferta de
+     vídeo.
+4. Recusa da oferta VIP
+   - Não oferecer um downsell pago menor dentro do mesmo fluxo.
+   - Mostrar instalação do app e ativação de notificações como retenção.
+   - Usar notificações para temas novos, vantagens e ofertas pontuais.
 5. Recompra pelo PWA
-   - Novo ensaio com 10 opções por R$ 7,90.
+   - Novo ensaio padrão com 15 opções por R$ 7,90.
+   - Inclui 1 foto e mantém a mesma lógica de galeria com fotos adicionais.
    - Primeiro lembrete 7 dias após a ativação.
    - Próximos lembretes a cada 14 dias.
 
@@ -71,7 +73,7 @@ Medir separadamente:
 Primeiro teste recomendado:
 
 - vídeo: R$ 14,90 versus R$ 19,90;
-- novo ensaio: R$ 7,90 fixo;
+- novo ensaio VIP: R$ 14,90 com 3 fotos incluídas;
 - não alterar simultaneamente o preço de entrada;
 - escolher o vencedor por margem por 100 compradores, não apenas por taxa de
   conversão do complemento.
