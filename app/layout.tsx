@@ -20,15 +20,8 @@ export const metadata: Metadata = {
   },
   description:
     "Crie ensaios fotográficos com IA, escolha suas fotos e transforme-as em vídeos.",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Home Studio",
-  },
   icons: {
     icon: "/icon-192.png",
-    apple: "/apple-touch-icon.png",
   },
 };
 

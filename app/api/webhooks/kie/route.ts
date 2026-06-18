@@ -253,6 +253,10 @@ export async function POST(request: NextRequest) {
         .from("projects")
         .update({ status: "ready" })
         .eq("id", photo.project_id);
+      await supabase
+        .from("repeat_shoots")
+        .update({ status: "ready" })
+        .eq("project_id", photo.project_id);
     }
 
     return NextResponse.json({ ok: true, taskId, state, photoId: photo.id });

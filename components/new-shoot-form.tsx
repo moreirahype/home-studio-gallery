@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PwaInstall } from "@/components/pwa-install";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -17,6 +16,26 @@ const themes = [
   "Fitness",
   "Aniversário",
 ];
+
+async function optimizeReference(file: File) {
+  if (file.size <= 2.5 * 1024 * 1024) return file;
+
+  const bitmap = await createImageBitmap(file);
+  const maxSide = 1600;
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Nao foi possivel preparar a foto.");
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.86),
+  );
+  if (!blob) throw new Error("Nao foi possivel reduzir a foto.");
+  return new File([blob], "referencia.jpg", { type: "image/jpeg" });
+}
 
 export function NewShootForm({
   sourceToken,
@@ -39,7 +58,18 @@ export function NewShootForm({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
   const [error, setError] = useState("");
+  const [pixPayment, setPixPayment] = useState<{
+    orderId: string;
+    paymentId: string;
+    galleryToken: string;
+    galleryUrl: string;
+    amount: number;
+    qrCode?: string;
+    qrCodeBase64?: string;
+  } | null>(null);
 
   const description = useMemo(
     () =>
@@ -58,8 +88,19 @@ export function NewShootForm({
     setSubmitting(true);
     setError("");
 
+    let optimizedImage: File;
+    try {
+      optimizedImage = await optimizeReference(imageFile);
+    } catch {
+      setError(
+        "Nao conseguimos preparar essa foto. Tente uma imagem JPG menor.",
+      );
+      setSubmitting(false);
+      return;
+    }
+
     const formData = new FormData();
-    formData.set("reference", imageFile);
+    formData.set("reference", optimizedImage);
     formData.set("theme", theme);
     formData.set("occasion", occasion);
     formData.set("styleNotes", style);
@@ -71,7 +112,17 @@ export function NewShootForm({
       method: "POST",
       body: formData,
     });
-    const result = (await response.json()) as { ok: boolean; error?: string };
+    const result = (await response.json()) as {
+      ok: boolean;
+      error?: string;
+      orderId?: string;
+      paymentId?: string;
+      galleryToken?: string;
+      galleryUrl?: string;
+      amount?: number;
+      qrCode?: string;
+      qrCodeBase64?: string;
+    };
 
     if (!response.ok || !result.ok) {
       setError(result.error ?? "Não foi possível preparar o ensaio.");
@@ -79,30 +130,118 @@ export function NewShootForm({
       return;
     }
 
+    if (
+      !result.orderId ||
+      !result.paymentId ||
+      !result.galleryToken ||
+      !result.galleryUrl
+    ) {
+      setError("O Pix nao foi criado corretamente. Tente novamente.");
+      setSubmitting(false);
+      return;
+    }
+
+    setPixPayment({
+      orderId: result.orderId,
+      paymentId: result.paymentId,
+      galleryToken: result.galleryToken,
+      galleryUrl: result.galleryUrl,
+      amount: result.amount ?? price,
+      qrCode: result.qrCode,
+      qrCodeBase64: result.qrCodeBase64,
+    });
     setSubmitted(true);
     setSubmitting(false);
   }
 
-  if (submitted) {
+  async function checkPayment() {
+    if (!pixPayment) return;
+    setCheckingPayment(true);
+    setError("");
+    const response = await fetch("/api/checkout/status", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryToken: pixPayment.galleryToken,
+        orderId: pixPayment.orderId,
+      }),
+    });
+    const result = (await response.json()) as {
+      ok: boolean;
+      paid?: boolean;
+      error?: string;
+    };
+    setCheckingPayment(false);
+
+    if (!response.ok || !result.ok) {
+      setError(result.error ?? "Nao foi possivel conferir o pagamento.");
+      return;
+    }
+
+    if (!result.paid) {
+      setError("Pagamento ainda nao encontrado. Aguarde alguns segundos.");
+      return;
+    }
+
+    window.location.href = pixPayment.galleryUrl;
+  }
+
+  async function copyPixCode() {
+    if (!pixPayment?.qrCode) return;
+    try {
+      await navigator.clipboard.writeText(pixPayment.qrCode);
+      setError("");
+      setPixCopied(true);
+      window.setTimeout(() => setPixCopied(false), 3500);
+    } catch {
+      setError(
+        "Nao foi possivel copiar automaticamente. Toque e segure o codigo Pix para copiar.",
+      );
+    }
+  }
+
+  if (submitted && pixPayment) {
     return (
       <main className="new-shoot-shell">
         <section className="new-shoot-card success-state">
-          <span className="modal-badge success">Pedido preparado</span>
-          <h1>Seu próximo ensaio começa aqui.</h1>
+          <span className="modal-badge warning">Pix gerado</span>
+          <h1>Falta apenas confirmar o pagamento.</h1>
           <p>
-            Na integração final, o pagamento de {money.format(price)} iniciará
-            a geração de {photoCount} opções. Quando ficarem prontas, você
-            escolhe {includedPhotos}{" "}
-            {includedPhotos === 1 ? "foto incluída" : "fotos incluídas"} e pode
-            levar outras que gostar.
+            Pague {money.format(pixPayment.amount)} para iniciar a geracao de{" "}
+            {photoCount} opcoes. Voce ja leva {includedPhotos}{" "}
+            {includedPhotos === 1 ? "foto incluida" : "fotos incluidas"}.
           </p>
-          <PwaInstall />
+          {pixPayment.qrCodeBase64 && (
+            <img
+              alt="QR Code Pix"
+              className="pix-qr-image"
+              src={`data:image/png;base64,${pixPayment.qrCodeBase64}`}
+            />
+          )}
+          {pixPayment.qrCode && (
+            <button
+              className={`copy-pix-button ${pixCopied ? "copied" : ""}`}
+              onClick={copyPixCode}
+              type="button"
+            >
+              {pixCopied ? "Pix copiado! Abra seu banco" : "Copiar Pix Copia e Cola"}
+            </button>
+          )}
           <button
             className="primary-button"
+            disabled={checkingPayment}
+            onClick={checkPayment}
+            type="button"
+          >
+            {checkingPayment ? "Conferindo..." : "Ja paguei, iniciar ensaio"}
+          </button>
+          {error && <p className="form-error">{error}</p>}
+          <button
+            className="text-button muted"
             onClick={() => setSubmitted(false)}
             type="button"
           >
-            Criar outro tema
+            Voltar e revisar pedido
           </button>
         </section>
       </main>

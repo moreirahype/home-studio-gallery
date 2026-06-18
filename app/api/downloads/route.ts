@@ -24,7 +24,7 @@ async function authorizeIncludedPhotos({
     .eq("project_id", projectId);
 
   if (error) {
-    if (error.code === "42P01") {
+    if (["42P01", "PGRST205"].includes(error.code ?? "")) {
       return photoIds.length <= includedPhotos;
     }
     throw new Error(error.message);
@@ -140,17 +140,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const signed = await supabase.storage
-    .from("photo-originals")
-    .createSignedUrls(
-      photos.map((photo) => photo.original_path as string),
-      60 * 15,
-      { download: true },
-    );
+  const [signed, views] = await Promise.all([
+    supabase.storage
+      .from("photo-originals")
+      .createSignedUrls(
+        photos.map((photo) => photo.original_path as string),
+        60 * 15,
+        { download: true },
+      ),
+    supabase.storage
+      .from("photo-originals")
+      .createSignedUrls(
+        photos.map((photo) => photo.original_path as string),
+        60 * 60,
+      ),
+  ]);
 
-  if (signed.error) {
+  if (signed.error || views.error) {
     return NextResponse.json(
-      { ok: false, error: signed.error.message },
+      { ok: false, error: signed.error?.message ?? views.error?.message },
       { status: 500 },
     );
   }
@@ -162,6 +170,7 @@ export async function POST(request: NextRequest) {
       photoId: photo.id,
       number: photo.position,
       url: signed.data[index]?.signedUrl,
+      viewUrl: views.data[index]?.signedUrl,
     })),
   });
 }

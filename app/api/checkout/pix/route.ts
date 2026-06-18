@@ -66,11 +66,58 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const photoAmountCents = getAdditionalPhotoAmountCents({
-    selectedCount: selectedPhotoIds.length,
-    includedPhotos: project.included_photos,
-    paidAmountCents: project.paid_amount_cents,
-  });
+  const unlockedPhotoIds = new Set<string>();
+  const claims = await supabase
+    .from("project_included_photos")
+    .select("photo_id")
+    .eq("project_id", project.id);
+
+  if (claims.error && !["42P01", "PGRST205"].includes(claims.error.code ?? "")) {
+    return NextResponse.json(
+      { ok: false, error: claims.error.message },
+      { status: 500 },
+    );
+  }
+
+  for (const claim of claims.data ?? []) {
+    unlockedPhotoIds.add(claim.photo_id as string);
+  }
+
+  const { data: paidPhotos } = await supabase
+    .from("order_photos")
+    .select("photo_id, orders!inner(status, project_id)")
+    .eq("orders.project_id", project.id)
+    .eq("orders.status", "paid");
+
+  for (const row of paidPhotos ?? []) {
+    unlockedPhotoIds.add(row.photo_id as string);
+  }
+
+  const { data: paidPhotoItems } = await supabase
+    .from("order_items")
+    .select("amount_cents, orders!inner(status, project_id)")
+    .eq("kind", "photos")
+    .eq("orders.project_id", project.id)
+    .eq("orders.status", "paid");
+  const paidPhotoCreditCents = (paidPhotoItems ?? []).reduce(
+    (total, item) => total + Number(item.amount_cents || 0),
+    project.paid_amount_cents,
+  );
+  const targetPhotoCount = new Set([
+    ...unlockedPhotoIds,
+    ...selectedPhotoIds,
+  ]).size;
+  const targetPhotoTotalCents =
+    project.paid_amount_cents +
+    getAdditionalPhotoAmountCents({
+      selectedCount: targetPhotoCount,
+      includedPhotos: project.included_photos,
+      paidAmountCents: project.paid_amount_cents,
+    });
+  const photoAmountCents = Math.max(
+    0,
+    targetPhotoTotalCents - paidPhotoCreditCents,
+  );
   const videoAmountCents = parsed.data.videoAdded
     ? Math.round((Number(process.env.VIDEO_UPSELL_PRICE) || 19.9) * 100)
     : 0;

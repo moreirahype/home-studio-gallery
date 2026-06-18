@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { PwaInstall } from "@/components/pwa-install";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const MAX_PHOTOS = 20;
 const DEFAULT_GALLERY_SIZE = 15;
@@ -130,6 +130,7 @@ export function Gallery({
   galleryPhotos?: GalleryPhoto[];
   testMode?: boolean;
 }) {
+  const router = useRouter();
   const offer = useMemo(() => normalizeOffer(offerInput), [offerInput]);
   const prices = useMemo(() => createPriceCurve(offer), [offer]);
   const milestones = useMemo(
@@ -149,17 +150,23 @@ export function Gallery({
   const [videoAdded, setVideoAdded] = useState(false);
   const [videoPhotoIds, setVideoPhotoIds] = useState<string[]>([]);
   const [videoPickerOpen, setVideoPickerOpen] = useState(false);
-  const [postPurchaseOffer, setPostPurchaseOffer] = useState<
-    "main" | "install"
-  >("main");
   const [pixReady, setPixReady] = useState(false);
   const [downloadLinks, setDownloadLinks] = useState<
     { photoId: string; number: number; url: string }[]
   >([]);
+  const [unlockedPhotoIds, setUnlockedPhotoIds] = useState<string[]>([]);
+  const [unlockedViews, setUnlockedViews] = useState<Record<string, string>>({});
+  const [photoCredit, setPhotoCredit] = useState(offer.paidAmount);
+  const [videoAccess, setVideoAccess] = useState<{
+    status: string;
+    url?: string | null;
+    error?: string | null;
+  } | null>(null);
   const [checkoutError, setCheckoutError] = useState("");
   const [releasing, setReleasing] = useState(false);
   const [creatingPix, setCreatingPix] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
   const [pixPayment, setPixPayment] = useState<{
     orderId: string;
     paymentId: string;
@@ -184,8 +191,11 @@ export function Gallery({
 
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
-    const referenceUnit = offer.paidAmount / offer.includedPhotos;
-    const fullPrice = count * referenceUnit;
+    const referenceUnit =
+      (offer.paidAmount / offer.includedPhotos) * 1.25;
+    const fullPrice =
+      offer.paidAmount +
+      Math.max(0, count - offer.includedPhotos) * referenceUnit;
     const savings = Math.max(0, fullPrice - total);
     const discount = count ? Math.round((savings / fullPrice) * 100) : 0;
     const unitPrice = count ? total / count : 0;
@@ -205,17 +215,97 @@ export function Gallery({
     };
   }
 
-  const pricing = getPricing(selected.length);
+  const targetPhotoCount = new Set([...unlockedPhotoIds, ...selected]).size;
+  const basePricing = getPricing(targetPhotoCount);
+  const pricing = {
+    ...basePricing,
+    dueNow: selected.length
+      ? Math.max(0, basePricing.total - photoCredit)
+      : 0,
+  };
   const nextPrice = pricing.nextMilestone
     ? getPricing(pricing.nextMilestone.quantity)
     : null;
   const photosToNextDeal = pricing.nextMilestone
     ? pricing.nextMilestone.quantity - selected.length
     : 0;
-  const selectionIsIncluded =
-    selected.length > 0 && selected.length <= offer.includedPhotos;
+  const selectionIsIncluded = selected.length > 0 && pricing.dueNow === 0;
   const checkoutAmount =
     pricing.dueNow + (videoAdded ? offer.videoPrice : 0);
+
+  const refreshAccess = useCallback(async () => {
+    if (token === "demo") return;
+    const response = await fetch(
+      `/api/gallery/access?token=${encodeURIComponent(token)}`,
+      { cache: "no-store" },
+    );
+    const result = (await response.json()) as {
+      ok: boolean;
+      photoCredit?: number;
+      photos?: {
+        photoId: string;
+        number: number;
+        viewUrl?: string;
+        downloadUrl?: string;
+      }[];
+      video?: { status: string; url?: string | null; error?: string | null } | null;
+    };
+
+    if (!response.ok || !result.ok) return;
+    const unlocked = result.photos ?? [];
+    setUnlockedPhotoIds(unlocked.map((photo) => photo.photoId));
+    setUnlockedViews(
+      Object.fromEntries(
+        unlocked
+          .filter((photo) => photo.viewUrl)
+          .map((photo) => [photo.photoId, photo.viewUrl as string]),
+      ),
+    );
+    setDownloadLinks(
+      unlocked
+        .filter((photo) => photo.downloadUrl)
+        .map((photo) => ({
+          photoId: photo.photoId,
+          number: photo.number,
+          url: photo.downloadUrl as string,
+        })),
+    );
+    if (typeof result.photoCredit === "number") {
+      setPhotoCredit(result.photoCredit);
+    }
+    setVideoAccess(result.video ?? null);
+  }, [token]);
+
+  useEffect(() => {
+    void refreshAccess();
+  }, [refreshAccess]);
+
+  useEffect(() => {
+    if (
+      token === "demo" ||
+      galleryPhotos === undefined ||
+      photos.length >= offer.gallerySize
+    ) {
+      return;
+    }
+    const interval = window.setInterval(() => router.refresh(), 15000);
+    return () => window.clearInterval(interval);
+  }, [galleryPhotos, offer.gallerySize, photos.length, router, token]);
+
+  useEffect(() => {
+    if (token === "demo") return;
+    const interval = window.setInterval(
+      () => void refreshAccess(),
+      10 * 60 * 1000,
+    );
+    return () => window.clearInterval(interval);
+  }, [refreshAccess, token]);
+
+  useEffect(() => {
+    if (videoAccess?.status !== "generating") return;
+    const interval = window.setInterval(() => void refreshAccess(), 15000);
+    return () => window.clearInterval(interval);
+  }, [refreshAccess, videoAccess?.status]);
 
   function togglePhoto(id: string) {
     setSelected((current) =>
@@ -235,14 +325,27 @@ export function Gallery({
     setPixReady(false);
     setVideoPhotoIds(selected.slice(0, 3));
     setVideoPickerOpen(false);
-    setPostPurchaseOffer("main");
     setCheckoutError("");
     setPixPayment(null);
+    setPixCopied(false);
     setCheckoutOpen(true);
   }
 
+  async function copyPixCode() {
+    if (!pixPayment?.qrCode) return;
+    try {
+      await navigator.clipboard.writeText(pixPayment.qrCode);
+      setCheckoutError("");
+      setPixCopied(true);
+      window.setTimeout(() => setPixCopied(false), 3500);
+    } catch {
+      setCheckoutError(
+        "Nao foi possivel copiar automaticamente. Toque e segure o codigo Pix para copiar.",
+      );
+    }
+  }
+
   function approveTestPayment() {
-    setPostPurchaseOffer("main");
     setTestPaymentApproved(true);
   }
 
@@ -275,7 +378,12 @@ export function Gallery({
     const result = (await response.json()) as {
       ok: boolean;
       error?: string;
-      downloads?: { photoId: string; number: number; url: string }[];
+      downloads?: {
+        photoId: string;
+        number: number;
+        url: string;
+        viewUrl?: string;
+      }[];
     };
     setReleasing(false);
 
@@ -285,7 +393,19 @@ export function Gallery({
     }
 
     setDownloadLinks(result.downloads);
+    setUnlockedPhotoIds((current) => [
+      ...new Set([...current, ...result.downloads!.map((item) => item.photoId)]),
+    ]);
+    setUnlockedViews((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        result.downloads!
+          .filter((item) => item.viewUrl)
+          .map((item) => [item.photoId, item.viewUrl as string]),
+      ),
+    }));
     setTestPaymentApproved(true);
+    void refreshAccess();
   }
 
   async function continueCheckout() {
@@ -385,14 +505,26 @@ export function Gallery({
         </a>
         <div className="nav-meta">
           <span className="status-dot" />
-          {testMode ? "Modo de teste" : "Galeria pronta"}
+          {testMode
+            ? "Modo de teste"
+            : photos.length < offer.gallerySize
+              ? "Preparando fotos"
+              : "Galeria pronta"}
         </div>
       </nav>
 
       <header className="gallery-header" id="top">
         <div className="gallery-intro">
-          <span className="eyebrow">SEU ENSAIO ESTÁ PRONTO</span>
-          <h1>Agora escolha as fotos que você mais amou.</h1>
+          <span className="eyebrow">
+            {photos.length < offer.gallerySize
+              ? "SEU ENSAIO ESTA SENDO PREPARADO"
+              : "SEU ENSAIO ESTA PRONTO"}
+          </span>
+          <h1>
+            {photos.length < offer.gallerySize
+              ? "As primeiras fotos ja estao aparecendo."
+              : "Agora escolha as fotos que voce mais amou."}
+          </h1>
           <p>
             Você já tem {offer.includedPhotos}{" "}
             {offer.includedPhotos === 1 ? "foto incluída" : "fotos incluídas"}.
@@ -414,6 +546,44 @@ export function Gallery({
           </small>
         </div>
       </header>
+
+      {(downloadLinks.length > 0 || videoAccess) && (
+        <section className="owned-files" aria-label="Arquivos liberados">
+          <div>
+            <span className="section-kicker">SUAS COMPRAS</span>
+            <h2>Seus arquivos ficam sempre aqui.</h2>
+            <p>
+              Baixe novamente suas fotos liberadas ou acompanhe o video em
+              producao sem perder sua galeria.
+            </p>
+          </div>
+          <div className="owned-actions">
+            {downloadLinks.map((download) => (
+              <a
+                className="secondary-button"
+                download
+                href={download.url}
+                key={download.photoId}
+              >
+                Baixar foto {String(download.number).padStart(2, "0")}
+              </a>
+            ))}
+            {videoAccess?.status === "generating" && (
+              <span className="file-status">Video em producao...</span>
+            )}
+            {videoAccess?.status === "failed" && (
+              <span className="file-status error">
+                Nao foi possivel concluir o video. Fale com o suporte.
+              </span>
+            )}
+            {videoAccess?.url && (
+              <a className="primary-button" download href={videoAccess.url}>
+                Baixar meu video
+              </a>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="deal-section" aria-labelledby="deal-title">
         <div className="deal-heading">
@@ -509,6 +679,8 @@ export function Gallery({
         {photos.map((photo) => {
           const selectionPosition = selected.indexOf(photo.id);
           const isSelected = selectionPosition >= 0;
+          const isUnlocked = unlockedPhotoIds.includes(photo.id);
+          const displayUrl = unlockedViews[photo.id] ?? photo.previewUrl;
           const tone =
             "tone" in photo && typeof photo.tone === "number" ? photo.tone : 0;
 
@@ -524,17 +696,22 @@ export function Gallery({
               <span
                 className="photo-placeholder"
                 style={{
-                  background: photo.previewUrl
-                    ? `center / cover no-repeat url("${photo.previewUrl}")`
+                  background: displayUrl
+                    ? `center / cover no-repeat url("${displayUrl}")`
                     : `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
                 }}
               />
               <span className="photo-shade" />
-              <span className="watermark-pattern" aria-hidden="true">
-                {Array.from({ length: 18 }, (_, index) => (
-                  <span key={index}>HOMESTUDIO.IA</span>
-                ))}
-              </span>
+              {!isUnlocked && (
+                <span className="watermark-pattern" aria-hidden="true">
+                  {Array.from({ length: 18 }, (_, index) => (
+                    <span key={index}>HOMESTUDIO.IA</span>
+                  ))}
+                </span>
+              )}
+              {isUnlocked && (
+                <span className="unlocked-badge">Liberada</span>
+              )}
               <span className="photo-number">
                 Foto {String(photo.number).padStart(2, "0")}
               </span>
@@ -661,8 +838,7 @@ export function Gallery({
                 >
                   Continuar vendo minha galeria
                 </button>
-                {postPurchaseOffer === "main" ? (
-                  <div className="post-purchase-offer">
+                <div className="post-purchase-offer">
                     <span>CRIAR OUTRO TEMA</span>
                     <strong>
                       Quer mais um ensaio diferente? 15 novas opcoes e 3 fotos
@@ -684,24 +860,12 @@ export function Gallery({
                     </button>
                     <button
                       className="text-button muted"
-                      onClick={() => setPostPurchaseOffer("install")}
+                      onClick={() => setCheckoutOpen(false)}
                       type="button"
                     >
-                      Agora não
+                      Continuar com este ensaio
                     </button>
-                  </div>
-                ) : (
-                  <div className="post-purchase-offer downsell-offer">
-                    <span>GUARDE SUA VANTAGEM</span>
-                    <strong>Instale o app e ative notificações para receber descontos.</strong>
-                    <small>
-                      Em vez de oferecer um ensaio menor e confuso, vamos te
-                      avisar quando tiver tema novo e condição especial para
-                      gerar outro ensaio.
-                    </small>
-                  </div>
-                )}
-                <PwaInstall projectToken={token} />
+                </div>
               </>
             ) : pixReady ? (
               <>
@@ -731,13 +895,11 @@ export function Gallery({
                 )}
                 {pixPayment?.qrCode && (
                   <button
-                    className="copy-pix-button"
-                    onClick={() =>
-                      navigator.clipboard.writeText(pixPayment.qrCode!)
-                    }
+                    className={`copy-pix-button ${pixCopied ? "copied" : ""}`}
+                    onClick={copyPixCode}
                     type="button"
                   >
-                    Copiar Pix Copia e Cola
+                    {pixCopied ? "Pix copiado! Abra seu banco" : "Copiar Pix Copia e Cola"}
                   </button>
                 )}
                 <button

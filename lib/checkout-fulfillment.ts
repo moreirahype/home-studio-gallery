@@ -1,4 +1,5 @@
 import { reportGallerySaleToBi } from "@/lib/home-studio-bi";
+import { startProjectGeneration } from "@/lib/generation";
 import { getPayment, type MercadoPagoPayment } from "@/lib/mercado-pago";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { startVideoJob } from "@/lib/video";
@@ -9,6 +10,7 @@ type OrderItem = {
   metadata: {
     photoIds?: string[];
     videoPhotoIds?: string[];
+    repeatShootId?: string;
   };
 };
 
@@ -92,16 +94,52 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     }
   }
 
+  const newShootItem = orderItems.find((item) => item.kind === "new_shoot");
+  const repeatShootId = newShootItem?.metadata.repeatShootId;
+  if (repeatShootId) {
+    const { data: repeatShoot } = await supabase
+      .from("repeat_shoots")
+      .select("status")
+      .eq("id", repeatShootId)
+      .maybeSingle();
+
+    if (repeatShoot?.status === "pending_payment") {
+      await supabase
+        .from("repeat_shoots")
+        .update({ status: "generating" })
+        .eq("id", repeatShootId);
+
+      try {
+        await startProjectGeneration({
+          projectId: order.project_id,
+          appUrl:
+            process.env.APP_URL ?? "https://home-studio-gallery.vercel.app",
+        });
+      } catch {
+        await supabase
+          .from("repeat_shoots")
+          .update({ status: "failed" })
+          .eq("id", repeatShootId);
+        await supabase
+          .from("projects")
+          .update({ status: "failed" })
+          .eq("id", order.project_id);
+      }
+    }
+  }
+
   if (!order.bi_reported_at) {
     const totalUpsellCents = orderItems.reduce(
       (sum, item) => sum + item.amount_cents,
       0,
     );
-    const product = videoItem
-      ? photoIds.length
-        ? "Fotos adicionais"
-        : "Vídeo"
-      : "Fotos adicionais";
+    const product = newShootItem
+      ? "Novo ensaio"
+      : videoItem
+        ? photoIds.length
+          ? "Fotos adicionais"
+          : "Vídeo"
+        : "Fotos adicionais";
     const project = Array.isArray(order.projects)
       ? order.projects[0]
       : order.projects;

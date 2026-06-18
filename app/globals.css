@@ -376,6 +376,61 @@ p {
   margin-bottom: 24px;
 }
 
+.owned-files {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  gap: 28px;
+  align-items: center;
+  margin-bottom: 34px;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid rgb(46 106 61 / 20%);
+  border-radius: 24px;
+  background: #edf5ee;
+}
+
+.owned-files h2 {
+  margin: 6px 0 8px;
+}
+
+.owned-files p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.owned-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.secondary-button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  border: 1px solid rgb(46 106 61 / 28%);
+  border-radius: 999px;
+  background: white;
+  color: #285a35;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.file-status {
+  padding: 12px 15px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 65%);
+  color: #285a35;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.file-status.error {
+  color: #9a3025;
+}
+
 .photo-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -492,6 +547,21 @@ p {
   z-index: 4;
   color: white;
   font-weight: 800;
+}
+
+.unlocked-badge {
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  left: 12px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #2e6a3d;
+  color: white;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .photo-number {
@@ -1243,6 +1313,18 @@ p {
   color: var(--ink);
   font-weight: 800;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.copy-pix-button.copied {
+  border-color: #2e6a3d;
+  background: #2e6a3d;
+  color: white;
+  transform: scale(1.01);
 }
 
 .fake-pix-code span {
@@ -1276,6 +1358,10 @@ p {
 }
 
 @media (max-width: 900px) {
+  .owned-files {
+    grid-template-columns: 1fr;
+  }
+
   .photo-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;

@@ -15,12 +15,27 @@ export async function startProjectGeneration({
   const supabase = getSupabaseAdmin();
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id, source_image_url, context_final")
+    .select("id, source_image_url, source_image_path, context_final")
     .eq("id", projectId)
     .single();
 
   if (projectError || !project) {
     throw new Error("Projeto não encontrado.");
+  }
+
+  let sourceImageUrl = project.source_image_url;
+  if (project.source_image_path) {
+    const signedSource = await supabase.storage
+      .from("source-images")
+      .createSignedUrl(project.source_image_path, 60 * 60 * 6);
+    if (signedSource.error || !signedSource.data?.signedUrl) {
+      throw new Error("Nao foi possivel abrir a foto de referencia.");
+    }
+    sourceImageUrl = signedSource.data.signedUrl;
+    await supabase
+      .from("projects")
+      .update({ source_image_url: sourceImageUrl })
+      .eq("id", projectId);
   }
 
   let query = supabase
@@ -52,7 +67,7 @@ export async function startProjectGeneration({
     (photos ?? []).map(async (photo) => {
       const taskId = await createImageTask({
         prompt: photo.generation_prompt,
-        sourceImageUrl: project.source_image_url,
+        sourceImageUrl,
         contextFinal: project.context_final,
         callbackUrl: callbackUrl.toString(),
       });
