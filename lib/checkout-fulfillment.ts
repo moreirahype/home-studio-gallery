@@ -128,7 +128,10 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     }
   }
 
-  if (!order.bi_reported_at) {
+  let biReported = Boolean(order.bi_reported_at);
+  let biReportError: string | undefined;
+
+  if (!biReported) {
     const totalUpsellCents = orderItems.reduce(
       (sum, item) => sum + item.amount_cents,
       0,
@@ -144,21 +147,32 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
       ? order.projects[0]
       : order.projects;
 
-    if (totalUpsellCents > 0 && project?.customer_name && project?.phone) {
-      await reportGallerySaleToBi({
-        paymentId: String(payment.id),
-        customerName: project.customer_name,
-        phone: project.phone,
-        paidAt: payment.date_approved ?? new Date().toISOString(),
-        product,
-        upsellAmount: totalUpsellCents / 100,
-      }).catch(() => null);
-      await supabase
-        .from("orders")
-        .update({ bi_reported_at: new Date().toISOString() })
-        .eq("id", order.id);
+    if (totalUpsellCents > 0) {
+      try {
+        await reportGallerySaleToBi({
+          paymentId: String(payment.id),
+          customerName: project?.customer_name ?? "Cliente",
+          phone: project?.phone ?? "",
+          paidAt: payment.date_approved ?? new Date().toISOString(),
+          product,
+          upsellAmount: totalUpsellCents / 100,
+        });
+        await supabase
+          .from("orders")
+          .update({ bi_reported_at: new Date().toISOString() })
+          .eq("id", order.id);
+        biReported = true;
+      } catch (error) {
+        biReportError =
+          error instanceof Error ? error.message : "Falha desconhecida no BI.";
+      }
     }
   }
 
-  return { paid: true, orderId: order.id };
+  return {
+    paid: true,
+    orderId: order.id,
+    biReported,
+    biReportError,
+  };
 }

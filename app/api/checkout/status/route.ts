@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (order.status !== "paid" && order.mercado_pago_payment_id) {
+  if (order.mercado_pago_payment_id) {
     await settleMercadoPagoPayment(order.mercado_pago_payment_id);
   }
 

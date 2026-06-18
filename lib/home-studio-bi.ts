@@ -24,7 +24,7 @@ export async function reportGallerySaleToBi(sale: GallerySale) {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      id: `gallery-mp-${sale.paymentId}`,
+      transaction_id: `gallery-mp-${sale.paymentId}`,
       timestamp: sale.paidAt,
       valor: sale.upsellAmount,
       pagador: sale.customerName,
@@ -37,9 +37,22 @@ export async function reportGallerySaleToBi(sale: GallerySale) {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Home Studio BI respondeu HTTP ${response.status}.`);
+  const rawBody = await response.text();
+  let result: { ok?: boolean; duplicate?: boolean; error?: string } = {};
+
+  try {
+    result = JSON.parse(rawBody) as typeof result;
+  } catch {
+    throw new Error(
+      `Home Studio BI retornou uma resposta invalida (HTTP ${response.status}).`,
+    );
   }
 
-  return response.json() as Promise<{ ok: boolean; duplicate?: boolean }>;
+  if (!response.ok || result.ok !== true) {
+    throw new Error(
+      result.error ?? `Home Studio BI respondeu HTTP ${response.status}.`,
+    );
+  }
+
+  return result as { ok: true; duplicate?: boolean };
 }

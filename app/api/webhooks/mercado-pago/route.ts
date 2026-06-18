@@ -39,7 +39,23 @@ export async function POST(request: NextRequest) {
   }
 
   if (paymentId) {
-    await settleMercadoPagoPayment(paymentId).catch(() => null);
+    try {
+      const settlement = await settleMercadoPagoPayment(paymentId);
+      if (settlement.paid && settlement.biReported === false) {
+        return NextResponse.json(
+          { ok: false, error: settlement.biReportError ?? "Falha ao registrar no BI." },
+          { status: 500 },
+        );
+      }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error instanceof Error ? error.message : "Falha ao processar pagamento.",
+        },
+        { status: 500 },
+      );
+    }
   }
 
   return NextResponse.json({ ok: true });
