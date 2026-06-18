@@ -26,6 +26,71 @@ const payloadSchema = z.object({
   testMode: z.coerce.boolean().optional().default(false),
 });
 
+type ZapdataPayload = z.infer<typeof payloadSchema>;
+
+function readText(value: unknown) {
+  return typeof value === "string" ? value.trim() : undefined;
+}
+
+function normalizePayload(payload: unknown): Partial<ZapdataPayload> {
+  if (!payload || typeof payload !== "object") {
+    return {};
+  }
+
+  const data = payload as Record<string, unknown>;
+  const variables =
+    data.variables && typeof data.variables === "object"
+      ? (data.variables as Record<string, unknown>)
+      : {};
+  const flowVariables =
+    data.flow_variables && typeof data.flow_variables === "object"
+      ? (data.flow_variables as Record<string, unknown>)
+      : {};
+  const contact =
+    data.contact && typeof data.contact === "object"
+      ? (data.contact as Record<string, unknown>)
+      : {};
+
+  return {
+    ...data,
+    contactId:
+      readText(data.contactId) ??
+      readText(contact.id),
+    contactName:
+      readText(data.contactName) ??
+      readText(contact.name) ??
+      readText(flowVariables.contactName),
+    phone:
+      readText(data.phone) ??
+      readText(data.telefone) ??
+      readText(variables.telefone) ??
+      readText(flowVariables.telefone) ??
+      readText(contact.phone),
+    sourceImageUrl:
+      readText(data.sourceImageUrl) ??
+      readText(data.foto_cliente) ??
+      readText(variables.foto_cliente) ??
+      readText(flowVariables.foto_cliente),
+    foto_cliente:
+      readText(data.foto_cliente) ??
+      readText(variables.foto_cliente) ??
+      readText(flowVariables.foto_cliente),
+    contextFinal:
+      readText(data.contextFinal) ??
+      readText(data.contexto_final) ??
+      readText(variables.contexto_final) ??
+      readText(flowVariables.contexto_final),
+    contexto_final:
+      readText(data.contexto_final) ??
+      readText(variables.contexto_final) ??
+      readText(flowVariables.contexto_final),
+    nicho:
+      readText(data.nicho) ??
+      readText(variables.nicho) ??
+      readText(flowVariables.nicho),
+  };
+}
+
 function previewValue(value?: string) {
   if (!value) return null;
   return value.length > 220 ? `${value.slice(0, 220)}...` : value;
@@ -38,7 +103,8 @@ export async function POST(request: NextRequest) {
     return unauthorized();
   }
 
-  const parsed = payloadSchema.safeParse(await request.json());
+  const rawPayload = await request.json();
+  const parsed = payloadSchema.safeParse(normalizePayload(rawPayload));
 
   if (!parsed.success) {
     return NextResponse.json(
