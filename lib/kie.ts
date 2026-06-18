@@ -1,4 +1,5 @@
 const KIE_API_URL = "https://api.kie.ai/api/v1";
+export const KIE_VIDEO_MODEL = "bytedance/seedance-1.5-pro";
 
 type CreateTaskResponse = {
   code: number;
@@ -152,6 +153,17 @@ export async function createVideoTask({
     throw new Error("KIE_API_KEY não configurada.");
   }
 
+  const input = {
+    prompt,
+    input_urls: [imageUrl],
+    aspect_ratio: "3:4",
+    resolution: "720p",
+    duration: 5,
+    fixed_lens: false,
+    generate_audio: false,
+    nsfw_checker: true,
+  };
+
   const response = await fetch(`${KIE_API_URL}/jobs/createTask`, {
     method: "POST",
     headers: {
@@ -159,17 +171,9 @@ export async function createVideoTask({
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model:
-        process.env.KIE_VIDEO_MODEL ??
-        "bytedance/v1-pro-fast-image-to-video",
+      model: KIE_VIDEO_MODEL,
       callBackUrl: callbackUrl,
-      input: {
-        prompt,
-        image_url: imageUrl,
-        resolution: "720p",
-        duration: "5",
-        nsfw_checker: true,
-      },
+      input,
     }),
   });
   const result = (await response.json()) as CreateTaskResponse;

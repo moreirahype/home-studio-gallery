@@ -5,14 +5,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
-import { createVideoTask } from "@/lib/kie";
+import { createVideoTask, KIE_VIDEO_MODEL } from "@/lib/kie";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const execFileAsync = promisify(execFile);
 const MOVEMENT_PROMPTS = [
-  "Subtle cinematic camera push-in. Natural blinking and breathing. Preserve the person's face, body, clothes and environment exactly. No morphing, no talking, no exaggerated movement.",
-  "Slow elegant parallax and a gentle camera orbit. Preserve identity perfectly. Natural micro-movements only. No face distortion, no body changes and no new objects.",
-  "Premium editorial motion with a soft camera pull-back and realistic fabric movement. Keep the face and appearance identical. No morphing, no speech and no dramatic gesture.",
+  "Refined luxury portrait video. Very slow cinematic camera push-in. The person remains nearly still with one natural blink. Preserve the exact face, expression, body, clothes, hands and background from the source image. No talking, smiling, head movement, morphing or new objects.",
+  "Refined luxury portrait video. Subtle horizontal camera slide creating gentle depth. The person remains completely still. Preserve the exact identity, facial expression, anatomy, clothes, hands and scene from the source image. No orbit, talking, gestures, morphing or new objects.",
+  "Refined luxury portrait video. Very slow cinematic camera pull-back. The person remains nearly still with only natural breathing. Preserve the exact face, expression, body, clothes, hands and environment from the source image. No talking, smiling, head movement, morphing or new objects.",
 ];
 
 export async function startVideoJob({
@@ -59,9 +59,7 @@ export async function startVideoJob({
     .insert({
       project_id: projectId,
       order_id: orderId ?? null,
-      model:
-        process.env.KIE_VIDEO_MODEL ??
-        "bytedance/v1-pro-fast-image-to-video",
+      model: KIE_VIDEO_MODEL,
       source_photo_ids: sources.map((photo) => photo.id),
       status: "generating",
     })
