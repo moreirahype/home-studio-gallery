@@ -3,6 +3,7 @@ import { z } from "zod";
 import { unauthorized } from "@/lib/http";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { assembleVideo } from "@/lib/video";
 
 const requestSchema = z.object({
   taskId: z.string().min(8).optional(),
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
   const { data: videoJobs } = await supabase
     .from("video_jobs")
-    .select("id")
+    .select("id, output_path, status")
     .eq("project_id", projectId);
   const videoJobIds = (videoJobs ?? []).map((job) => job.id);
   const { data: videoClips } = videoJobIds.length
@@ -123,6 +124,23 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const assembledVideos = [];
+  for (const job of videoJobs ?? []) {
+    if (job.output_path) continue;
+    try {
+      assembledVideos.push({
+        videoJobId: job.id,
+        assembled: await assembleVideo(job.id),
+      });
+    } catch (error) {
+      assembledVideos.push({
+        videoJobId: job.id,
+        assembled: false,
+        error: error instanceof Error ? error.message : "Falha ao montar vídeo.",
+      });
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     projectId,
@@ -130,5 +148,6 @@ export async function POST(request: NextRequest) {
     recovered,
     attemptedVideos: recoveredVideos.length,
     recoveredVideos,
+    assembledVideos,
   });
 }

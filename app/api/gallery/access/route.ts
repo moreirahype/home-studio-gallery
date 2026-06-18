@@ -166,6 +166,7 @@ export async function GET(request: NextRequest) {
     .limit(1)
     .maybeSingle();
   let videoUrl: string | null = null;
+  let videoClips: { number: number; url: string }[] = [];
   let videoStatus = videoJob?.status ?? null;
   let videoError = videoJob?.error_message ?? null;
 
@@ -183,16 +184,29 @@ export async function GET(request: NextRequest) {
       .eq("video_job_id", videoJob.id)
       .eq("status", "ready")
       .not("path", "is", null)
-      .order("created_at")
-      .limit(1);
+      .order("created_at");
 
-    const clipPath = readyClips?.[0]?.path;
-    if (clipPath) {
-      const signedClip = await supabase.storage
+    const clipPaths = (readyClips ?? [])
+      .map((clip) => clip.path as string | null)
+      .filter((path): path is string => Boolean(path));
+
+    if (clipPaths.length) {
+      const signedClips = await supabase.storage
         .from("video-clips")
-        .createSignedUrl(clipPath, 60 * 30, { download: true });
-      videoUrl = signedClip.data?.signedUrl ?? null;
-      if (videoUrl) {
+        .createSignedUrls(clipPaths, 60 * 30, { download: true });
+
+      videoClips = (signedClips.data ?? []).flatMap((clip, index) =>
+        clip.signedUrl
+          ? [
+              {
+                number: index + 1,
+                url: clip.signedUrl,
+              },
+            ]
+          : [],
+      );
+
+      if (videoClips.length) {
         videoStatus = "ready";
         videoError = null;
       }
@@ -212,6 +226,7 @@ export async function GET(request: NextRequest) {
       ? {
           status: videoStatus,
           url: videoUrl,
+          clips: videoClips,
           error: videoError,
         }
       : null,

@@ -160,6 +160,7 @@ export function Gallery({
   const [videoAccess, setVideoAccess] = useState<{
     status: string;
     url?: string | null;
+    clips?: { number: number; url: string }[];
     error?: string | null;
   } | null>(null);
   const [checkoutError, setCheckoutError] = useState("");
@@ -248,7 +249,12 @@ export function Gallery({
         viewUrl?: string;
         downloadUrl?: string;
       }[];
-      video?: { status: string; url?: string | null; error?: string | null } | null;
+      video?: {
+        status: string;
+        url?: string | null;
+        clips?: { number: number; url: string }[];
+        error?: string | null;
+      } | null;
     };
 
     if (!response.ok || !result.ok) return;
@@ -581,6 +587,17 @@ export function Gallery({
                 Baixar meu vídeo
               </a>
             )}
+            {!videoAccess?.url &&
+              videoAccess?.clips?.map((clip) => (
+                <a
+                  className="primary-button"
+                  download
+                  href={clip.url}
+                  key={clip.url}
+                >
+                  Baixar vídeo {String(clip.number).padStart(2, "0")}
+                </a>
+              ))}
           </div>
         </section>
       )}
