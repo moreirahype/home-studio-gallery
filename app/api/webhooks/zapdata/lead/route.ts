@@ -78,11 +78,12 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const token = randomUUID().replaceAll("-", "");
-  const galleryAttendant =
-    parsed.data.galleryAttendant ??
-    defaultGalleryAttendant(parsed.data.paidAmount);
   const productName =
     parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho ?? "Galeria";
+  const galleryAttendant = defaultGalleryAttendant({
+    paidAmount: parsed.data.paidAmount,
+    productName,
+  });
   const leadPayload = {
     token,
     zapdata_contact_id: parsed.data.contactId ?? null,

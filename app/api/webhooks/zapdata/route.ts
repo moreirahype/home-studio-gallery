@@ -207,16 +207,18 @@ export async function POST(request: NextRequest) {
     savedLead?.paid_amount_cents ?? Math.round(parsed.data.paidAmount * 100);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
-  const galleryAttendant =
-    savedLead?.bi_attendant_name ??
-    parsed.data.galleryAttendant ??
-    defaultGalleryAttendant(paidAmountCents / 100);
   const productName =
     savedLead?.product_name ??
     parsed.data.productName ??
     parsed.data.produto ??
     parsed.data.nicho ??
     "Galeria";
+  const galleryAttendant =
+    savedLead?.bi_attendant_name ??
+    defaultGalleryAttendant({
+      paidAmount: paidAmountCents / 100,
+      productName,
+    });
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
     generationCount,

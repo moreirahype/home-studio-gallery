@@ -13,7 +13,6 @@ export const zapdataOfferSchema = z.object({
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
   paidAmount: z.coerce.number().positive().optional().default(7.9),
   generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
-  galleryAttendant: z.string().trim().min(1).max(80).optional(),
   productName: z.string().trim().min(1).max(120).optional(),
   produto: z.string().trim().min(1).max(120).optional(),
   receiptId: z.string().min(1).optional(),
@@ -107,16 +106,6 @@ export function normalizeZapdataPayload(
       readNumberValue(data.generationCount) ??
       readNumberValue(variables.generationCount) ??
       readNumberValue(flowVariables.generationCount),
-    galleryAttendant:
-      readText(data.galleryAttendant) ??
-      readText(data.gallery_attendant) ??
-      readText(data.atendenteGaleria) ??
-      readText(variables.galleryAttendant) ??
-      readText(variables.gallery_attendant) ??
-      readText(variables.atendenteGaleria) ??
-      readText(flowVariables.galleryAttendant) ??
-      readText(flowVariables.gallery_attendant) ??
-      readText(flowVariables.atendenteGaleria),
     productName:
       readText(data.productName) ??
       readText(data.product_name) ??
@@ -144,8 +133,14 @@ export function normalizeZapdataPayload(
   };
 }
 
-export function defaultGalleryAttendant(paidAmount: number) {
-  return `Galeria ${paidAmount.toFixed(2)}`;
+export function defaultGalleryAttendant({
+  paidAmount,
+  productName,
+}: {
+  paidAmount: number;
+  productName: string;
+}) {
+  return `${productName.trim() || "Galeria"} ${paidAmount.toFixed(2)}`;
 }
 
 export function previewValue(value?: string) {
