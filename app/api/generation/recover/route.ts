@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     (!parsed.data.taskId && !parsed.data.projectId && !parsed.data.galleryToken)
   ) {
     return NextResponse.json(
-      { ok: false, error: "Pedido de recuperacao invalido." },
+      { ok: false, error: "Pedido de recuperação inválido." },
       { status: 400 },
     );
   }
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
   if (!projectId) {
     return NextResponse.json(
-      { ok: false, error: "Galeria nao encontrada." },
+      { ok: false, error: "Galeria não encontrada." },
       { status: 404 },
     );
   }
@@ -99,10 +99,36 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const { data: videoJobs } = await supabase
+    .from("video_jobs")
+    .select("id")
+    .eq("project_id", projectId);
+  const videoJobIds = (videoJobs ?? []).map((job) => job.id);
+  const { data: videoClips } = videoJobIds.length
+    ? await supabase
+        .from("video_clips")
+        .select("id, video_job_id, task_id, status")
+        .in("video_job_id", videoJobIds)
+    : { data: [] };
+  const recoveredVideos = [];
+
+  for (const clip of videoClips ?? []) {
+    const taskId = clip.task_id as string | null;
+    if (!taskId || clip.status === "ready") continue;
+    recoveredVideos.push({
+      clipId: clip.id,
+      videoJobId: clip.video_job_id,
+      taskId,
+      ...(await recoverTask(taskId)),
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     projectId,
     attempted: recovered.length,
     recovered,
+    attemptedVideos: recoveredVideos.length,
+    recoveredVideos,
   });
 }

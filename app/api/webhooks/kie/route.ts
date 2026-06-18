@@ -38,19 +38,39 @@ function parseResultUrls(value?: string) {
   if (!value) return [];
 
   try {
-    const parsed = JSON.parse(value) as { resultUrls?: unknown };
-    return Array.isArray(parsed.resultUrls)
-      ? parsed.resultUrls.filter(
-          (url): url is string =>
-            typeof url === "string" && URL.canParse(url),
-        )
-      : [];
+    return extractUrls(JSON.parse(value));
   } catch {
     return [];
   }
 }
 
-async function handleVideoTask(taskId: string) {
+function extractUrls(value: unknown): string[] {
+  if (!value) return [];
+
+  if (typeof value === "string") {
+    if (URL.canParse(value)) return [value];
+    try {
+      return extractUrls(JSON.parse(value));
+    } catch {
+      return [];
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap(extractUrls);
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value).flatMap(extractUrls);
+  }
+
+  return [];
+}
+
+async function handleVideoTask(
+  taskId: string,
+  payload: z.infer<typeof callbackSchema>,
+) {
   const supabase = getSupabaseAdmin();
   const { data: clip } = await supabase
     .from("video_clips")
@@ -60,29 +80,47 @@ async function handleVideoTask(taskId: string) {
 
   if (!clip) return null;
 
+  const nestedData =
+    payload.data && typeof payload.data === "object" ? payload.data : {};
   const task = await getTaskDetails(taskId);
-  const resultUrl = parseResultUrls(task.resultJson)[0];
+  const state =
+    task.state ??
+    payload.state ??
+    ("state" in nestedData && typeof nestedData.state === "string"
+      ? nestedData.state
+      : "");
+  const resultUrl = [
+    ...(payload.resultUrls ?? []),
+    ...parseResultUrls(payload.resultJson),
+    ...parseResultUrls(task.resultJson),
+    ...("resultUrls" in nestedData ? extractUrls(nestedData.resultUrls) : []),
+    ...("resultJson" in nestedData &&
+    typeof nestedData.resultJson === "string"
+      ? parseResultUrls(nestedData.resultJson)
+      : []),
+  ].find((url) => URL.canParse(url));
 
-  if (task.state === "fail") {
+  if (state === "fail") {
     await supabase
       .from("video_clips")
       .update({
         status: "failed",
-        error_message: task.failMsg || "A KIE não concluiu o clipe.",
+        error_message:
+          task.failMsg || payload.failMsg || "A KIE não concluiu o clipe.",
       })
       .eq("id", clip.id);
     await supabase
       .from("video_jobs")
-      .update({ status: "failed", error_message: task.failMsg })
+      .update({ status: "failed", error_message: task.failMsg || payload.failMsg })
       .eq("id", clip.video_job_id);
-    return { ok: true, taskId, state: task.state, kind: "video" };
+    return { ok: true, taskId, state, kind: "video" };
   }
 
-  if (task.state !== "success" || !resultUrl) {
+  if (state !== "success" || !resultUrl) {
     return {
       ok: true,
       taskId,
-      state: task.state || "generating",
+      state: state || "generating",
       kind: "video",
     };
   }
@@ -108,7 +146,7 @@ async function handleVideoTask(taskId: string) {
   return {
     ok: true,
     taskId,
-    state: task.state,
+    state,
     kind: "video",
     assembled,
   };
@@ -145,7 +183,7 @@ export async function POST(request: NextRequest) {
 
   if (!photo) {
     try {
-      const videoResult = await handleVideoTask(taskId);
+      const videoResult = await handleVideoTask(taskId, parsed.data);
       if (videoResult) return NextResponse.json(videoResult);
     } catch (error) {
       return NextResponse.json(

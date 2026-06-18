@@ -160,18 +160,43 @@ export async function GET(request: NextRequest) {
 
   const { data: videoJob } = await supabase
     .from("video_jobs")
-    .select("status, output_path, error_message")
+    .select("id, status, output_path, error_message")
     .eq("project_id", project.id)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   let videoUrl: string | null = null;
+  let videoStatus = videoJob?.status ?? null;
+  let videoError = videoJob?.error_message ?? null;
 
   if (videoJob?.status === "ready" && videoJob.output_path) {
     const signedVideo = await supabase.storage
       .from("videos")
       .createSignedUrl(videoJob.output_path, 60 * 30, { download: true });
     videoUrl = signedVideo.data?.signedUrl ?? null;
+  }
+
+  if (!videoUrl && videoJob?.id) {
+    const { data: readyClips } = await supabase
+      .from("video_clips")
+      .select("path")
+      .eq("video_job_id", videoJob.id)
+      .eq("status", "ready")
+      .not("path", "is", null)
+      .order("created_at")
+      .limit(1);
+
+    const clipPath = readyClips?.[0]?.path;
+    if (clipPath) {
+      const signedClip = await supabase.storage
+        .from("video-clips")
+        .createSignedUrl(clipPath, 60 * 30, { download: true });
+      videoUrl = signedClip.data?.signedUrl ?? null;
+      if (videoUrl) {
+        videoStatus = "ready";
+        videoError = null;
+      }
+    }
   }
 
   return NextResponse.json({
@@ -185,9 +210,9 @@ export async function GET(request: NextRequest) {
     })),
     video: videoJob
       ? {
-          status: videoJob.status,
+          status: videoStatus,
           url: videoUrl,
-          error: videoJob.error_message,
+          error: videoError,
         }
       : null,
   });
