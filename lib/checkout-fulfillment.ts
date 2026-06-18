@@ -136,13 +136,6 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
       (sum, item) => sum + item.amount_cents,
       0,
     );
-    const product = newShootItem
-      ? "Novo ensaio"
-      : videoItem
-        ? photoIds.length
-          ? "Fotos adicionais"
-          : "Vídeo"
-        : "Fotos adicionais";
     const project = Array.isArray(order.projects)
       ? order.projects[0]
       : order.projects;
@@ -162,7 +155,6 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
           customerName: project?.customer_name ?? "Cliente",
           phone: project?.phone ?? "",
           paidAt: payment.date_approved ?? new Date().toISOString(),
-          product,
           upsellAmount: totalUpsellCents / 100,
           attendantName,
         });

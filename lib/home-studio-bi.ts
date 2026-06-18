@@ -5,7 +5,6 @@ type GallerySale = {
   upsellAmount: number;
   paidAt: string;
   attendantName: string;
-  product: "Fotos adicionais" | "Vídeo" | "Novo ensaio";
 };
 
 export async function reportGallerySaleToBi(sale: GallerySale) {
@@ -31,7 +30,6 @@ export async function reportGallerySaleToBi(sale: GallerySale) {
       moeda: "BRL",
       atendente: sale.attendantName,
       origem: "Home Studio Gallery",
-      produto: sale.product,
       webhook_secret: process.env.HSBI_WEBHOOK_SECRET ?? "",
     }),
   });
