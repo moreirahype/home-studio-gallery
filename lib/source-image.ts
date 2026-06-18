@@ -23,7 +23,7 @@ export async function validatePublicImageUrl(imageUrl: string) {
   if (!response?.ok) {
     return {
       ok: false as const,
-      error: "Nao consegui abrir a foto de referencia publicamente.",
+      error: "Não consegui abrir a foto de referência publicamente.",
     };
   }
 
@@ -39,7 +39,7 @@ export async function validatePublicImageUrl(imageUrl: string) {
   if (Number.isFinite(contentLength) && contentLength > MAX_IMAGE_BYTES) {
     return {
       ok: false as const,
-      error: "A foto de referencia precisa ter no maximo 15 MB.",
+      error: "A foto de referência precisa ter no máximo 15 MB.",
     };
   }
 

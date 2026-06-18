@@ -43,7 +43,7 @@ export async function reportGallerySaleToBi(sale: GallerySale) {
     result = JSON.parse(rawBody) as typeof result;
   } catch {
     throw new Error(
-      `Home Studio BI retornou uma resposta invalida (HTTP ${response.status}).`,
+      `Home Studio BI retornou uma resposta inválida (HTTP ${response.status}).`,
     );
   }
 

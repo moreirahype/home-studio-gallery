@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { isGalleryExpired } from "@/lib/gallery-expiration";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const querySchema = z.object({
@@ -13,22 +14,46 @@ export async function GET(request: NextRequest) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: "Galeria invalida." },
+      { ok: false, error: "Galeria inválida." },
       { status: 400 },
     );
   }
 
   const supabase = getSupabaseAdmin();
-  const { data: project } = await supabase
+  let { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id, paid_amount_cents")
+    .select("id, paid_amount_cents, created_at, expires_at")
     .eq("gallery_token", parsed.data.token)
     .maybeSingle();
 
+  if (projectError && projectError.code === "42703") {
+    const fallback = await supabase
+      .from("projects")
+      .select("id, paid_amount_cents, created_at")
+      .eq("gallery_token", parsed.data.token)
+      .maybeSingle();
+    project = fallback.data ? { ...fallback.data, expires_at: null } : null;
+    projectError = fallback.error;
+  }
+
+  if (projectError) {
+    return NextResponse.json(
+      { ok: false, error: projectError.message },
+      { status: 500 },
+    );
+  }
+
   if (!project) {
     return NextResponse.json(
-      { ok: false, error: "Galeria nao encontrada." },
+      { ok: false, error: "Galeria não encontrada." },
       { status: 404 },
+    );
+  }
+
+  if (isGalleryExpired(project.created_at, project.expires_at)) {
+    return NextResponse.json(
+      { ok: false, error: "Esta galeria expirou." },
+      { status: 410 },
     );
   }
 

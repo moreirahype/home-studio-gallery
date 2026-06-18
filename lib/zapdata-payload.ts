@@ -140,7 +140,13 @@ export function defaultGalleryAttendant({
   paidAmount: number;
   productName: string;
 }) {
-  return `${productName.trim() || "Galeria"} ${paidAmount.toFixed(2)}`;
+  const normalizedProduct = productName.trim() || "Geral";
+  const prefixedProduct = normalizedProduct
+    .toLowerCase()
+    .startsWith("galeria")
+    ? normalizedProduct
+    : `Galeria ${normalizedProduct}`;
+  return `${prefixedProduct} ${paidAmount.toFixed(2)}`;
 }
 
 export function previewValue(value?: string) {

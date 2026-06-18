@@ -29,7 +29,7 @@ export async function startProjectGeneration({
       .from("source-images")
       .createSignedUrl(project.source_image_path, 60 * 60 * 6);
     if (signedSource.error || !signedSource.data?.signedUrl) {
-      throw new Error("Nao foi possivel abrir a foto de referencia.");
+    throw new Error("Não foi possível abrir a foto de referência.");
     }
     sourceImageUrl = signedSource.data.signedUrl;
     await supabase

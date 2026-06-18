@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { isGalleryExpired } from "@/lib/gallery-expiration";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type ProjectRow = {
@@ -9,6 +10,8 @@ type ProjectRow = {
   status: string;
   customer_name: string | null;
   generation_count?: number;
+  created_at?: string;
+  expires_at?: string | null;
 };
 
 export const getProjectByToken = cache(async (galleryToken: string) => {
@@ -18,18 +21,22 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
   const primary = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, included_photos, paid_amount_cents, status, customer_name, generation_count",
+      "id, gallery_token, included_photos, paid_amount_cents, status, customer_name, generation_count, created_at, expires_at",
     )
     .eq("gallery_token", galleryToken)
     .maybeSingle();
   data = primary.data;
   error = primary.error;
 
-  if (error?.code === "42703" || error?.message.includes("generation_count")) {
+  if (
+    error?.code === "42703" ||
+    error?.message.includes("generation_count") ||
+    error?.message.includes("expires_at")
+  ) {
     const fallback = await supabase
       .from("projects")
       .select(
-        "id, gallery_token, included_photos, paid_amount_cents, status, customer_name",
+        "id, gallery_token, included_photos, paid_amount_cents, status, customer_name, created_at",
       )
       .eq("gallery_token", galleryToken)
       .maybeSingle();
@@ -38,10 +45,11 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
   }
 
   if (error) {
-    throw new Error(`Nao foi possivel carregar a galeria: ${error.message}`);
+    throw new Error(`Não foi possível carregar a galeria: ${error.message}`);
   }
 
   if (!data) return data;
+  if (isGalleryExpired(data.created_at, data.expires_at)) return null;
 
   return loadProjectPhotos(data);
 });
@@ -55,7 +63,7 @@ async function loadProjectPhotos(data: ProjectRow) {
     .order("position");
 
   if (photosError) {
-    throw new Error(`Nao foi possivel carregar as fotos: ${photosError.message}`);
+    throw new Error(`Não foi possível carregar as fotos: ${photosError.message}`);
   }
 
   const readyPhotos = (photos ?? []).filter(
@@ -72,7 +80,7 @@ async function loadProjectPhotos(data: ProjectRow) {
 
   if (signedPreviews.error) {
     throw new Error(
-      `Nao foi possivel abrir as previas: ${signedPreviews.error.message}`,
+      `Não foi possível abrir as prévias: ${signedPreviews.error.message}`,
     );
   }
 

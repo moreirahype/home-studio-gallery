@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { isGalleryExpired } from "@/lib/gallery-expiration";
 import { createPixPayment } from "@/lib/mercado-pago";
 import { getAdditionalPhotoAmountCents } from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -26,18 +27,44 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin();
-  const { data: project } = await supabase
+  let { data: project, error: projectError } = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, customer_name, included_photos, paid_amount_cents",
+      "id, gallery_token, customer_name, included_photos, paid_amount_cents, created_at, expires_at",
     )
     .eq("gallery_token", parsed.data.galleryToken)
     .maybeSingle();
+
+  if (projectError && projectError.code === "42703") {
+    const fallback = await supabase
+      .from("projects")
+      .select(
+        "id, gallery_token, customer_name, included_photos, paid_amount_cents, created_at",
+      )
+      .eq("gallery_token", parsed.data.galleryToken)
+      .maybeSingle();
+    project = fallback.data ? { ...fallback.data, expires_at: null } : null;
+    projectError = fallback.error;
+  }
+
+  if (projectError) {
+    return NextResponse.json(
+      { ok: false, error: projectError.message },
+      { status: 500 },
+    );
+  }
 
   if (!project) {
     return NextResponse.json(
       { ok: false, error: "Galeria não encontrada." },
       { status: 404 },
+    );
+  }
+
+  if (isGalleryExpired(project.created_at, project.expires_at)) {
+    return NextResponse.json(
+      { ok: false, error: "Esta galeria expirou." },
+      { status: 410 },
     );
   }
 

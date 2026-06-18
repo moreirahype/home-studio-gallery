@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
   if (signedReference.error || !signedReference.data?.signedUrl) {
     await supabase.storage.from("source-images").remove([referencePath]);
     return NextResponse.json(
-      { ok: false, error: "Falha ao preparar a foto de referencia." },
+        { ok: false, error: "Falha ao preparar a foto de referência." },
       { status: 500 },
     );
   }

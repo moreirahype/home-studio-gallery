@@ -86,7 +86,7 @@ export async function createImageTask({
 
   if (model.includes("text-to-image")) {
     throw new Error(
-      `KIE_MODEL precisa ser image-to-image/edit para usar foto de referencia. Valor atual: ${model}`,
+      `KIE_MODEL precisa ser image-to-image/edit para usar foto de referência. Valor atual: ${model}`,
     );
   }
 

@@ -27,13 +27,13 @@ async function optimizeReference(file: File) {
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Nao foi possivel preparar a foto.");
+  if (!context) throw new Error("Não foi possível preparar a foto.");
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/jpeg", 0.86),
   );
-  if (!blob) throw new Error("Nao foi possivel reduzir a foto.");
+  if (!blob) throw new Error("Não foi possível reduzir a foto.");
   return new File([blob], "referencia.jpg", { type: "image/jpeg" });
 }
 
@@ -93,7 +93,7 @@ export function NewShootForm({
       optimizedImage = await optimizeReference(imageFile);
     } catch {
       setError(
-        "Nao conseguimos preparar essa foto. Tente uma imagem JPG menor.",
+        "Não conseguimos preparar essa foto. Tente uma imagem JPG menor.",
       );
       setSubmitting(false);
       return;
@@ -136,7 +136,7 @@ export function NewShootForm({
       !result.galleryToken ||
       !result.galleryUrl
     ) {
-      setError("O Pix nao foi criado corretamente. Tente novamente.");
+      setError("O Pix não foi criado corretamente. Tente novamente.");
       setSubmitting(false);
       return;
     }
@@ -174,12 +174,12 @@ export function NewShootForm({
     setCheckingPayment(false);
 
     if (!response.ok || !result.ok) {
-      setError(result.error ?? "Nao foi possivel conferir o pagamento.");
+      setError(result.error ?? "Não foi possível conferir o pagamento.");
       return;
     }
 
     if (!result.paid) {
-      setError("Pagamento ainda nao encontrado. Aguarde alguns segundos.");
+      setError("Pagamento ainda não encontrado. Aguarde alguns segundos.");
       return;
     }
 
@@ -195,7 +195,7 @@ export function NewShootForm({
       window.setTimeout(() => setPixCopied(false), 3500);
     } catch {
       setError(
-        "Nao foi possivel copiar automaticamente. Toque e segure o codigo Pix para copiar.",
+        "Não foi possível copiar automaticamente. Toque e segure o código Pix para copiar.",
       );
     }
   }
@@ -207,9 +207,9 @@ export function NewShootForm({
           <span className="modal-badge warning">Pix gerado</span>
           <h1>Falta apenas confirmar o pagamento.</h1>
           <p>
-            Pague {money.format(pixPayment.amount)} para iniciar a geracao de{" "}
-            {photoCount} opcoes. Voce ja leva {includedPhotos}{" "}
-            {includedPhotos === 1 ? "foto incluida" : "fotos incluidas"}.
+            Pague {money.format(pixPayment.amount)} para iniciar a geração de{" "}
+            {photoCount} opções. Você já leva {includedPhotos}{" "}
+            {includedPhotos === 1 ? "foto incluída" : "fotos incluídas"}.
           </p>
           {pixPayment.qrCodeBase64 && (
             <img
@@ -233,7 +233,7 @@ export function NewShootForm({
             onClick={checkPayment}
             type="button"
           >
-            {checkingPayment ? "Conferindo..." : "Ja paguei, iniciar ensaio"}
+            {checkingPayment ? "Conferindo..." : "Já paguei, iniciar ensaio"}
           </button>
           {error && <p className="form-error">{error}</p>}
           <button

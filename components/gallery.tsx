@@ -340,7 +340,7 @@ export function Gallery({
       window.setTimeout(() => setPixCopied(false), 3500);
     } catch {
       setCheckoutError(
-        "Nao foi possivel copiar automaticamente. Toque e segure o codigo Pix para copiar.",
+        "Não foi possível copiar automaticamente. Toque e segure o código Pix para copiar.",
       );
     }
   }
@@ -517,13 +517,13 @@ export function Gallery({
         <div className="gallery-intro">
           <span className="eyebrow">
             {photos.length < offer.gallerySize
-              ? "SEU ENSAIO ESTA SENDO PREPARADO"
-              : "SEU ENSAIO ESTA PRONTO"}
+              ? "SEU ENSAIO ESTÁ SENDO PREPARADO"
+              : "SEU ENSAIO ESTÁ PRONTO"}
           </span>
           <h1>
             {photos.length < offer.gallerySize
-              ? "As primeiras fotos ja estao aparecendo."
-              : "Agora escolha as fotos que voce mais amou."}
+              ? "As primeiras fotos já estão aparecendo."
+              : "Agora escolha as fotos que você mais amou."}
           </h1>
           <p>
             Você já tem {offer.includedPhotos}{" "}
@@ -541,8 +541,8 @@ export function Gallery({
             fotos disponíveis
           </strong>
           <small>
-            Credito de {money.format(offer.paidAmount)} reconhecido. Galeria
-            disponivel por 7 dias.
+            Crédito de {money.format(offer.paidAmount)} reconhecido. Galeria
+            disponível por 7 dias; depois disso, os arquivos são excluídos.
           </small>
         </div>
       </header>
@@ -551,10 +551,10 @@ export function Gallery({
         <section className="owned-files" aria-label="Arquivos liberados">
           <div>
             <span className="section-kicker">SUAS COMPRAS</span>
-            <h2>Seus arquivos ficam sempre aqui.</h2>
+            <h2>Seus arquivos ficam aqui por 7 dias.</h2>
             <p>
-              Baixe novamente suas fotos liberadas ou acompanhe o video em
-              producao sem perder sua galeria.
+              Baixe novamente suas fotos liberadas ou acompanhe o vídeo em
+              produção sem perder sua galeria.
             </p>
           </div>
           <div className="owned-actions">
@@ -569,16 +569,16 @@ export function Gallery({
               </a>
             ))}
             {videoAccess?.status === "generating" && (
-              <span className="file-status">Video em producao...</span>
+              <span className="file-status">Vídeo em produção...</span>
             )}
             {videoAccess?.status === "failed" && (
               <span className="file-status error">
-                Nao foi possivel concluir o video. Fale com o suporte.
+                Não foi possível concluir o vídeo. Fale com o suporte.
               </span>
             )}
             {videoAccess?.url && (
               <a className="primary-button" download href={videoAccess.url}>
-                Baixar meu video
+                Baixar meu vídeo
               </a>
             )}
           </div>
@@ -808,7 +808,7 @@ export function Gallery({
             {testPaymentApproved ? (
               <>
                 <span className="modal-badge success">Pagamento aprovado</span>
-                <h2 id="checkout-title">Suas fotos estao liberadas.</h2>
+                <h2 id="checkout-title">Suas fotos estão liberadas.</h2>
                 <p>
                   Baixe agora os arquivos escolhidos. Sua galeria continua neste
                   link por 7 dias caso queira voltar e liberar mais fotos.
@@ -826,7 +826,7 @@ export function Gallery({
                       </a>
                     ))}
                     <small>
-                      Os links de download expiram em 15 minutos, mas voce pode
+                      Os links de download expiram em 15 minutos, mas você pode
                       gerar novos links nesta galeria por 7 dias.
                     </small>
                   </div>
@@ -841,12 +841,12 @@ export function Gallery({
                 <div className="post-purchase-offer">
                     <span>CRIAR OUTRO TEMA</span>
                     <strong>
-                      Quer mais um ensaio diferente? 15 novas opcoes e 3 fotos
-                      incluidas por {money.format(offer.newShootPrice)}
+                      Quer mais um ensaio diferente? 15 novas opções e 3 fotos
+                      incluídas por {money.format(offer.newShootPrice)}
                     </strong>
                     <small>
-                      Ideal para testar outro estilo, profissao, viagem, casal
-                      ou perfil. Voce escolhe o novo tema e recebe outra galeria.
+                      Ideal para testar outro estilo, profissão, viagem, casal
+                      ou perfil. Você escolhe o novo tema e recebe outra galeria.
                     </small>
                     <button
                       className="primary-button modal-primary"
@@ -932,8 +932,8 @@ export function Gallery({
                     : `${selected.length} fotos selecionadas`}
                 </h2>
                 <p>
-                  Transformamos suas fotos em um video vertical de ate 15
-                  segundos, com movimentos e transicoes suaves, pronto para
+                  Transformamos suas fotos em um vídeo vertical de até 15
+                  segundos, com movimentos e transições suaves, pronto para
                   compartilhar.
                 </p>
                 <div className="video-offer-preview">
@@ -962,7 +962,7 @@ export function Gallery({
                   </div>
                   <div className="video-benefits">
                     <span>1 vídeo vertical de aproximadamente 15 segundos</span>
-                    <span>Perfeito para adicionar musica no Instagram ou TikTok</span>
+                    <span>Perfeito para adicionar música no Instagram ou TikTok</span>
                     <span>Pronto para Instagram, Stories e WhatsApp</span>
                   </div>
                 </div>
