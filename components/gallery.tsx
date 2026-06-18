@@ -20,6 +20,7 @@ const basePricesByQuantity = [
   0, 7.9, 17.8, 25.8, 31.8, 35.8, 39.8, 42.8, 45.8, 49.8, 52.8,
   55.8, 58.8, 61.8, 64.8, 67.8, 71.8, 74.8, 77.8, 80.8, 82.8,
 ];
+const videoPricesByQuantity = [0, 19.9, 29.9, 39.9, 49.9, 59.9];
 
 const standardMilestones = [
   { quantity: 1, label: "Incluída" },
@@ -111,6 +112,16 @@ function createMilestones(includedPhotos: number, gallerySize: number) {
   return milestones;
 }
 
+function getVideoPrice(videoCount: number) {
+  const safeCount = Math.min(MAX_PHOTOS, Math.max(0, Math.round(videoCount)));
+  if (!safeCount) return 0;
+
+  return (
+    videoPricesByQuantity[safeCount] ??
+    videoPricesByQuantity[5] + (safeCount - 5) * 8.9
+  );
+}
+
 function AddIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -177,17 +188,9 @@ export function Gallery({
     ticketUrl?: string;
   } | null>(null);
   const videoPhotos = useMemo(() => {
-    const chosenPhotos = videoPhotoIds
+    return videoPhotoIds
       .map((photoId) => photos.find((photo) => photo.id === photoId))
-      .filter((photo): photo is (typeof photos)[number] => Boolean(photo))
-      .slice(0, 3);
-
-    if (!chosenPhotos.length) return [];
-
-    return Array.from(
-      { length: 3 },
-      (_, index) => chosenPhotos[index % chosenPhotos.length],
-    );
+      .filter((photo): photo is (typeof photos)[number] => Boolean(photo));
   }, [photos, videoPhotoIds]);
 
   function getPricing(count: number) {
@@ -231,8 +234,9 @@ export function Gallery({
     ? pricing.nextMilestone.quantity - selected.length
     : 0;
   const selectionIsIncluded = selected.length > 0 && pricing.dueNow === 0;
+  const videoPrice = videoAdded ? getVideoPrice(videoPhotoIds.length || 1) : 0;
   const checkoutAmount =
-    pricing.dueNow + (videoAdded ? offer.videoPrice : 0);
+    pricing.dueNow + videoPrice;
 
   const refreshAccess = useCallback(async () => {
     if (token === "demo") return;
@@ -329,7 +333,7 @@ export function Gallery({
     if (!selected.length) return;
     setTestPaymentApproved(false);
     setPixReady(false);
-    setVideoPhotoIds(selected.slice(0, 3));
+    setVideoPhotoIds(selected.slice(0, 1));
     setVideoPickerOpen(false);
     setCheckoutError("");
     setPixPayment(null);
@@ -363,7 +367,6 @@ export function Gallery({
           : current.filter((photoId) => photoId !== id);
       }
 
-      if (current.length === 3) return [...current.slice(1), id];
       return [...current, id];
     });
   }
@@ -949,9 +952,9 @@ export function Gallery({
                     : `${selected.length} fotos selecionadas`}
                 </h2>
                 <p>
-                  Transformamos suas fotos em um vídeo vertical de até 15
-                  segundos, com movimentos e transições suaves, pronto para
-                  compartilhar.
+                  Transforme suas fotos favoritas em vídeos curtos com
+                  movimento. Cada foto escolhida vira um vídeo separado para
+                  você baixar e postar.
                 </p>
                 <div className="video-offer-preview">
                   <div
@@ -978,9 +981,13 @@ export function Gallery({
                     <strong aria-hidden="true">▶</strong>
                   </div>
                   <div className="video-benefits">
-                    <span>1 vídeo vertical de aproximadamente 15 segundos</span>
+                    <span>
+                      {videoAdded
+                        ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "vídeo curto" : "vídeos curtos"}`
+                        : "1 vídeo curto por padrão"}
+                    </span>
+                    <span>Vídeos separados: você usa só os favoritos</span>
                     <span>Perfeito para adicionar música no Instagram ou TikTok</span>
-                    <span>Pronto para Instagram, Stories e WhatsApp</span>
                   </div>
                 </div>
                 <button
@@ -991,21 +998,35 @@ export function Gallery({
                 >
                   <span className="addon-check">{videoAdded ? "✓" : "+"}</span>
                   <span className="addon-copy">
-                    <strong>Quero transformar minhas fotos em vídeo</strong>
+                    <strong>Quero transformar foto em vídeo</strong>
                     <small>
-                      {selected.length === 1
-                        ? "Sua foto ganhará 3 movimentos diferentes"
-                        : `Usaremos ${Math.min(3, videoPhotoIds.length)} das fotos escolhidas para criar as cenas`}
+                      {videoAdded
+                        ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "foto escolhida" : "fotos escolhidas"} para vídeo`
+                        : "Começa com 1 vídeo da sua foto favorita"}
                     </small>
                   </span>
                   <span className="addon-action">
                     {videoAdded
-                      ? "Adicionado"
-                      : `Marcar por ${money.format(offer.videoPrice)}`}
+                      ? money.format(videoPrice)
+                      : `Adicionar por ${money.format(getVideoPrice(1))}`}
                   </span>
                 </button>
                 {videoAdded && selected.length > 1 && (
                   <div className="video-photo-choice">
+                    <div className="modal-total">
+                      <span>
+                        {videoPhotoIds.length}{" "}
+                        {videoPhotoIds.length === 1 ? "vídeo escolhido" : "vídeos escolhidos"}
+                      </span>
+                      <strong>{money.format(videoPrice)}</strong>
+                    </div>
+                    <button
+                      className="text-button muted"
+                      onClick={() => setVideoPhotoIds(selected)}
+                      type="button"
+                    >
+                      Transformar todas as fotos selecionadas em vídeo
+                    </button>
                     <button
                       className="text-button muted"
                       onClick={() => setVideoPickerOpen((current) => !current)}
@@ -1013,13 +1034,13 @@ export function Gallery({
                     >
                       {videoPickerOpen
                         ? "Concluir escolha"
-                        : "Alterar fotos usadas no vídeo"}
+                        : "Escolher quais fotos viram vídeo"}
                     </button>
                     {videoPickerOpen && (
                       <>
                         <small>
-                          Escolha até 3 fotos. Já deixamos as primeiras
-                          selecionadas.
+                          Já deixamos 1 foto marcada. Toque nas outras fotos
+                          para transformar mais delas em vídeo.
                         </small>
                         <div className="video-picker-grid">
                           {selected.map((photoId) => {
@@ -1059,9 +1080,16 @@ export function Gallery({
                 )}
                 <div className="modal-total">
                   <span>
-                    {pricing.dueNow > 0
-                      ? `Fotos adicionais: ${money.format(pricing.dueNow)}`
-                      : "Fotos escolhidas já incluídas"}
+                    {[
+                      pricing.dueNow > 0
+                        ? `Fotos adicionais: ${money.format(pricing.dueNow)}`
+                        : "Fotos escolhidas já incluídas",
+                      videoAdded && videoPrice > 0
+                        ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "vídeo" : "vídeos"}: ${money.format(videoPrice)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                   <strong>
                     {checkoutAmount > 0

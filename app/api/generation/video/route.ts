@@ -7,7 +7,7 @@ import { startVideoJob } from "@/lib/video";
 
 const requestSchema = z.object({
   galleryToken: z.string().min(8),
-  photoIds: z.array(z.string().min(1)).min(1).max(3),
+  photoIds: z.array(z.string().min(1)).min(1).max(20),
 });
 
 export async function POST(request: NextRequest) {

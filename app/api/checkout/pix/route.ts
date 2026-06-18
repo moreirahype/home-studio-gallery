@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isGalleryExpired } from "@/lib/gallery-expiration";
 import { createPixPayment } from "@/lib/mercado-pago";
-import { getAdditionalPhotoAmountCents } from "@/lib/pricing";
+import { getAdditionalPhotoAmountCents, getVideoAmountCents } from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const requestSchema = z.object({
   galleryToken: z.string().min(8),
   photoIds: z.array(z.string().min(1)).min(1).max(20),
   videoAdded: z.boolean().default(false),
-  videoPhotoIds: z.array(z.string().min(1)).min(0).max(3).default([]),
+  videoPhotoIds: z.array(z.string().min(1)).min(0).max(20).default([]),
 });
 
 function customerEmail(projectId: string) {
@@ -69,13 +69,15 @@ export async function POST(request: NextRequest) {
   }
 
   const selectedPhotoIds = [...new Set(parsed.data.photoIds)];
-  const videoPhotoIds = [
-    ...new Set(
-      parsed.data.videoPhotoIds.length
-        ? parsed.data.videoPhotoIds
-        : selectedPhotoIds.slice(0, 3),
-    ),
-  ].slice(0, 3);
+  const videoPhotoIds = parsed.data.videoAdded
+    ? [
+        ...new Set(
+          parsed.data.videoPhotoIds.length
+            ? parsed.data.videoPhotoIds
+            : selectedPhotoIds.slice(0, 1),
+        ),
+      ]
+    : [];
   const allReferencedPhotos = [...new Set([...selectedPhotoIds, ...videoPhotoIds])];
 
   const { data: photos } = await supabase
@@ -146,7 +148,7 @@ export async function POST(request: NextRequest) {
     targetPhotoTotalCents - paidPhotoCreditCents,
   );
   const videoAmountCents = parsed.data.videoAdded
-    ? Math.round((Number(process.env.VIDEO_UPSELL_PRICE) || 19.9) * 100)
+    ? getVideoAmountCents(videoPhotoIds.length)
     : 0;
   const amountCents = photoAmountCents + videoAmountCents;
 
@@ -189,8 +191,9 @@ export async function POST(request: NextRequest) {
     items.push({
       order_id: order.id,
       kind: "video",
-      description: "Vídeo das fotos",
-      quantity: 1,
+      description:
+        videoPhotoIds.length === 1 ? "Vídeo da foto" : "Vídeos das fotos",
+      quantity: videoPhotoIds.length,
       amount_cents: videoAmountCents,
       metadata: { videoPhotoIds },
     });

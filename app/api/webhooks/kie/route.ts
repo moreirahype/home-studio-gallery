@@ -3,7 +3,6 @@ import { z } from "zod";
 import { getTaskDetails } from "@/lib/kie";
 import { createWatermarkedPreview } from "@/lib/photo-processing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { assembleVideo } from "@/lib/video";
 import { unauthorized } from "@/lib/http";
 import { safeCompare } from "@/lib/security";
 
@@ -141,14 +140,28 @@ async function handleVideoTask(
     .from("video_clips")
     .update({ path: clipPath, status: "ready", error_message: null })
     .eq("id", clip.id);
-  const assembled = await assembleVideo(clip.video_job_id);
+
+  const { data: clips } = await supabase
+    .from("video_clips")
+    .select("status")
+    .eq("video_job_id", clip.video_job_id);
+  const allReady =
+    Boolean(clips?.length) &&
+    clips?.every((videoClip) => videoClip.status === "ready");
+
+  if (allReady) {
+    await supabase
+      .from("video_jobs")
+      .update({ status: "ready", error_message: null })
+      .eq("id", clip.video_job_id);
+  }
 
   return {
     ok: true,
     taskId,
     state,
     kind: "video",
-    assembled,
+    ready: allReady,
   };
 }
 

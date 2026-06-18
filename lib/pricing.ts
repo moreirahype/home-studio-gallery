@@ -5,6 +5,8 @@ const basePricesByQuantity = [
   55.8, 58.8, 61.8, 64.8, 67.8, 71.8, 74.8, 77.8, 80.8, 82.8,
 ];
 
+const videoPricesByQuantity = [0, 19.9, 29.9, 39.9, 49.9, 59.9];
+
 export function getAdditionalPhotoAmountCents({
   selectedCount,
   includedPhotos,
@@ -33,4 +35,15 @@ export function getAdditionalPhotoAmountCents({
 
 export function formatReaisFromCents(amountCents: number) {
   return (amountCents / 100).toFixed(2);
+}
+
+export function getVideoAmountCents(videoCount: number) {
+  const safeCount = Math.min(MAX_PHOTOS, Math.max(0, Math.round(videoCount)));
+  if (!safeCount) return 0;
+
+  const amount =
+    videoPricesByQuantity[safeCount] ??
+    videoPricesByQuantity[5] + (safeCount - 5) * 8.9;
+
+  return Math.round(amount * 100);
 }

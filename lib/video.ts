@@ -39,10 +39,7 @@ export async function startVideoJob({
     throw new Error("Nenhuma foto pronta para o vídeo.");
   }
 
-  const sources = Array.from(
-    { length: 3 },
-    (_, index) => photos[index % Math.min(photos.length, 3)],
-  );
+  const sources = photos;
   const signed = await supabase.storage
     .from("photo-originals")
     .createSignedUrls(
@@ -83,7 +80,7 @@ export async function startVideoJob({
     const imageUrl = signed.data[index]?.signedUrl;
     if (!imageUrl) throw new Error("URL temporária da foto não foi criada.");
     const taskId = await createVideoTask({
-      prompt: MOVEMENT_PROMPTS[index],
+      prompt: MOVEMENT_PROMPTS[index % MOVEMENT_PROMPTS.length],
       imageUrl,
       callbackUrl: callbackUrl.toString(),
     });
