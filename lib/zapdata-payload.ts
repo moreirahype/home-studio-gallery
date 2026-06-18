@@ -13,6 +13,7 @@ export const zapdataOfferSchema = z.object({
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
   paidAmount: z.coerce.number().positive().optional().default(7.9),
   generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
+  galleryAttendant: z.string().trim().min(1).max(80).optional(),
   receiptId: z.string().min(1).optional(),
   testMode: z.coerce.boolean().optional().default(false),
   leadToken: z.string().min(8).optional(),
@@ -104,11 +105,25 @@ export function normalizeZapdataPayload(
       readNumberValue(data.generationCount) ??
       readNumberValue(variables.generationCount) ??
       readNumberValue(flowVariables.generationCount),
+    galleryAttendant:
+      readText(data.galleryAttendant) ??
+      readText(data.gallery_attendant) ??
+      readText(data.atendenteGaleria) ??
+      readText(variables.galleryAttendant) ??
+      readText(variables.gallery_attendant) ??
+      readText(variables.atendenteGaleria) ??
+      readText(flowVariables.galleryAttendant) ??
+      readText(flowVariables.gallery_attendant) ??
+      readText(flowVariables.atendenteGaleria),
     leadToken:
       readText(data.leadToken) ??
       readText(variables.leadToken) ??
       readText(flowVariables.leadToken),
   };
+}
+
+export function defaultGalleryAttendant(paidAmount: number) {
+  return `Galeria ${paidAmount.toFixed(2)}`;
 }
 
 export function previewValue(value?: string) {

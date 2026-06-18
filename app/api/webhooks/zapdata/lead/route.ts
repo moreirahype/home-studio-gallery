@@ -5,6 +5,7 @@ import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
+  defaultGalleryAttendant,
   normalizeZapdataPayload,
   previewValue,
   zapdataOfferSchema,
@@ -77,23 +78,40 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const token = randomUUID().replaceAll("-", "");
-  const { data: lead, error } = await supabase
+  const galleryAttendant =
+    parsed.data.galleryAttendant ??
+    defaultGalleryAttendant(parsed.data.paidAmount);
+  const leadPayload = {
+    token,
+    zapdata_contact_id: parsed.data.contactId ?? null,
+    customer_name: parsed.data.contactName ?? null,
+    phone: parsed.data.phone ?? null,
+    source_image_url: sourceImageUrl,
+    context_final: contextFinal,
+    niche_id: parsed.data.nicho ?? parsed.data.nicheId,
+    included_photos: parsed.data.includedPhotos,
+    paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
+    generation_count: parsed.data.generationCount,
+    bi_attendant_name: galleryAttendant,
+    status: "pending_payment",
+  };
+  let { data: lead, error } = await supabase
     .from("zapdata_leads")
-    .insert({
-      token,
-      zapdata_contact_id: parsed.data.contactId ?? null,
-      customer_name: parsed.data.contactName ?? null,
-      phone: parsed.data.phone ?? null,
-      source_image_url: sourceImageUrl,
-      context_final: contextFinal,
-      niche_id: parsed.data.nicho ?? parsed.data.nicheId,
-      included_photos: parsed.data.includedPhotos,
-      paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
-      generation_count: parsed.data.generationCount,
-      status: "pending_payment",
-    })
+    .insert(leadPayload)
     .select("id, token")
     .single();
+
+  if (error?.message.includes("bi_attendant_name")) {
+    const { bi_attendant_name: ignored, ...legacyLeadPayload } = leadPayload;
+    void ignored;
+    const fallback = await supabase
+      .from("zapdata_leads")
+      .insert(legacyLeadPayload)
+      .select("id, token")
+      .single();
+    lead = fallback.data;
+    error = fallback.error;
+  }
 
   if (error || !lead) {
     return NextResponse.json(
@@ -113,5 +131,6 @@ export async function POST(request: NextRequest) {
     includedPhotos: parsed.data.includedPhotos,
     paidAmount: parsed.data.paidAmount,
     generationCount: parsed.data.generationCount,
+    galleryAttendant,
   });
 }

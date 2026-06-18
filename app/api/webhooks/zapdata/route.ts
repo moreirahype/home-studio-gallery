@@ -8,6 +8,7 @@ import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
+  defaultGalleryAttendant,
   normalizeZapdataPayload,
   previewValue,
   zapdataOfferSchema,
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
         included_photos: number;
         paid_amount_cents: number;
         generation_count: number;
+        bi_attendant_name?: string | null;
         consumed_at: string | null;
       }
     | null = null;
@@ -58,9 +60,7 @@ export async function POST(request: NextRequest) {
   if (leadToken) {
     const { data: lead, error: leadError } = await supabase
       .from("zapdata_leads")
-      .select(
-        "id, token, project_id, zapdata_contact_id, customer_name, phone, source_image_url, context_final, niche_id, included_photos, paid_amount_cents, generation_count, consumed_at",
-      )
+      .select("*")
       .eq("token", leadToken)
       .maybeSingle();
 
@@ -80,8 +80,7 @@ export async function POST(request: NextRequest) {
 
     savedLead = lead;
   } else {
-    const leadFields =
-      "id, token, project_id, zapdata_contact_id, customer_name, phone, source_image_url, context_final, niche_id, included_photos, paid_amount_cents, generation_count, consumed_at";
+    const leadFields = "*";
     let leadError: { message: string } | null = null;
 
     if (parsed.data.contactId) {
@@ -207,6 +206,10 @@ export async function POST(request: NextRequest) {
     savedLead?.paid_amount_cents ?? Math.round(parsed.data.paidAmount * 100);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
+  const galleryAttendant =
+    savedLead?.bi_attendant_name ??
+    parsed.data.galleryAttendant ??
+    defaultGalleryAttendant(paidAmountCents / 100);
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
     generationCount,
@@ -234,18 +237,31 @@ export async function POST(request: NextRequest) {
     included_photos: includedPhotos,
     paid_amount_cents: paidAmountCents,
     generation_count: generationCount,
+    bi_attendant_name: galleryAttendant,
     status: "queued",
   };
+  let compatibleProjectPayload = projectPayload;
   let { error: projectError } = await supabase
     .from("projects")
-    .insert(projectPayload);
+    .insert(compatibleProjectPayload);
+
+  if (projectError?.message.includes("bi_attendant_name")) {
+    const { bi_attendant_name: ignored, ...legacyAttributionPayload } =
+      compatibleProjectPayload;
+    void ignored;
+    compatibleProjectPayload = legacyAttributionPayload as typeof projectPayload;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(compatibleProjectPayload);
+    projectError = fallbackInsert.error;
+  }
 
   if (
     projectError?.code === "42703" ||
     projectError?.message.includes("generation_count")
   ) {
     const { generation_count: generationCount, ...legacyProjectPayload } =
-      projectPayload;
+      compatibleProjectPayload;
     void generationCount;
     const fallbackInsert = await supabase
       .from("projects")

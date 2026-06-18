@@ -30,7 +30,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, project_id, status, bi_reported_at, projects(customer_name, phone)",
+      "id, project_id, status, bi_reported_at, projects(customer_name, phone, paid_amount_cents)",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -146,6 +146,14 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     const project = Array.isArray(order.projects)
       ? order.projects[0]
       : order.projects;
+    const { data: attribution } = await supabase
+      .from("projects")
+      .select("bi_attendant_name")
+      .eq("id", order.project_id)
+      .maybeSingle();
+    const attendantName =
+      attribution?.bi_attendant_name?.trim() ||
+      `Galeria ${(Number(project?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
 
     if (totalUpsellCents > 0) {
       try {
@@ -156,6 +164,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
           paidAt: payment.date_approved ?? new Date().toISOString(),
           product,
           upsellAmount: totalUpsellCents / 100,
+          attendantName,
         });
         await supabase
           .from("orders")

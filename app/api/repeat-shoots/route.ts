@@ -66,16 +66,20 @@ export async function POST(request: NextRequest) {
   let sourceProjectId: string | null = null;
   let customerName = "Cliente Home Studio";
   let customerPhone: string | null = null;
+  let galleryAttendant = "Galeria App";
 
   if (parsed.data.sourceToken) {
     const { data: sourceProject } = await supabase
       .from("projects")
-      .select("id, customer_name, phone")
+      .select("*")
       .eq("gallery_token", parsed.data.sourceToken)
       .maybeSingle();
     sourceProjectId = sourceProject?.id ?? null;
     customerName = sourceProject?.customer_name || customerName;
     customerPhone = sourceProject?.phone ?? null;
+    galleryAttendant =
+      sourceProject?.bi_attendant_name ||
+      `Galeria ${(Number(sourceProject?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
   }
 
   if (isVip && !sourceProjectId) {
@@ -124,7 +128,7 @@ export async function POST(request: NextRequest) {
     .filter(Boolean)
     .join(". ");
   const prompts = buildGenerationPrompts(contextFinal).slice(0, photoCount);
-  const { error: projectError } = await supabase.from("projects").insert({
+  const projectPayload = {
     id: projectId,
     gallery_token: galleryToken,
     customer_name: customerName,
@@ -136,8 +140,22 @@ export async function POST(request: NextRequest) {
     included_photos: includedPhotos,
     paid_amount_cents: paidAmountCents,
     generation_count: photoCount,
+    bi_attendant_name: galleryAttendant,
     status: "queued",
-  });
+  };
+  let { error: projectError } = await supabase
+    .from("projects")
+    .insert(projectPayload);
+
+  if (projectError?.message.includes("bi_attendant_name")) {
+    const { bi_attendant_name: ignored, ...legacyProjectPayload } =
+      projectPayload;
+    void ignored;
+    const fallback = await supabase
+      .from("projects")
+      .insert(legacyProjectPayload);
+    projectError = fallback.error;
+  }
 
   if (projectError) {
     await supabase.storage.from("source-images").remove([referencePath]);
