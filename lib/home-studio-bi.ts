@@ -8,11 +8,9 @@ type GallerySale = {
 };
 
 export async function reportGallerySaleToBi(sale: GallerySale) {
-  const webhookUrl = process.env.HSBI_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    throw new Error("HSBI_WEBHOOK_URL não configurada.");
-  }
+  const webhookUrl =
+    process.env.HSBI_WEBHOOK_URL ??
+    "https://script.google.com/macros/s/AKfycbx2g18eOChWAmiJ7Y-pGYrcyL6fFBFgI_0OeMBSFUVlUdD7sUshIRkw_Lglok4a1-fg/exec";
 
   if (sale.upsellAmount <= 0) {
     throw new Error("O valor do upsell da galeria deve ser positivo.");
