@@ -41,12 +41,16 @@ export async function POST(request: NextRequest) {
     | {
         id: string;
         token: string;
+        project_id: string | null;
         zapdata_contact_id: string | null;
         customer_name: string | null;
         phone: string | null;
         source_image_url: string;
         context_final: string;
         niche_id: string;
+        included_photos: number;
+        paid_amount_cents: number;
+        generation_count: number;
         consumed_at: string | null;
       }
     | null = null;
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
     const { data: lead, error: leadError } = await supabase
       .from("zapdata_leads")
       .select(
-        "id, token, zapdata_contact_id, customer_name, phone, source_image_url, context_final, niche_id, consumed_at",
+        "id, token, project_id, zapdata_contact_id, customer_name, phone, source_image_url, context_final, niche_id, included_photos, paid_amount_cents, generation_count, consumed_at",
       )
       .eq("token", leadToken)
       .maybeSingle();
@@ -75,6 +79,65 @@ export async function POST(request: NextRequest) {
     }
 
     savedLead = lead;
+  } else {
+    const leadFields =
+      "id, token, project_id, zapdata_contact_id, customer_name, phone, source_image_url, context_final, niche_id, included_photos, paid_amount_cents, generation_count, consumed_at";
+    let leadError: { message: string } | null = null;
+
+    if (parsed.data.contactId) {
+      const result = await supabase
+        .from("zapdata_leads")
+        .select(leadFields)
+        .eq("zapdata_contact_id", parsed.data.contactId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      savedLead = result.data;
+      leadError = result.error;
+    }
+
+    if (!savedLead && !leadError && parsed.data.phone) {
+      const result = await supabase
+        .from("zapdata_leads")
+        .select(leadFields)
+        .eq("phone", parsed.data.phone)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      savedLead = result.data;
+      leadError = result.error;
+    }
+
+    if (leadError) {
+      return NextResponse.json(
+        { ok: false, error: `Falha ao buscar lead: ${leadError.message}` },
+        { status: 500 },
+      );
+    }
+  }
+
+  if (savedLead?.project_id) {
+    const { data: existingProject } = await supabase
+      .from("projects")
+      .select("gallery_token, included_photos, generation_count")
+      .eq("id", savedLead.project_id)
+      .maybeSingle();
+
+    if (existingProject) {
+      return NextResponse.json({
+        ok: true,
+        projectId: savedLead.project_id,
+        status: "queued",
+        galleryUrl: new URL(
+          `/g/${existingProject.gallery_token}`,
+          appUrl,
+        ).toString(),
+        includedPhotos: existingProject.included_photos,
+        generationStarted: false,
+        generationTasks: 0,
+        reused: true,
+      });
+    }
   }
 
   const isTestMode =
@@ -138,9 +201,15 @@ export async function POST(request: NextRequest) {
   }
 
   const nicheId = savedLead?.niche_id ?? parsed.data.nicho ?? parsed.data.nicheId;
+  const includedPhotos =
+    savedLead?.included_photos ?? parsed.data.includedPhotos;
+  const paidAmountCents =
+    savedLead?.paid_amount_cents ?? Math.round(parsed.data.paidAmount * 100);
+  const generationCount =
+    savedLead?.generation_count ?? parsed.data.generationCount;
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
-    parsed.data.generationCount,
+    generationCount,
   );
   const galleryUrl = new URL(
     `/g/${galleryToken}`,
@@ -162,9 +231,9 @@ export async function POST(request: NextRequest) {
     context_final: contextFinal,
     niche_id: nicheId,
     receipt_id: parsed.data.receiptId ?? null,
-    included_photos: parsed.data.includedPhotos,
-    paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
-    generation_count: parsed.data.generationCount,
+    included_photos: includedPhotos,
+    paid_amount_cents: paidAmountCents,
+    generation_count: generationCount,
     status: "queued",
   };
   let { error: projectError } = await supabase
@@ -262,7 +331,7 @@ export async function POST(request: NextRequest) {
     status: "queued",
     galleryUrl: galleryUrl.toString(),
     testMode: isTestMode,
-    includedPhotos: parsed.data.includedPhotos,
+    includedPhotos,
     generationStarted: Boolean(generation?.started.length),
     generationTasks: generation?.started.length ?? 0,
     generationPlan: {
