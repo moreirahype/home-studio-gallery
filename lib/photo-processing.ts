@@ -35,15 +35,15 @@ export async function createWatermarkedPreview(
     const rotation = -31;
 
     return `<g transform="rotate(${rotation} ${x} ${y})">
-      <text x="${x}" y="${y}" text-anchor="middle"
-        fill="rgba(255,255,255,0.58)" stroke="rgba(0,0,0,0.24)" stroke-width="1.2"
-        font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="800"
+      <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"
+        fill="#ffffff" fill-opacity="0.62" stroke="#000000" stroke-opacity="0.26" stroke-width="1.2"
+        font-family="sans-serif" font-size="${fontSize}" font-weight="800"
         letter-spacing="4">${escapedLabel}</text>
     </g>`;
   }).join("");
   const overlay = Buffer.from(
     `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="rgba(0,0,0,0.05)" />
+      <rect width="100%" height="100%" fill="#000000" fill-opacity="0.06" />
       ${marks}
     </svg>`,
   );

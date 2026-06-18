@@ -29,8 +29,8 @@ export default async function GalleryPage({
         paidAmount: project.paid_amount_cents / 100,
         includedPhotos: project.included_photos,
         gallerySize: project.generation_count,
-        videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 14.9,
-        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 7.9,
+        videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
+        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 14.9,
         expressShootPrice:
           Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,
       }
@@ -38,8 +38,8 @@ export default async function GalleryPage({
         paidAmount: Number(query.paidAmount) || 7.9,
         includedPhotos: Number(query.includedPhotos) || 1,
         gallerySize: 15,
-        videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 14.9,
-        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 7.9,
+        videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
+        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 14.9,
         expressShootPrice:
           Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,
       };

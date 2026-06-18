@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     paidAmountCents: project.paid_amount_cents,
   });
   const videoAmountCents = parsed.data.videoAdded
-    ? Math.round((Number(process.env.VIDEO_UPSELL_PRICE) || 14.9) * 100)
+    ? Math.round((Number(process.env.VIDEO_UPSELL_PRICE) || 19.9) * 100)
     : 0;
   const amountCents = photoAmountCents + videoAmountCents;
 

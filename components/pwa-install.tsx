@@ -104,9 +104,12 @@ export function PwaInstall({ projectToken }: { projectToken?: string }) {
 
   return (
     <div className="install-card">
-      <span className="install-icon" aria-hidden="true">
-        <span>HS</span>
-      </span>
+      <img
+        alt=""
+        aria-hidden="true"
+        className="install-icon"
+        src="/icon-192.png"
+      />
       <div>
         <strong>Salve o Home Studio no celular</strong>
         <p>

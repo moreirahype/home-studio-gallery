@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { unauthorized } from "@/lib/http";
 import { startProjectGeneration } from "@/lib/generation";
 import { getKieImageModel } from "@/lib/kie";
@@ -8,93 +7,11 @@ import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-
-const payloadSchema = z.object({
-  contactId: z.string().min(1).optional(),
-  contactName: z.string().min(1).optional(),
-  phone: z.string().min(8).optional(),
-  sourceImageUrl: z.string().optional(),
-  foto_cliente: z.string().optional(),
-  contextFinal: z.string().optional(),
-  contexto_final: z.string().optional(),
-  nicheId: z.string().min(1).optional().default("geral"),
-  nicho: z.string().min(1).optional(),
-  includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
-  paidAmount: z.coerce.number().positive().optional().default(7.9),
-  generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
-  receiptId: z.string().min(1).optional(),
-  testMode: z.coerce.boolean().optional().default(false),
-});
-
-type ZapdataPayload = z.infer<typeof payloadSchema>;
-
-function readText(value: unknown) {
-  return typeof value === "string" ? value.trim() : undefined;
-}
-
-function normalizePayload(payload: unknown): Partial<ZapdataPayload> {
-  if (!payload || typeof payload !== "object") {
-    return {};
-  }
-
-  const data = payload as Record<string, unknown>;
-  const variables =
-    data.variables && typeof data.variables === "object"
-      ? (data.variables as Record<string, unknown>)
-      : {};
-  const flowVariables =
-    data.flow_variables && typeof data.flow_variables === "object"
-      ? (data.flow_variables as Record<string, unknown>)
-      : {};
-  const contact =
-    data.contact && typeof data.contact === "object"
-      ? (data.contact as Record<string, unknown>)
-      : {};
-
-  return {
-    ...data,
-    contactId:
-      readText(data.contactId) ??
-      readText(contact.id),
-    contactName:
-      readText(data.contactName) ??
-      readText(contact.name) ??
-      readText(flowVariables.contactName),
-    phone:
-      readText(data.phone) ??
-      readText(data.telefone) ??
-      readText(variables.telefone) ??
-      readText(flowVariables.telefone) ??
-      readText(contact.phone),
-    sourceImageUrl:
-      readText(data.sourceImageUrl) ??
-      readText(data.foto_cliente) ??
-      readText(variables.foto_cliente) ??
-      readText(flowVariables.foto_cliente),
-    foto_cliente:
-      readText(data.foto_cliente) ??
-      readText(variables.foto_cliente) ??
-      readText(flowVariables.foto_cliente),
-    contextFinal:
-      readText(data.contextFinal) ??
-      readText(data.contexto_final) ??
-      readText(variables.contexto_final) ??
-      readText(flowVariables.contexto_final),
-    contexto_final:
-      readText(data.contexto_final) ??
-      readText(variables.contexto_final) ??
-      readText(flowVariables.contexto_final),
-    nicho:
-      readText(data.nicho) ??
-      readText(variables.nicho) ??
-      readText(flowVariables.nicho),
-  };
-}
-
-function previewValue(value?: string) {
-  if (!value) return null;
-  return value.length > 220 ? `${value.slice(0, 220)}...` : value;
-}
+import {
+  normalizeZapdataPayload,
+  previewValue,
+  zapdataOfferSchema,
+} from "@/lib/zapdata-payload";
 
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
@@ -104,7 +21,9 @@ export async function POST(request: NextRequest) {
   }
 
   const rawPayload = await request.json();
-  const parsed = payloadSchema.safeParse(normalizePayload(rawPayload));
+  const parsed = zapdataOfferSchema.safeParse(
+    normalizeZapdataPayload(rawPayload),
+  );
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -116,19 +35,66 @@ export async function POST(request: NextRequest) {
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
   const appUrl = process.env.APP_URL ?? request.nextUrl.origin;
-  const isTestMode = process.env.TEST_MODE === "true";
+  const supabase = getSupabaseAdmin();
+  const leadToken = parsed.data.leadToken?.trim();
+  let savedLead:
+    | {
+        id: string;
+        token: string;
+        zapdata_contact_id: string | null;
+        customer_name: string | null;
+        phone: string | null;
+        source_image_url: string;
+        context_final: string;
+        niche_id: string;
+        consumed_at: string | null;
+      }
+    | null = null;
+
+  if (leadToken) {
+    const { data: lead, error: leadError } = await supabase
+      .from("zapdata_leads")
+      .select(
+        "id, token, zapdata_contact_id, customer_name, phone, source_image_url, context_final, niche_id, consumed_at",
+      )
+      .eq("token", leadToken)
+      .maybeSingle();
+
+    if (leadError) {
+      return NextResponse.json(
+        { ok: false, error: `Falha ao buscar lead: ${leadError.message}` },
+        { status: 500 },
+      );
+    }
+
+    if (!lead) {
+      return NextResponse.json(
+        { ok: false, error: "leadToken nao encontrado." },
+        { status: 404 },
+      );
+    }
+
+    savedLead = lead;
+  }
+
+  const isTestMode =
+    process.env.TEST_MODE === "true" && parsed.data.testMode === true;
   const receivedSourceImage =
-    parsed.data.foto_cliente?.trim() || parsed.data.sourceImageUrl?.trim();
+    savedLead?.source_image_url ||
+    parsed.data.foto_cliente?.trim() ||
+    parsed.data.sourceImageUrl?.trim();
   const receivedContext =
-    parsed.data.contextFinal?.trim() || parsed.data.contexto_final?.trim();
+    savedLead?.context_final ||
+    parsed.data.contextFinal?.trim() ||
+    parsed.data.contexto_final?.trim();
   const sourceImageUrl =
     receivedSourceImage ||
-    (isTestMode && parsed.data.testMode
+    (isTestMode
       ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200"
       : "");
   const contextFinal =
     receivedContext ||
-    (isTestMode && parsed.data.testMode ? "Ensaio premium para homologação" : "");
+    (isTestMode ? "Ensaio premium para homologação" : "");
   const receivedDebug = {
     foto_cliente: previewValue(parsed.data.foto_cliente),
     sourceImageUrl: previewValue(parsed.data.sourceImageUrl),
@@ -171,7 +137,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const nicheId = parsed.data.nicho ?? parsed.data.nicheId;
+  const nicheId = savedLead?.niche_id ?? parsed.data.nicho ?? parsed.data.nicheId;
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
     parsed.data.generationCount,
@@ -185,13 +151,13 @@ export async function POST(request: NextRequest) {
     galleryUrl.searchParams.set("test", "1");
   }
 
-  const supabase = getSupabaseAdmin();
   const projectPayload = {
     id: projectId,
     gallery_token: galleryToken,
-    zapdata_contact_id: parsed.data.contactId ?? null,
-    customer_name: parsed.data.contactName ?? null,
-    phone: parsed.data.phone ?? null,
+    zapdata_contact_id:
+      savedLead?.zapdata_contact_id ?? parsed.data.contactId ?? null,
+    customer_name: savedLead?.customer_name ?? parsed.data.contactName ?? null,
+    phone: savedLead?.phone ?? parsed.data.phone ?? null,
     source_image_url: sourceImageUrl,
     context_final: contextFinal,
     niche_id: nicheId,
@@ -223,6 +189,17 @@ export async function POST(request: NextRequest) {
       { ok: false, error: `Falha ao criar galeria: ${projectError.message}` },
       { status: 500 },
     );
+  }
+
+  if (savedLead) {
+    await supabase
+      .from("zapdata_leads")
+      .update({
+        project_id: projectId,
+        status: "converted",
+        consumed_at: new Date().toISOString(),
+      })
+      .eq("id", savedLead.id);
   }
 
   const { error: photosError } = await supabase.from("photos").insert(

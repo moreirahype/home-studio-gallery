@@ -6,6 +6,7 @@ out
 .env.*.local
 .generation-secret.tmp
 npm-debug.log*
+tsconfig.tsbuildinfo
 .DS_Store
 
 .vercel

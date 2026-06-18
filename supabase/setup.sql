@@ -60,6 +60,29 @@ create table if not exists public.projects (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.zapdata_leads (
+  id uuid primary key default gen_random_uuid(),
+  token text not null unique,
+  project_id uuid references public.projects(id) on delete set null,
+  zapdata_contact_id text,
+  customer_name text,
+  phone text,
+  source_image_url text not null,
+  context_final text not null,
+  niche_id text not null default 'universal',
+  included_photos smallint not null default 1
+    check (included_photos between 1 and 20),
+  paid_amount_cents integer not null default 790
+    check (paid_amount_cents > 0),
+  generation_count smallint not null default 15
+    check (generation_count between 1 and 20),
+  status text not null default 'pending_payment'
+    check (status in ('pending_payment', 'converted', 'expired', 'failed')),
+  consumed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.photos (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
@@ -98,6 +121,13 @@ create table if not exists public.order_photos (
   order_id uuid not null references public.orders(id) on delete cascade,
   photo_id uuid not null references public.photos(id) on delete restrict,
   primary key (order_id, photo_id)
+);
+
+create table if not exists public.project_included_photos (
+  project_id uuid not null references public.projects(id) on delete cascade,
+  photo_id uuid not null references public.photos(id) on delete restrict,
+  claimed_at timestamptz not null default now(),
+  primary key (project_id, photo_id)
 );
 
 create table if not exists public.order_items (
@@ -209,6 +239,12 @@ create index if not exists push_subscriptions_due_idx
 create index if not exists projects_gallery_token_idx
   on public.projects(gallery_token);
 
+create index if not exists zapdata_leads_phone_idx
+  on public.zapdata_leads(phone);
+
+create index if not exists zapdata_leads_contact_idx
+  on public.zapdata_leads(zapdata_contact_id);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -237,9 +273,11 @@ before update on public.orders
 for each row execute function public.set_updated_at();
 
 alter table public.projects enable row level security;
+alter table public.zapdata_leads enable row level security;
 alter table public.photos enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_photos enable row level security;
+alter table public.project_included_photos enable row level security;
 alter table public.order_items enable row level security;
 alter table public.video_jobs enable row level security;
 alter table public.video_clips enable row level security;

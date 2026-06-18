@@ -17,8 +17,8 @@ const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
 
 // Canonical curve for the default R$ 7,90 / 1-photo offer.
 const basePricesByQuantity = [
-  0, 7.9, 15.8, 22.8, 27.8, 32.8, 37.3, 41.3, 45.3, 49.3, 52.8,
-  56.3, 59.3, 62.3, 65.3, 67.8, 71.3, 74.3, 77.3, 80.3, 82.8,
+  0, 7.9, 17.8, 25.8, 31.8, 35.8, 39.8, 42.8, 45.8, 49.8, 52.8,
+  55.8, 58.8, 61.8, 64.8, 67.8, 71.8, 74.8, 77.8, 80.8, 82.8,
 ];
 
 const standardMilestones = [
@@ -26,7 +26,7 @@ const standardMilestones = [
   { quantity: 3, label: "Trio" },
   { quantity: 5, label: "Favoritas" },
   { quantity: 10, label: "Ensaio" },
-  { quantity: 15, label: "Coleção" },
+  { quantity: 15, label: "Galeria completa" },
   { quantity: 20, label: "Galeria completa" },
 ];
 
@@ -63,8 +63,8 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
       Math.round(offer?.gallerySize ?? DEFAULT_GALLERY_SIZE),
     ),
   );
-  const videoPrice = Math.max(0, offer?.videoPrice ?? 14.9);
-  const newShootPrice = Math.max(0, offer?.newShootPrice ?? 7.9);
+  const videoPrice = Math.max(0, offer?.videoPrice ?? 19.9);
+  const newShootPrice = Math.max(0, offer?.newShootPrice ?? 14.9);
   const expressShootPrice = Math.max(0, offer?.expressShootPrice ?? 4.9);
 
   return {
@@ -409,7 +409,8 @@ export function Gallery({
             fotos disponíveis
           </strong>
           <small>
-            Crédito de {money.format(offer.paidAmount)} já reconhecido
+            Credito de {money.format(offer.paidAmount)} reconhecido. Galeria
+            disponivel por 7 dias.
           </small>
         </div>
       </header>
@@ -529,13 +530,11 @@ export function Gallery({
                 }}
               />
               <span className="photo-shade" />
-              {!photo.previewUrl && (
-                <span className="watermark-pattern" aria-hidden="true">
-                  {Array.from({ length: 12 }, (_, index) => (
-                    <span key={index}>HOME STUDIO</span>
-                  ))}
-                </span>
-              )}
+              <span className="watermark-pattern" aria-hidden="true">
+                {Array.from({ length: 18 }, (_, index) => (
+                  <span key={index}>HOMESTUDIO.IA</span>
+                ))}
+              </span>
               <span className="photo-number">
                 Foto {String(photo.number).padStart(2, "0")}
               </span>
@@ -632,36 +631,46 @@ export function Gallery({
             {testPaymentApproved ? (
               <>
                 <span className="modal-badge success">Pagamento aprovado</span>
-                <h2 id="checkout-title">Suas fotos foram liberadas.</h2>
+                <h2 id="checkout-title">Suas fotos estao liberadas.</h2>
                 <p>
-                  Os arquivos escolhidos ficarão disponíveis para download e o
-                  vídeo será produzido quando estiver no pedido.
+                  Baixe agora os arquivos escolhidos. Sua galeria continua neste
+                  link por 7 dias caso queira voltar e liberar mais fotos.
                 </p>
                 {downloadLinks.length > 0 && (
                   <div className="download-list">
                     {downloadLinks.map((download) => (
                       <a
                         className="primary-button"
+                        download
                         href={download.url}
                         key={download.photoId}
                       >
                         Baixar foto {String(download.number).padStart(2, "0")}
                       </a>
                     ))}
-                    <small>Os links expiram em 15 minutos.</small>
+                    <small>
+                      Os links de download expiram em 15 minutos, mas voce pode
+                      gerar novos links nesta galeria por 7 dias.
+                    </small>
                   </div>
                 )}
+                <button
+                  className="text-button muted"
+                  onClick={() => setCheckoutOpen(false)}
+                  type="button"
+                >
+                  Continuar vendo minha galeria
+                </button>
                 {postPurchaseOffer === "main" ? (
                   <div className="post-purchase-offer">
-                    <span>PRÓXIMO ENSAIO COM MAIS FOTOS INCLUÍDAS</span>
+                    <span>CRIAR OUTRO TEMA</span>
                     <strong>
-                      Novo ensaio VIP: 15 opções e 3 fotos incluídas por{" "}
-                      {money.format(14.9)}
+                      Quer mais um ensaio diferente? 15 novas opcoes e 3 fotos
+                      incluidas por {money.format(offer.newShootPrice)}
                     </strong>
                     <small>
-                      Diferente da entrada de {money.format(offer.paidAmount)}:
-                      você recebe outro tema completo e já leva 3 fotos sem
-                      pagar adicionais.
+                      Ideal para testar outro estilo, profissao, viagem, casal
+                      ou perfil. Voce escolhe o novo tema e recebe outra galeria.
                     </small>
                     <button
                       className="primary-button modal-primary"
@@ -671,7 +680,7 @@ export function Gallery({
                       }}
                       type="button"
                     >
-                      Quero meu próximo ensaio VIP
+                      Quero criar outro ensaio
                     </button>
                     <button
                       className="text-button muted"
@@ -739,6 +748,13 @@ export function Gallery({
                 >
                   {checkingPayment ? "Conferindo..." : "Já paguei, liberar fotos"}
                 </button>
+                <button
+                  className="text-button muted"
+                  onClick={() => setPixReady(false)}
+                  type="button"
+                >
+                  Voltar para escolher fotos
+                </button>
                 {checkoutError && <p className="form-error">{checkoutError}</p>}
               </>
             ) : (
@@ -754,8 +770,8 @@ export function Gallery({
                     : `${selected.length} fotos selecionadas`}
                 </h2>
                 <p>
-                  Transformamos suas fotos em um vídeo vertical de cerca de 15
-                  segundos, com movimentos, transições e música, pronto para
+                  Transformamos suas fotos em um video vertical de ate 15
+                  segundos, com movimentos e transicoes suaves, pronto para
                   compartilhar.
                 </p>
                 <div className="video-offer-preview">
@@ -784,7 +800,7 @@ export function Gallery({
                   </div>
                   <div className="video-benefits">
                     <span>1 vídeo vertical de aproximadamente 15 segundos</span>
-                    <span>Trilha instrumental incluída</span>
+                    <span>Perfeito para adicionar musica no Instagram ou TikTok</span>
                     <span>Pronto para Instagram, Stories e WhatsApp</span>
                   </div>
                 </div>
@@ -806,7 +822,7 @@ export function Gallery({
                   <span className="addon-action">
                     {videoAdded
                       ? "Adicionado"
-                      : `Adicionar por ${money.format(offer.videoPrice)}`}
+                      : `Marcar por ${money.format(offer.videoPrice)}`}
                   </span>
                 </button>
                 {videoAdded && selected.length > 1 && (
