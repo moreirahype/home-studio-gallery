@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         paid_amount_cents: number;
         generation_count: number;
         bi_attendant_name?: string | null;
+        product_name?: string | null;
         consumed_at: string | null;
       }
     | null = null;
@@ -210,6 +211,12 @@ export async function POST(request: NextRequest) {
     savedLead?.bi_attendant_name ??
     parsed.data.galleryAttendant ??
     defaultGalleryAttendant(paidAmountCents / 100);
+  const productName =
+    savedLead?.product_name ??
+    parsed.data.productName ??
+    parsed.data.produto ??
+    parsed.data.nicho ??
+    "Galeria";
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
     generationCount,
@@ -238,6 +245,7 @@ export async function POST(request: NextRequest) {
     paid_amount_cents: paidAmountCents,
     generation_count: generationCount,
     bi_attendant_name: galleryAttendant,
+    product_name: productName,
     status: "queued",
   };
   let compatibleProjectPayload = projectPayload;
@@ -250,6 +258,17 @@ export async function POST(request: NextRequest) {
       compatibleProjectPayload;
     void ignored;
     compatibleProjectPayload = legacyAttributionPayload as typeof projectPayload;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(compatibleProjectPayload);
+    projectError = fallbackInsert.error;
+  }
+
+  if (projectError?.message.includes("product_name")) {
+    const { product_name: ignored, ...legacyProductPayload } =
+      compatibleProjectPayload;
+    void ignored;
+    compatibleProjectPayload = legacyProductPayload as typeof projectPayload;
     const fallbackInsert = await supabase
       .from("projects")
       .insert(compatibleProjectPayload);

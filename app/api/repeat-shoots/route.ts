@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
   let customerName = "Cliente Home Studio";
   let customerPhone: string | null = null;
   let galleryAttendant = "Galeria App";
+  let productName = "Novo ensaio";
 
   if (parsed.data.sourceToken) {
     const { data: sourceProject } = await supabase
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
     galleryAttendant =
       sourceProject?.bi_attendant_name ||
       `Galeria ${(Number(sourceProject?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
+    productName = sourceProject?.product_name || productName;
   }
 
   if (isVip && !sourceProjectId) {
@@ -141,6 +143,7 @@ export async function POST(request: NextRequest) {
     paid_amount_cents: paidAmountCents,
     generation_count: photoCount,
     bi_attendant_name: galleryAttendant,
+    product_name: productName,
     status: "queued",
   };
   let { error: projectError } = await supabase
@@ -148,9 +151,22 @@ export async function POST(request: NextRequest) {
     .insert(projectPayload);
 
   if (projectError?.message.includes("bi_attendant_name")) {
-    const { bi_attendant_name: ignored, ...legacyProjectPayload } =
+    const {
+      bi_attendant_name: ignoredAttendant,
+      product_name: ignoredProduct,
+      ...legacyProjectPayload
+    } =
       projectPayload;
-    void ignored;
+    void ignoredAttendant;
+    void ignoredProduct;
+    const fallback = await supabase
+      .from("projects")
+      .insert(legacyProjectPayload);
+    projectError = fallback.error;
+  } else if (projectError?.message.includes("product_name")) {
+    const { product_name: ignoredProduct, ...legacyProjectPayload } =
+      projectPayload;
+    void ignoredProduct;
     const fallback = await supabase
       .from("projects")
       .insert(legacyProjectPayload);

@@ -14,6 +14,8 @@ export const zapdataOfferSchema = z.object({
   paidAmount: z.coerce.number().positive().optional().default(7.9),
   generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
   galleryAttendant: z.string().trim().min(1).max(80).optional(),
+  productName: z.string().trim().min(1).max(120).optional(),
+  produto: z.string().trim().min(1).max(120).optional(),
   receiptId: z.string().min(1).optional(),
   testMode: z.coerce.boolean().optional().default(false),
   leadToken: z.string().min(8).optional(),
@@ -115,6 +117,26 @@ export function normalizeZapdataPayload(
       readText(flowVariables.galleryAttendant) ??
       readText(flowVariables.gallery_attendant) ??
       readText(flowVariables.atendenteGaleria),
+    productName:
+      readText(data.productName) ??
+      readText(data.product_name) ??
+      readText(data.product) ??
+      readText(data.produto) ??
+      readText(variables.productName) ??
+      readText(variables.product_name) ??
+      readText(variables.product) ??
+      readText(variables.produto) ??
+      readText(flowVariables.productName) ??
+      readText(flowVariables.product_name) ??
+      readText(flowVariables.product) ??
+      readText(flowVariables.produto) ??
+      readText(data.nicho) ??
+      readText(variables.nicho) ??
+      readText(flowVariables.nicho),
+    produto:
+      readText(data.produto) ??
+      readText(variables.produto) ??
+      readText(flowVariables.produto),
     leadToken:
       readText(data.leadToken) ??
       readText(variables.leadToken) ??

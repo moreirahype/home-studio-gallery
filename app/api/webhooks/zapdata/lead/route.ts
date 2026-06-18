@@ -81,6 +81,8 @@ export async function POST(request: NextRequest) {
   const galleryAttendant =
     parsed.data.galleryAttendant ??
     defaultGalleryAttendant(parsed.data.paidAmount);
+  const productName =
+    parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho ?? "Galeria";
   const leadPayload = {
     token,
     zapdata_contact_id: parsed.data.contactId ?? null,
@@ -93,6 +95,7 @@ export async function POST(request: NextRequest) {
     paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
     generation_count: parsed.data.generationCount,
     bi_attendant_name: galleryAttendant,
+    product_name: productName,
     status: "pending_payment",
   };
   let { data: lead, error } = await supabase
@@ -102,8 +105,23 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error?.message.includes("bi_attendant_name")) {
-    const { bi_attendant_name: ignored, ...legacyLeadPayload } = leadPayload;
-    void ignored;
+    const {
+      bi_attendant_name: ignoredAttendant,
+      product_name: ignoredProduct,
+      ...legacyLeadPayload
+    } = leadPayload;
+    void ignoredAttendant;
+    void ignoredProduct;
+    const fallback = await supabase
+      .from("zapdata_leads")
+      .insert(legacyLeadPayload)
+      .select("id, token")
+      .single();
+    lead = fallback.data;
+    error = fallback.error;
+  } else if (error?.message.includes("product_name")) {
+    const { product_name: ignoredProduct, ...legacyLeadPayload } = leadPayload;
+    void ignoredProduct;
     const fallback = await supabase
       .from("zapdata_leads")
       .insert(legacyLeadPayload)
@@ -132,5 +150,6 @@ export async function POST(request: NextRequest) {
     paidAmount: parsed.data.paidAmount,
     generationCount: parsed.data.generationCount,
     galleryAttendant,
+    productName,
   });
 }
