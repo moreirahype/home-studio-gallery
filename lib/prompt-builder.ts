@@ -9,7 +9,11 @@ Client request:
 
 Interpret the client request literally and visually. Build the photoshoot around the actual occasion, theme, place, profession, fantasy, color palette, age, object, mood or story requested by the client.
 
-Do not force every image to be luxury, glamorous or sophisticated. Use that aesthetic only when it naturally matches the request.
+All images must remain clearly inside the client's requested concept. Do not drift into unrelated photoshoot styles, generic fashion portraits or generic luxury scenes that ignore the requested theme.
+
+Most images should strongly express the request in an obvious, easy-to-understand way. A smaller portion can be a premium, editorial or luxury version of the same concept, but the main theme elements must still be visible.
+
+Do not force every image to be luxury, glamorous or sophisticated. Use that aesthetic as an upgrade layer only when it still supports the request.
 
 If the request is a birthday or anniversary photoshoot, include clear celebratory elements in several images: studio backdrop, metallic number balloons, balloon bouquets, confetti, cake, flowers, party props, warm happy expression and tasteful celebratory styling. Use the age or number from the request only if it is explicitly provided. Avoid random numbers.
 
@@ -33,7 +37,7 @@ const SCENE_VARIATIONS = [
   "Three-quarter portrait with a different pose, wardrobe and camera angle, keeping the face clearly visible.",
   "Warm close-up portrait focused on expression, identity and subtle thematic details.",
   "Full-body or seated portrait with the environment and props clearly communicating the requested concept.",
-  "Editorial portrait with tasteful styling and a different color palette inspired by the client request.",
+  "Editorial portrait with tasteful styling and a different color palette, while keeping the requested concept unmistakable.",
   "Candid joyful moment with natural expression and realistic movement, still matching the theme.",
   "Minimalist version of the requested concept, elegant but not necessarily luxurious.",
   "Detailed environmental portrait with foreground/background depth and theme-specific objects.",
@@ -43,11 +47,11 @@ const SCENE_VARIATIONS = [
   "Creative composition using props, set design or visual symbols from the client request.",
   "Classic portrait pose with refined lighting and a different outfit from previous images.",
   "Dynamic pose with gentle movement in clothing, hair or props, without distorting anatomy.",
-  "Magazine-style portrait adapted to the theme, polished but still faithful to the client's request.",
+  "Premium magazine-style portrait adapted to the same theme, polished and aspirational without becoming unrelated.",
   "Playful or expressive portrait if the theme allows it, with a natural smile and clear face.",
   "Elegant environmental portrait highlighting the requested theme without overcrowding the image.",
   "Distinct alternative scene from the same theme, changing background, pose and styling.",
-  "Final signature portrait with strong visual appeal, clean composition and memorable theme execution.",
+  "Final signature portrait with strong visual appeal, clean composition, premium finish and memorable theme execution.",
 ];
 
 export function buildGenerationPrompts(context: string) {
