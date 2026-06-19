@@ -174,6 +174,9 @@ export function Gallery({
     clips?: { number: number; url: string }[];
     error?: string | null;
   } | null>(null);
+  const [relatedGalleries, setRelatedGalleries] = useState<
+    { token: string; title: string; status?: string | null; url: string }[]
+  >([]);
   const [checkoutError, setCheckoutError] = useState("");
   const [releasing, setReleasing] = useState(false);
   const [creatingPix, setCreatingPix] = useState(false);
@@ -259,6 +262,12 @@ export function Gallery({
         clips?: { number: number; url: string }[];
         error?: string | null;
       } | null;
+      relatedGalleries?: {
+        token: string;
+        title: string;
+        status?: string | null;
+        url: string;
+      }[];
     };
 
     if (!response.ok || !result.ok) return;
@@ -284,6 +293,7 @@ export function Gallery({
       setPhotoCredit(result.photoCredit);
     }
     setVideoAccess(result.video ?? null);
+    setRelatedGalleries(result.relatedGalleries ?? []);
   }, [token]);
 
   useEffect(() => {
@@ -556,14 +566,14 @@ export function Gallery({
         </div>
       </header>
 
-      {(downloadLinks.length > 0 || videoAccess) && (
+      {(downloadLinks.length > 0 || videoAccess || relatedGalleries.length > 0) && (
         <section className="owned-files" aria-label="Arquivos liberados">
           <div>
             <span className="section-kicker">SUAS COMPRAS</span>
             <h2>Seus arquivos ficam aqui por 7 dias.</h2>
             <p>
-              Baixe novamente suas fotos liberadas ou acompanhe o vídeo em
-              produção sem perder sua galeria.
+              Baixe novamente suas fotos e vídeos liberados, ou acesse outros
+              ensaios que você comprou.
             </p>
           </div>
           <div className="owned-actions">
@@ -601,6 +611,15 @@ export function Gallery({
                   Baixar vídeo {String(clip.number).padStart(2, "0")}
                 </a>
               ))}
+            {relatedGalleries.map((gallery) => (
+              <a
+                className="secondary-button"
+                href={gallery.url}
+                key={gallery.token}
+              >
+                Abrir {gallery.title}
+              </a>
+            ))}
           </div>
         </section>
       )}

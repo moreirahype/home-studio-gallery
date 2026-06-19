@@ -213,6 +213,46 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const { data: repeatShoots } = await supabase
+    .from("repeat_shoots")
+    .select("project_id, theme, status, created_at")
+    .eq("source_project_id", project.id)
+    .not("project_id", "is", null)
+    .order("created_at", { ascending: false });
+  const repeatProjectIds = (repeatShoots ?? [])
+    .map((shoot) => shoot.project_id as string | null)
+    .filter((projectId): projectId is string => Boolean(projectId));
+  const { data: repeatProjects } = repeatProjectIds.length
+    ? await supabase
+        .from("projects")
+        .select("id, gallery_token, status, created_at, expires_at")
+        .in("id", repeatProjectIds)
+    : { data: [] };
+  const repeatProjectMap = new Map(
+    (repeatProjects ?? []).map((repeatProject) => [
+      repeatProject.id,
+      repeatProject,
+    ]),
+  );
+  const relatedGalleries = (repeatShoots ?? []).flatMap((shoot, index) => {
+    const repeatProject = repeatProjectMap.get(shoot.project_id as string);
+    if (
+      !repeatProject?.gallery_token ||
+      isGalleryExpired(repeatProject.created_at, repeatProject.expires_at)
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        token: repeatProject.gallery_token,
+        title: shoot.theme || `Novo ensaio ${index + 1}`,
+        status: repeatProject.status || shoot.status,
+        url: `/g/${repeatProject.gallery_token}`,
+      },
+    ];
+  });
+
   return NextResponse.json({
     ok: true,
     photoCredit: photoCreditCents / 100,
@@ -230,5 +270,6 @@ export async function GET(request: NextRequest) {
           error: videoError,
         }
       : null,
+    relatedGalleries,
   });
 }
