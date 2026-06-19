@@ -575,6 +575,13 @@ export function Gallery({
               Baixe novamente suas fotos e vídeos liberados, ou acesse outros
               ensaios que você comprou.
             </p>
+            <div className="auto-release-note">
+              <strong>Pagamento confirmado automaticamente.</strong>
+              <span>
+                Não precisa enviar comprovante no WhatsApp. As fotos compradas
+                já foram liberadas aqui na galeria.
+              </span>
+            </div>
           </div>
           <div className="owned-actions">
             {downloadLinks.map((download) => (
@@ -852,6 +859,13 @@ export function Gallery({
                   Baixe agora os arquivos escolhidos. Sua galeria continua neste
                   link por 7 dias caso queira voltar e liberar mais fotos.
                 </p>
+                <div className="auto-release-note modal-note">
+                  <strong>Não envie comprovante no WhatsApp.</strong>
+                  <span>
+                    O pagamento já foi reconhecido e suas fotos selecionadas
+                    foram liberadas automaticamente aqui.
+                  </span>
+                </div>
                 {downloadLinks.length > 0 && (
                   <div className="download-list">
                     {downloadLinks.map((download) => (
