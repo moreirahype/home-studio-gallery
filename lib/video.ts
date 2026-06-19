@@ -2,9 +2,9 @@ import { createVideoTask, KIE_VIDEO_MODEL } from "@/lib/kie";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const MOVEMENT_PROMPTS = [
-  "Refined luxury portrait video. Very slow cinematic camera push-in. The person remains nearly still with one natural blink. Preserve the exact face, expression, body, clothes, hands and background from the source image. No talking, smiling, head movement, morphing or new objects.",
-  "Refined luxury portrait video. Subtle horizontal camera slide creating gentle depth. The person remains completely still. Preserve the exact identity, facial expression, anatomy, clothes, hands and scene from the source image. No orbit, talking, gestures, morphing or new objects.",
-  "Refined luxury portrait video. Very slow cinematic camera pull-back. The person remains nearly still with only natural breathing. Preserve the exact face, expression, body, clothes, hands and environment from the source image. No talking, smiling, head movement, morphing or new objects.",
+  "Polished portrait video. Very slow cinematic camera push-in. The person remains nearly still with one natural blink. Preserve the exact face, expression, body, clothes, hands and background from the source image. No talking, smiling, head movement, morphing or new objects.",
+  "Polished portrait video. Subtle horizontal camera slide creating gentle depth. The person remains completely still. Preserve the exact identity, facial expression, anatomy, clothes, hands and scene from the source image. No orbit, talking, gestures, morphing or new objects.",
+  "Polished portrait video. Very slow cinematic camera pull-back. The person remains nearly still with only natural breathing. Preserve the exact face, expression, body, clothes, hands and environment from the source image. No talking, smiling, head movement, morphing or new objects.",
 ];
 
 export async function startVideoJob({
