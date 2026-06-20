@@ -1,4 +1,5 @@
 const MAX_PHOTOS = 20;
+const DEFAULT_FIRST_EXTRA_AMOUNT_CENTS = 990;
 
 const basePricesByQuantity = [
   0, 7.9, 17.8, 25.8, 31.8, 35.8, 39.8, 42.8, 45.8, 49.8, 52.8,
@@ -26,6 +27,13 @@ export function getPricingBaseAmountCentsFromFirstExtraAmountCents({
     firstExtraAmount * (basePricesByQuantity[safeIncluded] / baseGap);
 
   return Math.round(pricingBaseAmount * 100);
+}
+
+function getDefaultPricingBaseAmountCents(includedPhotos: number) {
+  return getPricingBaseAmountCentsFromFirstExtraAmountCents({
+    firstExtraAmountCents: DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
+    includedPhotos,
+  });
 }
 
 export function getFirstExtraAmountCentsFromPricingBaseAmountCents({
@@ -70,7 +78,10 @@ export function getAdditionalPhotoAmountCents({
     Math.max(1, Math.round(selectedCount)),
   );
   const pricingBaseAmount =
-    Math.max(1, pricingBaseAmountCents ?? paidAmountCents) / 100;
+    Math.max(
+      1,
+      pricingBaseAmountCents ?? getDefaultPricingBaseAmountCents(safeIncluded),
+    ) / 100;
   const scale = pricingBaseAmount / basePricesByQuantity[safeIncluded];
   const scaledAdditional = Math.round(
     (basePricesByQuantity[safeSelected] - basePricesByQuantity[safeIncluded]) *

@@ -7,6 +7,7 @@ const MAX_PHOTOS = 20;
 const DEFAULT_GALLERY_SIZE = 15;
 const DEFAULT_PAID_AMOUNT = 7.9;
 const DEFAULT_INCLUDED_PHOTOS = 1;
+const DEFAULT_FIRST_EXTRA_AMOUNT = 9.9;
 
 const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
   id: `photo-${index + 1}`,
@@ -58,9 +59,15 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     Math.max(1, Math.round(offer?.includedPhotos ?? DEFAULT_INCLUDED_PHOTOS)),
   );
   const paidAmount = Math.max(0.01, offer?.paidAmount ?? DEFAULT_PAID_AMOUNT);
+  const pricingReferenceQuantity = Math.min(MAX_PHOTOS - 1, includedPhotos);
+  const defaultPricingBaseAmount =
+    DEFAULT_FIRST_EXTRA_AMOUNT *
+    (basePricesByQuantity[pricingReferenceQuantity] /
+      (basePricesByQuantity[pricingReferenceQuantity + 1] -
+        basePricesByQuantity[pricingReferenceQuantity]));
   const pricingBaseAmount = Math.max(
     0.01,
-    offer?.pricingBaseAmount ?? paidAmount,
+    offer?.pricingBaseAmount ?? defaultPricingBaseAmount,
   );
   const gallerySize = Math.min(
     MAX_PHOTOS,
