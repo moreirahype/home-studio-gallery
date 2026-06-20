@@ -36,6 +36,11 @@ function mergeContexts(initialContext?: string, finalContext?: string) {
   return `${initial}. ${final}`;
 }
 
+function isGenericProductName(productName?: string | null) {
+  const normalized = productName?.trim().toLowerCase();
+  return !normalized || normalized === "galeria" || normalized === "geral";
+}
+
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
 
@@ -298,9 +303,11 @@ export async function POST(request: NextRequest) {
     parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho;
   const savedProductName = savedLead?.product_name?.trim();
   const productName =
-    parsedProductName ??
-    (savedProductName && savedProductName.toLowerCase() !== "galeria"
+    (savedProductName && !isGenericProductName(savedProductName)
       ? savedProductName
+      : undefined) ??
+    (parsedProductName && !isGenericProductName(parsedProductName)
+      ? parsedProductName
       : undefined) ??
     "Geral";
   const galleryAttendant = defaultGalleryAttendant({

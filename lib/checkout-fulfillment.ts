@@ -1,8 +1,13 @@
 import { reportGallerySaleToBi } from "@/lib/home-studio-bi";
 import { startProjectGeneration } from "@/lib/generation";
 import { getPayment, type MercadoPagoPayment } from "@/lib/mercado-pago";
+import {
+  DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
+  getFirstExtraAmountCentsFromPricingBaseAmountCents,
+} from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { startVideoJob } from "@/lib/video";
+import { defaultGalleryAttendant } from "@/lib/zapdata-payload";
 
 type OrderItem = {
   kind: "photos" | "video" | "new_shoot";
@@ -19,6 +24,11 @@ function isPaid(payment: MercadoPagoPayment) {
     payment.status === "approved" ||
     payment.status_detail === "accredited"
   );
+}
+
+function isGenericProductName(productName?: string | null) {
+  const normalized = productName?.trim().toLowerCase();
+  return !normalized || normalized === "galeria" || normalized === "geral";
 }
 
 export async function settleMercadoPagoPayment(paymentId: string | number) {
@@ -141,13 +151,27 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
       : order.projects;
     const { data: attribution } = await supabase
       .from("projects")
-      .select("bi_attendant_name, product_name")
+      .select(
+        "bi_attendant_name, product_name, included_photos, pricing_base_amount_cents",
+      )
       .eq("id", order.project_id)
       .maybeSingle();
-    const attendantName =
-      attribution?.bi_attendant_name?.trim() ||
-      `Galeria ${(Number(project?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
     const productName = attribution?.product_name?.trim() || "Galeria";
+    const firstExtraAmountCents = attribution?.pricing_base_amount_cents
+      ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
+          pricingBaseAmountCents: Number(attribution.pricing_base_amount_cents),
+          includedPhotos: Number(attribution.included_photos ?? 1),
+        })
+      : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
+    const savedAttendantName = attribution?.bi_attendant_name?.trim();
+    const attendantName =
+      !isGenericProductName(productName)
+        ? defaultGalleryAttendant({
+            amount: firstExtraAmountCents / 100,
+            productName,
+          })
+        : savedAttendantName ||
+          `Galeria ${(Number(project?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
 
     if (totalUpsellCents > 0) {
       try {

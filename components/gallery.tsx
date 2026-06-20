@@ -198,6 +198,7 @@ export function Gallery({
   const [releasing, setReleasing] = useState(false);
   const [creatingPix, setCreatingPix] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
   const [pixPayment, setPixPayment] = useState<{
     orderId: string;
@@ -394,6 +395,56 @@ export function Gallery({
       setCheckoutError(
         "Não foi possível copiar automaticamente. Toque e segure o código Pix para copiar.",
       );
+    }
+  }
+
+  async function savePhotoToDevice(download: {
+    photoId: string;
+    number: number;
+    url: string;
+  }) {
+    setSavingPhotoId(download.photoId);
+    setCheckoutError("");
+
+    try {
+      const response = await fetch(download.url);
+      if (!response.ok) throw new Error("Falha ao buscar imagem.");
+
+      const blob = await response.blob();
+      const file = new File(
+        [blob],
+        `home-studio-foto-${String(download.number).padStart(2, "0")}.jpg`,
+        { type: blob.type || "image/jpeg" },
+      );
+      const shareData = {
+        files: [file],
+        title: `Foto ${String(download.number).padStart(2, "0")}`,
+      };
+
+      if (
+        typeof navigator !== "undefined" &&
+        "share" in navigator &&
+        "canShare" in navigator &&
+        navigator.canShare(shareData)
+      ) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = download.url;
+      link.download = file.name;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      window.open(download.url, "_blank", "noopener,noreferrer");
+      setCheckoutError(
+        "Se a foto abrir em outra tela, toque e segure na imagem para salvar no app Fotos.",
+      );
+    } finally {
+      setSavingPhotoId(null);
     }
   }
 
@@ -921,18 +972,21 @@ export function Gallery({
                 {downloadLinks.length > 0 && (
                   <div className="download-list">
                     {downloadLinks.map((download) => (
-                      <a
+                      <button
                         className="primary-button"
-                        download
-                        href={download.url}
                         key={download.photoId}
+                        onClick={() => void savePhotoToDevice(download)}
+                        type="button"
                       >
-                        Baixar foto {String(download.number).padStart(2, "0")}
-                      </a>
+                        {savingPhotoId === download.photoId
+                          ? "Abrindo Fotos..."
+                          : `Salvar foto ${String(download.number).padStart(2, "0")} no Fotos`}
+                      </button>
                     ))}
                     <small>
-                      Os links de download expiram em 15 minutos, mas você pode
-                      gerar novos links nesta galeria por 7 dias.
+                      No celular, o botão abre as opções nativas para salvar a
+                      imagem no app Fotos. Esta galeria continua disponível por
+                      7 dias.
                     </small>
                   </div>
                 )}
