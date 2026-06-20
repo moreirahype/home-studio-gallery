@@ -425,6 +425,12 @@ p {
   text-align: left;
 }
 
+.auto-release-note.pre-payment-note {
+  border-color: rgb(154 96 37 / 24%);
+  background: #fff6e8;
+  color: #7b421e;
+}
+
 .owned-actions {
   display: grid;
   gap: 8px;

@@ -932,6 +932,13 @@ export function Gallery({
                   Pague com o QR Code ou use o Pix Copia e Cola. Assim que o
                   pagamento for aprovado, suas fotos serão liberadas aqui.
                 </p>
+                <div className="auto-release-note modal-note pre-payment-note">
+                  <strong>Não mande comprovante no WhatsApp.</strong>
+                  <span>
+                    Depois de pagar no app do banco, volte para esta tela e toque
+                    no botão de liberar fotos. A liberação é automática.
+                  </span>
+                </div>
                 {pixPayment?.qrCodeBase64 ? (
                   <img
                     alt="QR Code Pix"
@@ -1130,6 +1137,16 @@ export function Gallery({
                       : "Sem valor adicional"}
                   </strong>
                 </div>
+                {checkoutAmount > 0 && (
+                  <div className="auto-release-note modal-note pre-payment-note">
+                    <strong>Atenção antes de pagar</strong>
+                    <span>
+                      Não precisa enviar comprovante no WhatsApp. Após o Pix,
+                      volte para esta galeria e suas fotos serão liberadas
+                      automaticamente.
+                    </span>
+                  </div>
+                )}
                 <button
                   className="primary-button modal-primary"
                   disabled={releasing || creatingPix}
