@@ -147,11 +147,10 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     const { data: attribution } = await supabase
       .from("projects")
       .select(
-        "product_name, included_photos, pricing_base_amount_cents",
+        "included_photos, pricing_base_amount_cents",
       )
       .eq("id", order.project_id)
       .maybeSingle();
-    const productName = attribution?.product_name?.trim() || "Galeria";
     const firstExtraAmountCents = attribution?.pricing_base_amount_cents
       ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
           pricingBaseAmountCents: Number(attribution.pricing_base_amount_cents),
@@ -171,7 +170,6 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
           paidAt: payment.date_approved ?? new Date().toISOString(),
           upsellAmount: totalUpsellCents / 100,
           attendantName,
-          productName,
         });
         await supabase
           .from("orders")

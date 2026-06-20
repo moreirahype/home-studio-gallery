@@ -16,8 +16,6 @@ export const zapdataOfferSchema = z.object({
   paidAmount: z.coerce.number().positive().optional().default(7.9),
   firstExtraAmount: z.coerce.number().positive().optional(),
   generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
-  productName: z.string().trim().min(1).max(120).optional(),
-  produto: z.string().trim().min(1).max(120).optional(),
   receiptId: z.string().min(1).optional(),
   testMode: z.coerce.boolean().optional().default(false),
   leadToken: z.string().min(8).optional(),
@@ -137,26 +135,6 @@ export function normalizeZapdataPayload(
       readNumberValue(data.generationCount) ??
       readNumberValue(variables.generationCount) ??
       readNumberValue(flowVariables.generationCount),
-    productName:
-      readText(data.productName) ??
-      readText(data.product_name) ??
-      readText(data.product) ??
-      readText(data.produto) ??
-      readText(variables.productName) ??
-      readText(variables.product_name) ??
-      readText(variables.product) ??
-      readText(variables.produto) ??
-      readText(flowVariables.productName) ??
-      readText(flowVariables.product_name) ??
-      readText(flowVariables.product) ??
-      readText(flowVariables.produto) ??
-      readText(data.nicho) ??
-      readText(variables.nicho) ??
-      readText(flowVariables.nicho),
-    produto:
-      readText(data.produto) ??
-      readText(variables.produto) ??
-      readText(flowVariables.produto),
     leadToken:
       readText(data.leadToken) ??
       readText(variables.leadToken) ??
@@ -168,7 +146,6 @@ export function defaultGalleryAttendant({
   amount,
 }: {
   amount: number;
-  productName?: string;
 }) {
   return `Galeria ${amount.toFixed(2)}`;
 }

@@ -104,8 +104,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const token = randomUUID().replaceAll("-", "");
-  const productName =
-    parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho ?? "Geral";
   const firstExtraAmountCents = parsed.data.firstExtraAmount
     ? Math.round(parsed.data.firstExtraAmount * 100)
     : null;
@@ -125,7 +123,6 @@ export async function POST(request: NextRequest) {
       : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS);
   const galleryAttendant = defaultGalleryAttendant({
     amount: attendantAmountCents / 100,
-    productName,
   });
   const leadPayload = {
     token,
@@ -140,7 +137,6 @@ export async function POST(request: NextRequest) {
     pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: parsed.data.generationCount,
     bi_attendant_name: galleryAttendant,
-    product_name: productName,
     status: "pending_payment",
   };
   let { data: lead, error } = await supabase
@@ -163,23 +159,11 @@ export async function POST(request: NextRequest) {
   } else if (error?.message.includes("bi_attendant_name")) {
     const {
       bi_attendant_name: ignoredAttendant,
-      product_name: ignoredProduct,
       pricing_base_amount_cents: ignoredPricingBase,
       ...legacyLeadPayload
     } = leadPayload;
     void ignoredAttendant;
-    void ignoredProduct;
     void ignoredPricingBase;
-    const fallback = await supabase
-      .from("zapdata_leads")
-      .insert(legacyLeadPayload)
-      .select("id, token")
-      .single();
-    lead = fallback.data;
-    error = fallback.error;
-  } else if (error?.message.includes("product_name")) {
-    const { product_name: ignoredProduct, ...legacyLeadPayload } = leadPayload;
-    void ignoredProduct;
     const fallback = await supabase
       .from("zapdata_leads")
       .insert(legacyLeadPayload)
@@ -209,6 +193,5 @@ export async function POST(request: NextRequest) {
     firstExtraAmount: parsed.data.firstExtraAmount ?? null,
     generationCount: parsed.data.generationCount,
     galleryAttendant,
-    productName,
   });
 }

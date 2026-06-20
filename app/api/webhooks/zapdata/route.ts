@@ -36,11 +36,6 @@ function mergeContexts(initialContext?: string, finalContext?: string) {
   return `${initial}. ${final}`;
 }
 
-function isGenericProductName(productName?: string | null) {
-  const normalized = productName?.trim().toLowerCase();
-  return !normalized || normalized === "galeria" || normalized === "geral";
-}
-
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
 
@@ -81,7 +76,6 @@ export async function POST(request: NextRequest) {
         pricing_base_amount_cents?: number | null;
         generation_count: number;
         bi_attendant_name?: string | null;
-        product_name?: string | null;
         consumed_at: string | null;
       }
     | null = null;
@@ -299,20 +293,8 @@ export async function POST(request: NextRequest) {
       : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
-  const parsedProductName =
-    parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho;
-  const savedProductName = savedLead?.product_name?.trim();
-  const productName =
-    (savedProductName && !isGenericProductName(savedProductName)
-      ? savedProductName
-      : undefined) ??
-    (parsedProductName && !isGenericProductName(parsedProductName)
-      ? parsedProductName
-      : undefined) ??
-    "Geral";
   const galleryAttendant = defaultGalleryAttendant({
     amount: (firstExtraAmountCents ?? paidAmountCents) / 100,
-    productName,
   });
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
@@ -352,7 +334,6 @@ export async function POST(request: NextRequest) {
     pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: generationCount,
     bi_attendant_name: galleryAttendant,
-    product_name: productName,
     status: "queued",
   };
   let compatibleProjectPayload = projectPayload;
@@ -376,17 +357,6 @@ export async function POST(request: NextRequest) {
       compatibleProjectPayload;
     void ignored;
     compatibleProjectPayload = legacyAttributionPayload as typeof projectPayload;
-    const fallbackInsert = await supabase
-      .from("projects")
-      .insert(compatibleProjectPayload);
-    projectError = fallbackInsert.error;
-  }
-
-  if (projectError?.message.includes("product_name")) {
-    const { product_name: ignored, ...legacyProductPayload } =
-      compatibleProjectPayload;
-    void ignored;
-    compatibleProjectPayload = legacyProductPayload as typeof projectPayload;
     const fallbackInsert = await supabase
       .from("projects")
       .insert(compatibleProjectPayload);
@@ -491,7 +461,6 @@ export async function POST(request: NextRequest) {
       firstExtraAmountCents === null || firstExtraAmountCents === undefined
         ? null
         : firstExtraAmountCents / 100,
-    productName,
     galleryAttendant,
     generationStarted: Boolean(generation?.started.length),
     generationTasks: generation?.started.length ?? 0,

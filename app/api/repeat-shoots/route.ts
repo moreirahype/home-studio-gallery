@@ -97,7 +97,6 @@ export async function POST(request: NextRequest) {
   let customerName = "Cliente Home Studio";
   let customerPhone: string | null = null;
   let galleryAttendant = "Galeria App";
-  let productName = "Novo ensaio";
   let inheritedFirstExtraAmountCents = DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
 
   if (parsed.data.sourceToken) {
@@ -112,7 +111,6 @@ export async function POST(request: NextRequest) {
     galleryAttendant =
       sourceProject?.bi_attendant_name ||
       `Galeria ${(Number(sourceProject?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
-    productName = sourceProject?.product_name || productName;
     if (sourceProject?.pricing_base_amount_cents) {
       inheritedFirstExtraAmountCents =
         getFirstExtraAmountCentsFromPricingBaseAmountCents({
@@ -185,7 +183,6 @@ export async function POST(request: NextRequest) {
     pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: photoCount,
     bi_attendant_name: galleryAttendant,
-    product_name: productName,
     status: "queued",
   };
   let { error: projectError } = await supabase
@@ -203,20 +200,10 @@ export async function POST(request: NextRequest) {
   } else if (projectError?.message.includes("bi_attendant_name")) {
     const {
       bi_attendant_name: ignoredAttendant,
-      product_name: ignoredProduct,
       ...legacyProjectPayload
     } =
       projectPayload;
     void ignoredAttendant;
-    void ignoredProduct;
-    const fallback = await supabase
-      .from("projects")
-      .insert(legacyProjectPayload);
-    projectError = fallback.error;
-  } else if (projectError?.message.includes("product_name")) {
-    const { product_name: ignoredProduct, ...legacyProjectPayload } =
-      projectPayload;
-    void ignoredProduct;
     const fallback = await supabase
       .from("projects")
       .insert(legacyProjectPayload);
