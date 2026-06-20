@@ -834,7 +834,19 @@ p {
   gap: 3px;
   overflow: hidden;
   border-radius: 11px;
-  background: var(--ink);
+  background: #efe3d7;
+}
+
+.video-photo-strip.count-1 {
+  grid-template-columns: 1fr;
+}
+
+.video-photo-strip.count-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.video-photo-strip.count-3 {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .video-photo-strip > span {

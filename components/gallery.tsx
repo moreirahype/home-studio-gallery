@@ -999,7 +999,7 @@ export function Gallery({
                 <div className="video-offer-preview">
                   <div
                     aria-label="Prévia das fotos usadas no vídeo"
-                    className="video-photo-strip"
+                    className={`video-photo-strip count-${Math.min(videoPhotos.length, 3)}`}
                   >
                     {videoPhotos.map((photo, index) => {
                       const tone =
