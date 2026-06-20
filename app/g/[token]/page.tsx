@@ -11,6 +11,7 @@ export default async function GalleryPage({
   params: Promise<{ token: string }>;
   searchParams: Promise<{
     paidAmount?: string;
+    pricingBaseAmount?: string;
     includedPhotos?: string;
     test?: string;
   }>;
@@ -41,6 +42,7 @@ export default async function GalleryPage({
       }
     : {
         paidAmount: Number(query.paidAmount) || 7.9,
+        pricingBaseAmount: Number(query.pricingBaseAmount) || undefined,
         includedPhotos: Number(query.includedPhotos) || 1,
         gallerySize: 15,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
