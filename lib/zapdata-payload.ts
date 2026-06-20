@@ -7,6 +7,8 @@ export const zapdataOfferSchema = z.object({
   sourceImageUrl: z.string().optional(),
   foto_cliente: z.string().optional(),
   contextFinal: z.string().optional(),
+  contexto_inicial: z.string().optional(),
+  initialContext: z.string().optional(),
   contexto_final: z.string().optional(),
   nicheId: z.string().min(1).optional().default("geral"),
   nicho: z.string().min(1).optional(),
@@ -87,6 +89,15 @@ export function normalizeZapdataPayload(
       readText(data.contexto_final) ??
       readText(variables.contexto_final) ??
       readText(flowVariables.contexto_final),
+    initialContext:
+      readText(data.initialContext) ??
+      readText(data.contexto_inicial) ??
+      readText(variables.contexto_inicial) ??
+      readText(flowVariables.contexto_inicial),
+    contexto_inicial:
+      readText(data.contexto_inicial) ??
+      readText(variables.contexto_inicial) ??
+      readText(flowVariables.contexto_inicial),
     contexto_final:
       readText(data.contexto_final) ??
       readText(variables.contexto_final) ??

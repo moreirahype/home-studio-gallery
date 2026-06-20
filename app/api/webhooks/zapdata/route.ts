@@ -20,6 +20,22 @@ import {
   zapdataOfferSchema,
 } from "@/lib/zapdata-payload";
 
+function mergeContexts(initialContext?: string, finalContext?: string) {
+  const initial = initialContext?.trim();
+  const final = finalContext?.trim();
+
+  if (!initial) return final ?? "";
+  if (!final) return initial;
+
+  const normalizedInitial = initial.toLowerCase();
+  const normalizedFinal = final.toLowerCase();
+
+  if (normalizedFinal.includes(normalizedInitial)) return final;
+  if (normalizedInitial.includes(normalizedFinal)) return initial;
+
+  return `${initial}. ${final}`;
+}
+
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
 
@@ -145,7 +161,7 @@ export async function POST(request: NextRequest) {
     const { data: existingProject } = await supabase
       .from("projects")
       .select(
-        "gallery_token, included_photos, generation_count, pricing_base_amount_cents",
+        "gallery_token, included_photos, paid_amount_cents, generation_count, pricing_base_amount_cents",
       )
       .eq("id", savedLead.project_id)
       .maybeSingle();
@@ -159,7 +175,10 @@ export async function POST(request: NextRequest) {
         : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
       const reusedNewShootUrl = new URL("/novo", appUrl);
       reusedNewShootUrl.searchParams.set("source", existingProject.gallery_token);
-      reusedNewShootUrl.searchParams.set("paidAmount", "7.90");
+      reusedNewShootUrl.searchParams.set(
+        "paidAmount",
+        formatReaisFromCents(Number(existingProject.paid_amount_cents ?? 790)),
+      );
       reusedNewShootUrl.searchParams.set("includedPhotos", "1");
       reusedNewShootUrl.searchParams.set("generationCount", "15");
       reusedNewShootUrl.searchParams.set(
@@ -190,10 +209,13 @@ export async function POST(request: NextRequest) {
     savedLead?.source_image_url ||
     parsed.data.foto_cliente?.trim() ||
     parsed.data.sourceImageUrl?.trim();
+  const receivedInitialContext =
+    parsed.data.initialContext?.trim() || parsed.data.contexto_inicial?.trim();
+  const receivedFinalContext =
+    parsed.data.contextFinal?.trim() || parsed.data.contexto_final?.trim();
   const receivedContext =
     savedLead?.context_final ||
-    parsed.data.contextFinal?.trim() ||
-    parsed.data.contexto_final?.trim();
+    mergeContexts(receivedInitialContext, receivedFinalContext);
   const sourceImageUrl =
     receivedSourceImage ||
     (isTestMode
@@ -205,6 +227,8 @@ export async function POST(request: NextRequest) {
   const receivedDebug = {
     foto_cliente: previewValue(parsed.data.foto_cliente),
     sourceImageUrl: previewValue(parsed.data.sourceImageUrl),
+    contexto_inicial: previewValue(parsed.data.contexto_inicial),
+    initialContext: previewValue(parsed.data.initialContext),
     contexto_final: previewValue(parsed.data.contexto_final),
     contextFinal: previewValue(parsed.data.contextFinal),
   };
@@ -293,7 +317,7 @@ export async function POST(request: NextRequest) {
   );
   const newShootUrl = new URL("/novo", appUrl);
   newShootUrl.searchParams.set("source", galleryToken);
-  newShootUrl.searchParams.set("paidAmount", "7.90");
+  newShootUrl.searchParams.set("paidAmount", formatReaisFromCents(paidAmountCents));
   newShootUrl.searchParams.set("includedPhotos", "1");
   newShootUrl.searchParams.set("generationCount", "15");
   newShootUrl.searchParams.set(
@@ -419,7 +443,7 @@ export async function POST(request: NextRequest) {
   const canAutoGenerate =
     process.env.KIE_AUTO_GENERATE === "true" &&
     Boolean(receivedSourceImage) &&
-    Boolean(receivedContext);
+    Boolean(contextFinal);
 
   if (canAutoGenerate) {
     try {

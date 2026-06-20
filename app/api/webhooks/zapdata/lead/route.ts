@@ -16,6 +16,22 @@ import {
   getPricingBaseAmountCentsFromFirstExtraAmountCents,
 } from "@/lib/pricing";
 
+function mergeContexts(initialContext?: string, finalContext?: string) {
+  const initial = initialContext?.trim();
+  const final = finalContext?.trim();
+
+  if (!initial) return final ?? "";
+  if (!final) return initial;
+
+  const normalizedInitial = initial.toLowerCase();
+  const normalizedFinal = final.toLowerCase();
+
+  if (normalizedFinal.includes(normalizedInitial)) return final;
+  if (normalizedInitial.includes(normalizedFinal)) return initial;
+
+  return `${initial}. ${final}`;
+}
+
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
 
@@ -37,11 +53,16 @@ export async function POST(request: NextRequest) {
 
   const sourceImageUrl =
     parsed.data.foto_cliente?.trim() || parsed.data.sourceImageUrl?.trim();
-  const contextFinal =
+  const initialContext =
+    parsed.data.initialContext?.trim() || parsed.data.contexto_inicial?.trim();
+  const finalContext =
     parsed.data.contextFinal?.trim() || parsed.data.contexto_final?.trim();
+  const contextFinal = mergeContexts(initialContext, finalContext);
   const received = {
     foto_cliente: previewValue(parsed.data.foto_cliente),
     sourceImageUrl: previewValue(parsed.data.sourceImageUrl),
+    contexto_inicial: previewValue(parsed.data.contexto_inicial),
+    initialContext: previewValue(parsed.data.initialContext),
     contexto_final: previewValue(parsed.data.contexto_final),
     contextFinal: previewValue(parsed.data.contextFinal),
   };

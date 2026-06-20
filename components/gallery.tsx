@@ -261,7 +261,9 @@ export function Gallery({
     prices[offer.includedPhotos];
   const newShootUrl = `/novo?source=${encodeURIComponent(
     token,
-  )}&paidAmount=7.90&includedPhotos=1&generationCount=15&firstExtraAmount=${firstExtraAmount.toFixed(
+  )}&paidAmount=${offer.newShootPrice.toFixed(
+    2,
+  )}&includedPhotos=1&generationCount=15&firstExtraAmount=${firstExtraAmount.toFixed(
     2,
   )}`;
   const hasUnlockedPurchases =
@@ -944,12 +946,12 @@ export function Gallery({
                 <div className="post-purchase-offer">
                   <span>CRIAR OUTRO ENSAIO</span>
                   <strong>
-                    Quer gerar outro tema? 15 novas opções e 1 foto incluída por{" "}
-                    {money.format(offer.newShootPrice)}
+                    Quer testar outro tema ou outra foto? 15 novas opções e 1
+                    foto incluída por {money.format(offer.newShootPrice)}
                   </strong>
                   <small>
-                    É o mesmo modelo da entrada: você escolhe uma nova foto de
-                    referência, descreve o tema e recebe outra galeria com
+                    É o mesmo modelo da entrada: você escolhe a foto de
+                    referência, descreve o novo tema e recebe outra galeria com
                     desconto progressivo nas fotos extras.
                   </small>
                   <button
