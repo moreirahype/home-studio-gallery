@@ -252,6 +252,14 @@ p {
   gap: 24px;
 }
 
+.deal-note {
+  max-width: 560px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .milestone-track {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

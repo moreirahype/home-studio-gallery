@@ -40,17 +40,23 @@ async function optimizeReference(file: File) {
 export function NewShootForm({
   sourceToken,
   expressOffer = false,
-  vipOffer = false,
   offerToken,
+  paidAmount = 7.9,
+  includedPhotos: configuredIncludedPhotos = 1,
+  generationCount = 15,
+  firstExtraAmount = 9.9,
 }: {
   sourceToken?: string;
   expressOffer?: boolean;
-  vipOffer?: boolean;
   offerToken?: string;
+  paidAmount?: number;
+  includedPhotos?: number;
+  generationCount?: number;
+  firstExtraAmount?: number;
 }) {
-  const photoCount = vipOffer ? 15 : expressOffer ? 5 : 15;
-  const includedPhotos = vipOffer ? 3 : 1;
-  const price = vipOffer ? 14.9 : expressOffer ? 4.9 : 7.9;
+  const photoCount = expressOffer ? 5 : generationCount;
+  const includedPhotos = expressOffer ? 1 : configuredIncludedPhotos;
+  const price = expressOffer ? 4.9 : paidAmount;
   const [theme, setTheme] = useState("");
   const [occasion, setOccasion] = useState("");
   const [style, setStyle] = useState("");
@@ -104,7 +110,11 @@ export function NewShootForm({
     formData.set("theme", theme);
     formData.set("occasion", occasion);
     formData.set("styleNotes", style);
-    formData.set("offer", vipOffer ? "vip" : expressOffer ? "express" : "standard");
+    formData.set("offer", expressOffer ? "express" : "standard");
+    formData.set("paidAmount", price.toFixed(2));
+    formData.set("includedPhotos", String(includedPhotos));
+    formData.set("generationCount", String(photoCount));
+    formData.set("firstExtraAmount", firstExtraAmount.toFixed(2));
     if (offerToken) formData.set("offerToken", offerToken);
     if (sourceToken) formData.set("sourceToken", sourceToken);
 

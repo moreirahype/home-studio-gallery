@@ -37,7 +37,7 @@ export default async function GalleryPage({
         includedPhotos: project.included_photos,
         gallerySize: project.generation_count,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
-        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 14.9,
+        newShootPrice: 7.9,
         expressShootPrice:
           Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,
       }
@@ -54,7 +54,7 @@ export default async function GalleryPage({
         includedPhotos: Number(query.includedPhotos) || 1,
         gallerySize: 15,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
-        newShootPrice: Number(process.env.NEW_SHOOT_UPSELL_PRICE) || 14.9,
+        newShootPrice: 7.9,
         expressShootPrice:
           Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,
       };

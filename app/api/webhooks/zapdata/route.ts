@@ -9,6 +9,7 @@ import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
+  formatReaisFromCents,
   getFirstExtraAmountCentsFromPricingBaseAmountCents,
   getPricingBaseAmountCentsFromFirstExtraAmountCents,
 } from "@/lib/pricing";
@@ -143,11 +144,29 @@ export async function POST(request: NextRequest) {
   if (savedLead?.project_id) {
     const { data: existingProject } = await supabase
       .from("projects")
-      .select("gallery_token, included_photos, generation_count")
+      .select(
+        "gallery_token, included_photos, generation_count, pricing_base_amount_cents",
+      )
       .eq("id", savedLead.project_id)
       .maybeSingle();
 
     if (existingProject) {
+      const reusedFirstExtraAmountCents = existingProject.pricing_base_amount_cents
+        ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
+            pricingBaseAmountCents: Number(existingProject.pricing_base_amount_cents),
+            includedPhotos: Number(existingProject.included_photos ?? 1),
+          })
+        : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
+      const reusedNewShootUrl = new URL("/novo", appUrl);
+      reusedNewShootUrl.searchParams.set("source", existingProject.gallery_token);
+      reusedNewShootUrl.searchParams.set("paidAmount", "7.90");
+      reusedNewShootUrl.searchParams.set("includedPhotos", "1");
+      reusedNewShootUrl.searchParams.set("generationCount", "15");
+      reusedNewShootUrl.searchParams.set(
+        "firstExtraAmount",
+        formatReaisFromCents(reusedFirstExtraAmountCents),
+      );
+
       return NextResponse.json({
         ok: true,
         projectId: savedLead.project_id,
@@ -156,6 +175,7 @@ export async function POST(request: NextRequest) {
           `/g/${existingProject.gallery_token}`,
           appUrl,
         ).toString(),
+        newShootUrl: reusedNewShootUrl.toString(),
         includedPhotos: existingProject.included_photos,
         generationStarted: false,
         generationTasks: 0,
@@ -270,6 +290,15 @@ export async function POST(request: NextRequest) {
   const galleryUrl = new URL(
     `/g/${galleryToken}`,
     appUrl,
+  );
+  const newShootUrl = new URL("/novo", appUrl);
+  newShootUrl.searchParams.set("source", galleryToken);
+  newShootUrl.searchParams.set("paidAmount", "7.90");
+  newShootUrl.searchParams.set("includedPhotos", "1");
+  newShootUrl.searchParams.set("generationCount", "15");
+  newShootUrl.searchParams.set(
+    "firstExtraAmount",
+    formatReaisFromCents(firstExtraAmountCents ?? DEFAULT_FIRST_EXTRA_AMOUNT_CENTS),
   );
 
   if (isTestMode) {
@@ -423,6 +452,7 @@ export async function POST(request: NextRequest) {
     projectId,
     status: "queued",
     galleryUrl: galleryUrl.toString(),
+    newShootUrl: newShootUrl.toString(),
     testMode: isTestMode,
     includedPhotos,
     paidAmount: paidAmountCents / 100,

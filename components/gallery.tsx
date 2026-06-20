@@ -77,7 +77,7 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     ),
   );
   const videoPrice = Math.max(0, offer?.videoPrice ?? 19.9);
-  const newShootPrice = Math.max(0, offer?.newShootPrice ?? 14.9);
+  const newShootPrice = Math.max(0, offer?.newShootPrice ?? 7.9);
   const expressShootPrice = Math.max(0, offer?.expressShootPrice ?? 4.9);
 
   return {
@@ -251,8 +251,21 @@ export function Gallery({
     ? getPricing(pricing.nextMilestone.quantity)
     : null;
   const photosToNextDeal = pricing.nextMilestone
-    ? pricing.nextMilestone.quantity - selected.length
+    ? Math.max(0, pricing.nextMilestone.quantity - targetPhotoCount)
     : 0;
+  const nextDealAdditional = nextPrice
+    ? Math.max(0, nextPrice.total - photoCredit) - pricing.dueNow
+    : 0;
+  const firstExtraAmount =
+    prices[Math.min(MAX_PHOTOS, offer.includedPhotos + 1)] -
+    prices[offer.includedPhotos];
+  const newShootUrl = `/novo?source=${encodeURIComponent(
+    token,
+  )}&paidAmount=7.90&includedPhotos=1&generationCount=15&firstExtraAmount=${firstExtraAmount.toFixed(
+    2,
+  )}`;
+  const hasUnlockedPurchases =
+    unlockedPhotoIds.length > 0 || photoCredit > offer.paidAmount + 0.005;
   const selectionIsIncluded = selected.length > 0 && pricing.dueNow === 0;
   const videoPrice = videoAdded ? getVideoPrice(videoPhotoIds.length || 1) : 0;
   const checkoutAmount =
@@ -653,10 +666,18 @@ export function Gallery({
           <div>
             <span className="section-kicker">DESCONTO PROGRESSIVO</span>
             <h2 id="deal-title">
-              {offer.includedPhotos === 1
-                ? "Sua foto já está garantida."
-                : `Suas ${offer.includedPhotos} fotos já estão garantidas.`}
+              {hasUnlockedPurchases
+                ? "Quer liberar mais fotos?"
+                : offer.includedPhotos === 1
+                  ? "Sua foto já está garantida."
+                  : `Suas ${offer.includedPhotos} fotos já estão garantidas.`}
             </h2>
+            {hasUnlockedPurchases && (
+              <p className="deal-note">
+                Os valores abaixo mostram apenas o que falta para chegar em cada
+                faixa. O que você já liberou continua garantido.
+              </p>
+            )}
           </div>
           <button className="text-button" onClick={selectAll} type="button">
             Quero todas
@@ -666,11 +687,27 @@ export function Gallery({
         <div className="milestone-track">
           {milestones.map((milestone) => {
             const milestonePricing = getPricing(milestone.quantity);
-            const reached = selected.length >= milestone.quantity;
+            const reached = targetPhotoCount >= milestone.quantity;
             const isNext =
               pricing.nextMilestone?.quantity === milestone.quantity;
             const isIncluded =
               milestone.quantity === offer.includedPhotos;
+            const remainingForMilestone = Math.max(
+              0,
+              milestonePricing.total - photoCredit,
+            );
+            const milestoneAmountLabel = hasUnlockedPurchases
+              ? remainingForMilestone > 0
+                ? `+ ${money.format(remainingForMilestone)}`
+                : "Liberado"
+              : money.format(milestonePricing.total);
+            const milestoneHelpLabel = hasUnlockedPurchases
+              ? remainingForMilestone > 0
+                ? `para ${milestone.quantity} fotos`
+                : "já liberado"
+              : isIncluded
+                ? "já pago"
+                : `${money.format(milestonePricing.unitPrice)}/foto`;
 
             return (
               <div
@@ -682,12 +719,8 @@ export function Gallery({
                 )}
                 <span className="milestone-count">{milestone.quantity}</span>
                 <span className="milestone-label">{milestone.label}</span>
-                <strong>{money.format(milestonePricing.total)}</strong>
-                <small>
-                  {isIncluded
-                    ? "já pago"
-                    : `${money.format(milestonePricing.unitPrice)}/foto`}
-                </small>
+                <strong>{milestoneAmountLabel}</strong>
+                <small>{milestoneHelpLabel}</small>
               </div>
             );
           })}
@@ -704,7 +737,7 @@ export function Gallery({
               <strong>{pricing.nextMilestone.label}</strong>. Você leva{" "}
               {pricing.nextMilestone.quantity} por apenas{" "}
               <strong>
-                {money.format(nextPrice.dueNow - pricing.dueNow)} a mais
+                {money.format(Math.max(0, nextDealAdditional))} a mais
               </strong>
               .
             </p>
@@ -800,7 +833,7 @@ export function Gallery({
                 ? `${selected.length} ${selected.length === 1 ? "foto selecionada" : "fotos selecionadas"}`
                 : "Nenhuma foto selecionada"}
             </span>
-            {selected.length > offer.includedPhotos &&
+            {targetPhotoCount > offer.includedPhotos &&
               pricing.discount > 0 && (
                 <strong className="discount-pill">
                   -{pricing.discount}%
@@ -823,7 +856,7 @@ export function Gallery({
                 ) : (
                   <>
                     Total {money.format(pricing.total)} ·{" "}
-                    {money.format(offer.paidAmount)} já pagos
+                    {money.format(photoCredit)} já pagos
                   </>
                 )}
               </span>
@@ -843,7 +876,7 @@ export function Gallery({
               ? selected.length === 1
                 ? "Baixar foto incluída"
                 : "Baixar fotos incluídas"
-              : selected.length > offer.includedPhotos
+              : pricing.dueNow > 0
                 ? "Pagar adicionais no Pix"
                 : "Escolha suas fotos"}
           </span>
@@ -909,32 +942,33 @@ export function Gallery({
                   Continuar vendo minha galeria
                 </button>
                 <div className="post-purchase-offer">
-                    <span>CRIAR OUTRO TEMA</span>
-                    <strong>
-                      Quer mais um ensaio diferente? 15 novas opções e 3 fotos
-                      incluídas por {money.format(offer.newShootPrice)}
-                    </strong>
-                    <small>
-                      Ideal para testar outro estilo, profissão, viagem, casal
-                      ou perfil. Você escolhe o novo tema e recebe outra galeria.
-                    </small>
-                    <button
-                      className="primary-button modal-primary"
-                      onClick={() => {
-                        setCheckoutOpen(false);
-                        window.location.href = `/novo?source=${token}&offer=vip`;
-                      }}
-                      type="button"
-                    >
-                      Quero criar outro ensaio
-                    </button>
-                    <button
-                      className="text-button muted"
-                      onClick={() => setCheckoutOpen(false)}
-                      type="button"
-                    >
-                      Continuar com este ensaio
-                    </button>
+                  <span>CRIAR OUTRO ENSAIO</span>
+                  <strong>
+                    Quer gerar outro tema? 15 novas opções e 1 foto incluída por{" "}
+                    {money.format(offer.newShootPrice)}
+                  </strong>
+                  <small>
+                    É o mesmo modelo da entrada: você escolhe uma nova foto de
+                    referência, descreve o tema e recebe outra galeria com
+                    desconto progressivo nas fotos extras.
+                  </small>
+                  <button
+                    className="primary-button modal-primary"
+                    onClick={() => {
+                      setCheckoutOpen(false);
+                      window.location.href = newShootUrl;
+                    }}
+                    type="button"
+                  >
+                    Criar novo ensaio por {money.format(offer.newShootPrice)}
+                  </button>
+                  <button
+                    className="text-button muted"
+                    onClick={() => setCheckoutOpen(false)}
+                    type="button"
+                  >
+                    Continuar com este ensaio
+                  </button>
                 </div>
               </>
             ) : pixReady ? (

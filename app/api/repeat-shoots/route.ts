@@ -5,18 +5,39 @@ import { createPixPayment } from "@/lib/mercado-pago";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { verifyExpressOfferToken } from "@/lib/offers";
 import { buildGenerationPrompts } from "@/lib/prompt-builder";
+import {
+  DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
+  getFirstExtraAmountCentsFromPricingBaseAmountCents,
+  getPricingBaseAmountCentsFromFirstExtraAmountCents,
+} from "@/lib/pricing";
 
 const fieldsSchema = z.object({
   sourceToken: z.string().optional(),
   theme: z.string().min(2),
   occasion: z.string().max(240).optional(),
   styleNotes: z.string().max(1000).optional(),
-  offer: z.enum(["standard", "express", "vip"]).default("standard"),
+  offer: z.enum(["standard", "express"]).default("standard"),
   offerToken: z.string().optional(),
+  paidAmount: z.string().optional(),
+  includedPhotos: z.string().optional(),
+  generationCount: z.string().optional(),
+  firstExtraAmount: z.string().optional(),
 });
 
 function customerEmail(projectId: string) {
   return `cliente+${projectId.replaceAll("-", "")}@home-studio-gallery.com.br`;
+}
+
+function parseAmountCents(value: string | undefined, fallbackCents: number) {
+  const amount = Number(value?.replace(",", "."));
+  return Number.isFinite(amount) && amount > 0
+    ? Math.round(amount * 100)
+    : fallbackCents;
+}
+
+function parseCount(value: string | undefined, fallback: number) {
+  const count = Number(value);
+  return Number.isFinite(count) && count > 0 ? Math.round(count) : fallback;
 }
 
 export async function POST(request: NextRequest) {
@@ -28,6 +49,10 @@ export async function POST(request: NextRequest) {
     styleNotes: formData.get("styleNotes")?.toString(),
     offer: formData.get("offer")?.toString(),
     offerToken: formData.get("offerToken")?.toString(),
+    paidAmount: formData.get("paidAmount")?.toString(),
+    includedPhotos: formData.get("includedPhotos")?.toString(),
+    generationCount: formData.get("generationCount")?.toString(),
+    firstExtraAmount: formData.get("firstExtraAmount")?.toString(),
   });
   const reference = formData.get("reference");
 
@@ -47,7 +72,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const isExpress = parsed.data.offer === "express";
-  const isVip = parsed.data.offer === "vip";
   if (
     isExpress &&
     !verifyExpressOfferToken(
@@ -60,14 +84,21 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     );
   }
-  const photoCount = isVip ? 15 : isExpress ? 5 : 15;
-  const includedPhotos = isVip ? 3 : 1;
-  const paidAmountCents = isVip ? 1490 : isExpress ? 490 : 790;
+  const photoCount = isExpress
+    ? 5
+    : Math.min(20, parseCount(parsed.data.generationCount, 15));
+  const includedPhotos = isExpress
+    ? 1
+    : Math.min(photoCount, parseCount(parsed.data.includedPhotos, 1));
+  const paidAmountCents = isExpress
+    ? 490
+    : parseAmountCents(parsed.data.paidAmount, 790);
   let sourceProjectId: string | null = null;
   let customerName = "Cliente Home Studio";
   let customerPhone: string | null = null;
   let galleryAttendant = "Galeria App";
   let productName = "Novo ensaio";
+  let inheritedFirstExtraAmountCents = DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
 
   if (parsed.data.sourceToken) {
     const { data: sourceProject } = await supabase
@@ -82,14 +113,24 @@ export async function POST(request: NextRequest) {
       sourceProject?.bi_attendant_name ||
       `Galeria ${(Number(sourceProject?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
     productName = sourceProject?.product_name || productName;
+    if (sourceProject?.pricing_base_amount_cents) {
+      inheritedFirstExtraAmountCents =
+        getFirstExtraAmountCentsFromPricingBaseAmountCents({
+          pricingBaseAmountCents: Number(sourceProject.pricing_base_amount_cents),
+          includedPhotos: Number(sourceProject.included_photos ?? 1),
+        });
+    }
   }
 
-  if (isVip && !sourceProjectId) {
-    return NextResponse.json(
-      { ok: false, error: "Esta oferta precisa partir de uma galeria valida." },
-      { status: 403 },
-    );
-  }
+  const firstExtraAmountCents = isExpress
+    ? null
+    : parseAmountCents(parsed.data.firstExtraAmount, inheritedFirstExtraAmountCents);
+  const pricingBaseAmountCents = firstExtraAmountCents
+    ? getPricingBaseAmountCentsFromFirstExtraAmountCents({
+        firstExtraAmountCents,
+        includedPhotos,
+      })
+    : null;
 
   const requestId = randomUUID();
   const extension = reference.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -141,6 +182,7 @@ export async function POST(request: NextRequest) {
     niche_id: "repeat_shoot",
     included_photos: includedPhotos,
     paid_amount_cents: paidAmountCents,
+    pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: photoCount,
     bi_attendant_name: galleryAttendant,
     product_name: productName,
@@ -150,7 +192,15 @@ export async function POST(request: NextRequest) {
     .from("projects")
     .insert(projectPayload);
 
-  if (projectError?.message.includes("bi_attendant_name")) {
+  if (projectError?.message.includes("pricing_base_amount_cents")) {
+    const { pricing_base_amount_cents: ignoredPricing, ...legacyProjectPayload } =
+      projectPayload;
+    void ignoredPricing;
+    const fallback = await supabase
+      .from("projects")
+      .insert(legacyProjectPayload);
+    projectError = fallback.error;
+  } else if (projectError?.message.includes("bi_attendant_name")) {
     const {
       bi_attendant_name: ignoredAttendant,
       product_name: ignoredProduct,
