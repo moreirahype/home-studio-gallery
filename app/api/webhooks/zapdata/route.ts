@@ -85,28 +85,46 @@ export async function POST(request: NextRequest) {
     const leadFields = "*";
     let leadError: { message: string } | null = null;
 
-    if (parsed.data.contactId) {
-      const result = await supabase
+    async function findLeadBy(
+      field: "zapdata_contact_id" | "phone",
+      value: string,
+      pendingOnly: boolean,
+    ) {
+      let query = supabase
         .from("zapdata_leads")
         .select(leadFields)
-        .eq("zapdata_contact_id", parsed.data.contactId)
+        .eq(field, value)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      savedLead = result.data;
-      leadError = result.error;
+        .limit(1);
+
+      if (pendingOnly) {
+        query = query.eq("status", "pending_payment").is("consumed_at", null);
+      }
+
+      return query.maybeSingle();
     }
 
-    if (!savedLead && !leadError && parsed.data.phone) {
-      const result = await supabase
-        .from("zapdata_leads")
-        .select(leadFields)
-        .eq("phone", parsed.data.phone)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      savedLead = result.data;
-      leadError = result.error;
+    const lookupKeys = [
+      parsed.data.contactId
+        ? ({ field: "zapdata_contact_id", value: parsed.data.contactId } as const)
+        : null,
+      parsed.data.phone
+        ? ({ field: "phone", value: parsed.data.phone } as const)
+        : null,
+    ].filter(
+      (
+        key,
+      ): key is { field: "zapdata_contact_id" | "phone"; value: string } =>
+        Boolean(key),
+    );
+
+    for (const pendingOnly of [true, false]) {
+      for (const key of lookupKeys) {
+        if (savedLead || leadError) break;
+        const result = await findLeadBy(key.field, key.value, pendingOnly);
+        savedLead = result.data;
+        leadError = result.error;
+      }
     }
 
     if (leadError) {
