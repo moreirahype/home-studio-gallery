@@ -31,8 +31,12 @@ export function getAdditionalPhotoAmountCents({
   const pricingBaseAmount =
     Math.max(1, pricingBaseAmountCents ?? paidAmountCents) / 100;
   const scale = pricingBaseAmount / basePricesByQuantity[safeIncluded];
-  const scaledTotal = Math.round(basePricesByQuantity[safeSelected] * scale * 100);
-  const total = Math.max(paidAmountCents, scaledTotal);
+  const scaledAdditional = Math.round(
+    (basePricesByQuantity[safeSelected] - basePricesByQuantity[safeIncluded]) *
+      scale *
+      100,
+  );
+  const total = paidAmountCents + Math.max(0, scaledAdditional);
 
   return Math.max(0, total - paidAmountCents);
 }

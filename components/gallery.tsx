@@ -91,8 +91,11 @@ function createPriceCurve(offer: GalleryOffer) {
   return basePricesByQuantity.map((basePrice, quantity) => {
     if (quantity === 0) return 0;
     if (quantity <= offer.includedPhotos) return offer.paidAmount;
-    const scaledTotal = Math.round(basePrice * scale * 100) / 100;
-    return Math.max(offer.paidAmount, scaledTotal);
+    const scaledAdditional =
+      Math.round(
+        (basePrice - basePricesByQuantity[offer.includedPhotos]) * scale * 100,
+      ) / 100;
+    return offer.paidAmount + Math.max(0, scaledAdditional);
   });
 }
 
