@@ -11,6 +11,7 @@ import {
   zapdataOfferSchema,
 } from "@/lib/zapdata-payload";
 import {
+  DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
   getFirstExtraAmountCentsFromPricingBaseAmountCents,
   getPricingBaseAmountCentsFromFirstExtraAmountCents,
 } from "@/lib/pricing";
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
           pricingBaseAmountCents,
           includedPhotos: parsed.data.includedPhotos,
         })
-      : Math.round(parsed.data.paidAmount * 100));
+      : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS);
   const galleryAttendant = defaultGalleryAttendant({
     amount: attendantAmountCents / 100,
     productName,

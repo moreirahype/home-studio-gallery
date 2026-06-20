@@ -8,6 +8,7 @@ import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
+  DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
   getFirstExtraAmountCentsFromPricingBaseAmountCents,
   getPricingBaseAmountCentsFromFirstExtraAmountCents,
 } from "@/lib/pricing";
@@ -246,7 +247,7 @@ export async function POST(request: NextRequest) {
           pricingBaseAmountCents,
           includedPhotos,
         })
-      : null);
+      : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
   const parsedProductName =
