@@ -213,12 +213,15 @@ export async function POST(request: NextRequest) {
       : null);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
+  const parsedProductName =
+    parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho;
+  const savedProductName = savedLead?.product_name?.trim();
   const productName =
-    savedLead?.product_name ??
-    parsed.data.productName ??
-    parsed.data.produto ??
-    parsed.data.nicho ??
-    "Galeria";
+    parsedProductName ??
+    (savedProductName && savedProductName.toLowerCase() !== "galeria"
+      ? savedProductName
+      : undefined) ??
+    "Geral";
   const galleryAttendant = defaultGalleryAttendant({
     amount: (pricingBaseAmountCents ?? paidAmountCents) / 100,
     productName,
@@ -385,6 +388,13 @@ export async function POST(request: NextRequest) {
     galleryUrl: galleryUrl.toString(),
     testMode: isTestMode,
     includedPhotos,
+    paidAmount: paidAmountCents / 100,
+    pricingBaseAmount:
+      pricingBaseAmountCents === null || pricingBaseAmountCents === undefined
+        ? null
+        : pricingBaseAmountCents / 100,
+    productName,
+    galleryAttendant,
     generationStarted: Boolean(generation?.started.length),
     generationTasks: generation?.started.length ?? 0,
     generationPlan: {

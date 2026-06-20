@@ -105,14 +105,35 @@ export function normalizeZapdataPayload(
       readNumberValue(flowVariables.paidAmount),
     pricingBaseAmount:
       readNumberValue(data.pricingBaseAmount) ??
+      readNumberValue(data.pricing_base_amount) ??
       readNumberValue(data.upsellBaseAmount) ??
+      readNumberValue(data.upsell_base_amount) ??
       readNumberValue(data.galleryPricingBaseAmount) ??
+      readNumberValue(data.gallery_pricing_base_amount) ??
+      readNumberValue(data.valorBaseUpsell) ??
+      readNumberValue(data.valor_base_upsell) ??
+      readNumberValue(data.valorTabela) ??
+      readNumberValue(data.valor_tabela) ??
       readNumberValue(variables.pricingBaseAmount) ??
+      readNumberValue(variables.pricing_base_amount) ??
       readNumberValue(variables.upsellBaseAmount) ??
+      readNumberValue(variables.upsell_base_amount) ??
       readNumberValue(variables.galleryPricingBaseAmount) ??
+      readNumberValue(variables.gallery_pricing_base_amount) ??
+      readNumberValue(variables.valorBaseUpsell) ??
+      readNumberValue(variables.valor_base_upsell) ??
+      readNumberValue(variables.valorTabela) ??
+      readNumberValue(variables.valor_tabela) ??
       readNumberValue(flowVariables.pricingBaseAmount) ??
+      readNumberValue(flowVariables.pricing_base_amount) ??
       readNumberValue(flowVariables.upsellBaseAmount) ??
-      readNumberValue(flowVariables.galleryPricingBaseAmount),
+      readNumberValue(flowVariables.upsell_base_amount) ??
+      readNumberValue(flowVariables.galleryPricingBaseAmount) ??
+      readNumberValue(flowVariables.gallery_pricing_base_amount) ??
+      readNumberValue(flowVariables.valorBaseUpsell) ??
+      readNumberValue(flowVariables.valor_base_upsell) ??
+      readNumberValue(flowVariables.valorTabela) ??
+      readNumberValue(flowVariables.valor_tabela),
     generationCount:
       readNumberValue(data.generationCount) ??
       readNumberValue(variables.generationCount) ??

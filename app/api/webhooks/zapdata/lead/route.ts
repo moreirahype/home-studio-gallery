@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   const token = randomUUID().replaceAll("-", "");
   const productName =
-    parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho ?? "Galeria";
+    parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho ?? "Geral";
   const pricingBaseAmountCents = parsed.data.pricingBaseAmount
     ? Math.round(parsed.data.pricingBaseAmount * 100)
     : null;
