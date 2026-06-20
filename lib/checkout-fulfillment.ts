@@ -26,11 +26,6 @@ function isPaid(payment: MercadoPagoPayment) {
   );
 }
 
-function isGenericProductName(productName?: string | null) {
-  const normalized = productName?.trim().toLowerCase();
-  return !normalized || normalized === "galeria" || normalized === "geral";
-}
-
 export async function settleMercadoPagoPayment(paymentId: string | number) {
   const payment = await getPayment(paymentId);
   const orderId = payment.external_reference;
@@ -152,7 +147,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     const { data: attribution } = await supabase
       .from("projects")
       .select(
-        "bi_attendant_name, product_name, included_photos, pricing_base_amount_cents",
+        "product_name, included_photos, pricing_base_amount_cents",
       )
       .eq("id", order.project_id)
       .maybeSingle();
@@ -163,15 +158,9 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
           includedPhotos: Number(attribution.included_photos ?? 1),
         })
       : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
-    const savedAttendantName = attribution?.bi_attendant_name?.trim();
-    const attendantName =
-      !isGenericProductName(productName)
-        ? defaultGalleryAttendant({
-            amount: firstExtraAmountCents / 100,
-            productName,
-          })
-        : savedAttendantName ||
-          `Galeria ${(Number(project?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
+    const attendantName = defaultGalleryAttendant({
+      amount: firstExtraAmountCents / 100,
+    });
 
     if (totalUpsellCents > 0) {
       try {

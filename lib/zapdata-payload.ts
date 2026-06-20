@@ -166,18 +166,11 @@ export function normalizeZapdataPayload(
 
 export function defaultGalleryAttendant({
   amount,
-  productName,
 }: {
   amount: number;
-  productName: string;
+  productName?: string;
 }) {
-  const normalizedProduct = productName.trim() || "Geral";
-  const prefixedProduct = normalizedProduct
-    .toLowerCase()
-    .startsWith("galeria")
-    ? normalizedProduct
-    : `Galeria ${normalizedProduct}`;
-  return `${prefixedProduct} ${amount.toFixed(2)}`;
+  return `Galeria ${amount.toFixed(2)}`;
 }
 
 export function previewValue(value?: string) {
