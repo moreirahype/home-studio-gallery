@@ -80,13 +80,13 @@ export async function POST(request: NextRequest) {
   const token = randomUUID().replaceAll("-", "");
   const productName =
     parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho ?? "Galeria";
-  const galleryAttendant = defaultGalleryAttendant({
-    paidAmount: parsed.data.paidAmount,
-    productName,
-  });
   const pricingBaseAmountCents = parsed.data.pricingBaseAmount
     ? Math.round(parsed.data.pricingBaseAmount * 100)
     : null;
+  const galleryAttendant = defaultGalleryAttendant({
+    amount: (pricingBaseAmountCents ?? Math.round(parsed.data.paidAmount * 100)) / 100,
+    productName,
+  });
   const leadPayload = {
     token,
     zapdata_contact_id: parsed.data.contactId ?? null,

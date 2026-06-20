@@ -219,12 +219,10 @@ export async function POST(request: NextRequest) {
     parsed.data.produto ??
     parsed.data.nicho ??
     "Galeria";
-  const galleryAttendant =
-    savedLead?.bi_attendant_name ??
-    defaultGalleryAttendant({
-      paidAmount: paidAmountCents / 100,
-      productName,
-    });
+  const galleryAttendant = defaultGalleryAttendant({
+    amount: (pricingBaseAmountCents ?? paidAmountCents) / 100,
+    productName,
+  });
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
     generationCount,
