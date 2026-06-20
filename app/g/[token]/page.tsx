@@ -27,6 +27,11 @@ export default async function GalleryPage({
   const offer: Partial<GalleryOffer> = project
     ? {
         paidAmount: project.paid_amount_cents / 100,
+        pricingBaseAmount:
+          project.pricing_base_amount_cents === null ||
+          project.pricing_base_amount_cents === undefined
+            ? undefined
+            : project.pricing_base_amount_cents / 100,
         includedPhotos: project.included_photos,
         gallerySize: project.generation_count,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,

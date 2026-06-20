@@ -11,10 +11,12 @@ export function getAdditionalPhotoAmountCents({
   selectedCount,
   includedPhotos,
   paidAmountCents,
+  pricingBaseAmountCents,
 }: {
   selectedCount: number;
   includedPhotos: number;
   paidAmountCents: number;
+  pricingBaseAmountCents?: number | null;
 }) {
   if (selectedCount <= includedPhotos) return 0;
 
@@ -26,9 +28,11 @@ export function getAdditionalPhotoAmountCents({
     MAX_PHOTOS,
     Math.max(1, Math.round(selectedCount)),
   );
-  const paidAmount = Math.max(1, paidAmountCents) / 100;
-  const scale = paidAmount / basePricesByQuantity[safeIncluded];
-  const total = Math.round(basePricesByQuantity[safeSelected] * scale * 100);
+  const pricingBaseAmount =
+    Math.max(1, pricingBaseAmountCents ?? paidAmountCents) / 100;
+  const scale = pricingBaseAmount / basePricesByQuantity[safeIncluded];
+  const scaledTotal = Math.round(basePricesByQuantity[safeSelected] * scale * 100);
+  const total = Math.max(paidAmountCents, scaledTotal);
 
   return Math.max(0, total - paidAmountCents);
 }

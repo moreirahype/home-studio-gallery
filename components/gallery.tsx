@@ -38,6 +38,7 @@ const money = new Intl.NumberFormat("pt-BR", {
 
 export type GalleryOffer = {
   paidAmount: number;
+  pricingBaseAmount: number;
   includedPhotos: number;
   gallerySize: number;
   videoPrice: number;
@@ -57,6 +58,10 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     Math.max(1, Math.round(offer?.includedPhotos ?? DEFAULT_INCLUDED_PHOTOS)),
   );
   const paidAmount = Math.max(0.01, offer?.paidAmount ?? DEFAULT_PAID_AMOUNT);
+  const pricingBaseAmount = Math.max(
+    0.01,
+    offer?.pricingBaseAmount ?? paidAmount,
+  );
   const gallerySize = Math.min(
     MAX_PHOTOS,
     Math.max(
@@ -71,6 +76,7 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
   return {
     includedPhotos,
     paidAmount,
+    pricingBaseAmount,
     gallerySize,
     videoPrice,
     newShootPrice,
@@ -80,12 +86,13 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
 
 function createPriceCurve(offer: GalleryOffer) {
   const baseAtIncluded = basePricesByQuantity[offer.includedPhotos];
-  const scale = offer.paidAmount / baseAtIncluded;
+  const scale = offer.pricingBaseAmount / baseAtIncluded;
 
   return basePricesByQuantity.map((basePrice, quantity) => {
     if (quantity === 0) return 0;
     if (quantity <= offer.includedPhotos) return offer.paidAmount;
-    return Math.round(basePrice * scale * 100) / 100;
+    const scaledTotal = Math.round(basePrice * scale * 100) / 100;
+    return Math.max(offer.paidAmount, scaledTotal);
   });
 }
 
@@ -199,7 +206,7 @@ export function Gallery({
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
     const referenceUnit =
-      (offer.paidAmount / offer.includedPhotos) * 1.25;
+      (offer.pricingBaseAmount / offer.includedPhotos) * 1.25;
     const fullPrice =
       offer.paidAmount +
       Math.max(0, count - offer.includedPhotos) * referenceUnit;

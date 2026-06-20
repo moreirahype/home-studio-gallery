@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         niche_id: string;
         included_photos: number;
         paid_amount_cents: number;
+        pricing_base_amount_cents?: number | null;
         generation_count: number;
         bi_attendant_name?: string | null;
         product_name?: string | null;
@@ -205,6 +206,11 @@ export async function POST(request: NextRequest) {
     savedLead?.included_photos ?? parsed.data.includedPhotos;
   const paidAmountCents =
     savedLead?.paid_amount_cents ?? Math.round(parsed.data.paidAmount * 100);
+  const pricingBaseAmountCents =
+    savedLead?.pricing_base_amount_cents ??
+    (parsed.data.pricingBaseAmount
+      ? Math.round(parsed.data.pricingBaseAmount * 100)
+      : null);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
   const productName =
@@ -245,6 +251,7 @@ export async function POST(request: NextRequest) {
     receipt_id: parsed.data.receiptId ?? null,
     included_photos: includedPhotos,
     paid_amount_cents: paidAmountCents,
+    pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: generationCount,
     bi_attendant_name: galleryAttendant,
     product_name: productName,
@@ -254,6 +261,17 @@ export async function POST(request: NextRequest) {
   let { error: projectError } = await supabase
     .from("projects")
     .insert(compatibleProjectPayload);
+
+  if (projectError?.message.includes("pricing_base_amount_cents")) {
+    const { pricing_base_amount_cents: ignored, ...legacyPricingPayload } =
+      compatibleProjectPayload;
+    void ignored;
+    compatibleProjectPayload = legacyPricingPayload as typeof projectPayload;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(compatibleProjectPayload);
+    projectError = fallbackInsert.error;
+  }
 
   if (projectError?.message.includes("bi_attendant_name")) {
     const { bi_attendant_name: ignored, ...legacyAttributionPayload } =

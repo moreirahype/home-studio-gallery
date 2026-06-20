@@ -7,6 +7,7 @@ type ProjectRow = {
   gallery_token: string;
   included_photos: number;
   paid_amount_cents: number;
+  pricing_base_amount_cents?: number | null;
   status: string;
   customer_name: string | null;
   generation_count?: number;
@@ -21,7 +22,7 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
   const primary = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, included_photos, paid_amount_cents, status, customer_name, generation_count, created_at, expires_at",
+      "id, gallery_token, included_photos, paid_amount_cents, pricing_base_amount_cents, status, customer_name, generation_count, created_at, expires_at",
     )
     .eq("gallery_token", galleryToken)
     .maybeSingle();
@@ -31,6 +32,7 @@ export const getProjectByToken = cache(async (galleryToken: string) => {
   if (
     error?.code === "42703" ||
     error?.message.includes("generation_count") ||
+    error?.message.includes("pricing_base_amount_cents") ||
     error?.message.includes("expires_at")
   ) {
     const fallback = await supabase

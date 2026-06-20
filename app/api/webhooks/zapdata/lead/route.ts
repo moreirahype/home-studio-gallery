@@ -84,6 +84,9 @@ export async function POST(request: NextRequest) {
     paidAmount: parsed.data.paidAmount,
     productName,
   });
+  const pricingBaseAmountCents = parsed.data.pricingBaseAmount
+    ? Math.round(parsed.data.pricingBaseAmount * 100)
+    : null;
   const leadPayload = {
     token,
     zapdata_contact_id: parsed.data.contactId ?? null,
@@ -94,6 +97,7 @@ export async function POST(request: NextRequest) {
     niche_id: parsed.data.nicho ?? parsed.data.nicheId,
     included_photos: parsed.data.includedPhotos,
     paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
+    pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: parsed.data.generationCount,
     bi_attendant_name: galleryAttendant,
     product_name: productName,
@@ -105,14 +109,27 @@ export async function POST(request: NextRequest) {
     .select("id, token")
     .single();
 
-  if (error?.message.includes("bi_attendant_name")) {
+  if (error?.message.includes("pricing_base_amount_cents")) {
+    const { pricing_base_amount_cents: ignoredPricingBase, ...legacyLeadPayload } =
+      leadPayload;
+    void ignoredPricingBase;
+    const fallback = await supabase
+      .from("zapdata_leads")
+      .insert(legacyLeadPayload)
+      .select("id, token")
+      .single();
+    lead = fallback.data;
+    error = fallback.error;
+  } else if (error?.message.includes("bi_attendant_name")) {
     const {
       bi_attendant_name: ignoredAttendant,
       product_name: ignoredProduct,
+      pricing_base_amount_cents: ignoredPricingBase,
       ...legacyLeadPayload
     } = leadPayload;
     void ignoredAttendant;
     void ignoredProduct;
+    void ignoredPricingBase;
     const fallback = await supabase
       .from("zapdata_leads")
       .insert(legacyLeadPayload)
@@ -149,6 +166,7 @@ export async function POST(request: NextRequest) {
     status: "pending_payment",
     includedPhotos: parsed.data.includedPhotos,
     paidAmount: parsed.data.paidAmount,
+    pricingBaseAmount: parsed.data.pricingBaseAmount ?? null,
     generationCount: parsed.data.generationCount,
     galleryAttendant,
     productName,

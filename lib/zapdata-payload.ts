@@ -12,6 +12,7 @@ export const zapdataOfferSchema = z.object({
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
   paidAmount: z.coerce.number().positive().optional().default(7.9),
+  pricingBaseAmount: z.coerce.number().positive().optional(),
   generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
   productName: z.string().trim().min(1).max(120).optional(),
   produto: z.string().trim().min(1).max(120).optional(),
@@ -102,6 +103,16 @@ export function normalizeZapdataPayload(
       readNumberValue(data.paidAmount) ??
       readNumberValue(variables.paidAmount) ??
       readNumberValue(flowVariables.paidAmount),
+    pricingBaseAmount:
+      readNumberValue(data.pricingBaseAmount) ??
+      readNumberValue(data.upsellBaseAmount) ??
+      readNumberValue(data.galleryPricingBaseAmount) ??
+      readNumberValue(variables.pricingBaseAmount) ??
+      readNumberValue(variables.upsellBaseAmount) ??
+      readNumberValue(variables.galleryPricingBaseAmount) ??
+      readNumberValue(flowVariables.pricingBaseAmount) ??
+      readNumberValue(flowVariables.upsellBaseAmount) ??
+      readNumberValue(flowVariables.galleryPricingBaseAmount),
     generationCount:
       readNumberValue(data.generationCount) ??
       readNumberValue(variables.generationCount) ??
