@@ -10,6 +10,10 @@ import {
   previewValue,
   zapdataOfferSchema,
 } from "@/lib/zapdata-payload";
+import {
+  getFirstExtraAmountCentsFromPricingBaseAmountCents,
+  getPricingBaseAmountCentsFromFirstExtraAmountCents,
+} from "@/lib/pricing";
 
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
@@ -80,11 +84,25 @@ export async function POST(request: NextRequest) {
   const token = randomUUID().replaceAll("-", "");
   const productName =
     parsed.data.productName ?? parsed.data.produto ?? parsed.data.nicho ?? "Geral";
-  const pricingBaseAmountCents = parsed.data.pricingBaseAmount
-    ? Math.round(parsed.data.pricingBaseAmount * 100)
+  const firstExtraAmountCents = parsed.data.firstExtraAmount
+    ? Math.round(parsed.data.firstExtraAmount * 100)
     : null;
+  const pricingBaseAmountCents = firstExtraAmountCents
+    ? getPricingBaseAmountCentsFromFirstExtraAmountCents({
+        firstExtraAmountCents,
+        includedPhotos: parsed.data.includedPhotos,
+      })
+    : null;
+  const attendantAmountCents =
+    firstExtraAmountCents ??
+    (pricingBaseAmountCents
+      ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
+          pricingBaseAmountCents,
+          includedPhotos: parsed.data.includedPhotos,
+        })
+      : Math.round(parsed.data.paidAmount * 100));
   const galleryAttendant = defaultGalleryAttendant({
-    amount: (pricingBaseAmountCents ?? Math.round(parsed.data.paidAmount * 100)) / 100,
+    amount: attendantAmountCents / 100,
     productName,
   });
   const leadPayload = {
@@ -166,7 +184,7 @@ export async function POST(request: NextRequest) {
     status: "pending_payment",
     includedPhotos: parsed.data.includedPhotos,
     paidAmount: parsed.data.paidAmount,
-    pricingBaseAmount: parsed.data.pricingBaseAmount ?? null,
+    firstExtraAmount: parsed.data.firstExtraAmount ?? null,
     generationCount: parsed.data.generationCount,
     galleryAttendant,
     productName,

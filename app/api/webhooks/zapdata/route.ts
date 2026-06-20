@@ -8,6 +8,10 @@ import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
+  getFirstExtraAmountCentsFromPricingBaseAmountCents,
+  getPricingBaseAmountCentsFromFirstExtraAmountCents,
+} from "@/lib/pricing";
+import {
   defaultGalleryAttendant,
   normalizeZapdataPayload,
   previewValue,
@@ -224,10 +228,24 @@ export async function POST(request: NextRequest) {
     savedLead?.included_photos ?? parsed.data.includedPhotos;
   const paidAmountCents =
     savedLead?.paid_amount_cents ?? Math.round(parsed.data.paidAmount * 100);
+  const parsedFirstExtraAmountCents = parsed.data.firstExtraAmount
+    ? Math.round(parsed.data.firstExtraAmount * 100)
+    : null;
   const pricingBaseAmountCents =
     savedLead?.pricing_base_amount_cents ??
-    (parsed.data.pricingBaseAmount
-      ? Math.round(parsed.data.pricingBaseAmount * 100)
+    (parsedFirstExtraAmountCents
+      ? getPricingBaseAmountCentsFromFirstExtraAmountCents({
+          firstExtraAmountCents: parsedFirstExtraAmountCents,
+          includedPhotos,
+        })
+      : null);
+  const firstExtraAmountCents =
+    parsedFirstExtraAmountCents ??
+    (pricingBaseAmountCents
+      ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
+          pricingBaseAmountCents,
+          includedPhotos,
+        })
       : null);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
@@ -241,7 +259,7 @@ export async function POST(request: NextRequest) {
       : undefined) ??
     "Geral";
   const galleryAttendant = defaultGalleryAttendant({
-    amount: (pricingBaseAmountCents ?? paidAmountCents) / 100,
+    amount: (firstExtraAmountCents ?? paidAmountCents) / 100,
     productName,
   });
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
@@ -407,10 +425,10 @@ export async function POST(request: NextRequest) {
     testMode: isTestMode,
     includedPhotos,
     paidAmount: paidAmountCents / 100,
-    pricingBaseAmount:
-      pricingBaseAmountCents === null || pricingBaseAmountCents === undefined
+    firstExtraAmount:
+      firstExtraAmountCents === null || firstExtraAmountCents === undefined
         ? null
-        : pricingBaseAmountCents / 100,
+        : firstExtraAmountCents / 100,
     productName,
     galleryAttendant,
     generationStarted: Boolean(generation?.started.length),

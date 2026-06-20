@@ -7,6 +7,47 @@ const basePricesByQuantity = [
 
 const videoPricesByQuantity = [0, 19.9, 29.9, 39.9, 49.9, 59.9];
 
+export function getPricingBaseAmountCentsFromFirstExtraAmountCents({
+  firstExtraAmountCents,
+  includedPhotos,
+}: {
+  firstExtraAmountCents: number;
+  includedPhotos: number;
+}) {
+  const safeIncluded = Math.min(
+    MAX_PHOTOS - 1,
+    Math.max(1, Math.round(includedPhotos)),
+  );
+  const baseGap =
+    basePricesByQuantity[safeIncluded + 1] -
+    basePricesByQuantity[safeIncluded];
+  const firstExtraAmount = Math.max(1, firstExtraAmountCents) / 100;
+  const pricingBaseAmount =
+    firstExtraAmount * (basePricesByQuantity[safeIncluded] / baseGap);
+
+  return Math.round(pricingBaseAmount * 100);
+}
+
+export function getFirstExtraAmountCentsFromPricingBaseAmountCents({
+  pricingBaseAmountCents,
+  includedPhotos,
+}: {
+  pricingBaseAmountCents: number;
+  includedPhotos: number;
+}) {
+  const safeIncluded = Math.min(
+    MAX_PHOTOS - 1,
+    Math.max(1, Math.round(includedPhotos)),
+  );
+  const baseGap =
+    basePricesByQuantity[safeIncluded + 1] -
+    basePricesByQuantity[safeIncluded];
+  const pricingBaseAmount = Math.max(1, pricingBaseAmountCents) / 100;
+  const scale = pricingBaseAmount / basePricesByQuantity[safeIncluded];
+
+  return Math.round(baseGap * scale * 100);
+}
+
 export function getAdditionalPhotoAmountCents({
   selectedCount,
   includedPhotos,

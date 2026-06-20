@@ -1,5 +1,6 @@
 import { Gallery, type GalleryOffer } from "@/components/gallery";
 import { getProjectByToken } from "@/lib/projects";
+import { getPricingBaseAmountCentsFromFirstExtraAmountCents } from "@/lib/pricing";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function GalleryPage({
   params: Promise<{ token: string }>;
   searchParams: Promise<{
     paidAmount?: string;
-    pricingBaseAmount?: string;
+    firstExtraAmount?: string;
     includedPhotos?: string;
     test?: string;
   }>;
@@ -42,7 +43,14 @@ export default async function GalleryPage({
       }
     : {
         paidAmount: Number(query.paidAmount) || 7.9,
-        pricingBaseAmount: Number(query.pricingBaseAmount) || undefined,
+        pricingBaseAmount: Number(query.firstExtraAmount)
+          ? getPricingBaseAmountCentsFromFirstExtraAmountCents({
+              firstExtraAmountCents: Math.round(
+                Number(query.firstExtraAmount) * 100,
+              ),
+              includedPhotos: Number(query.includedPhotos) || 1,
+            }) / 100
+          : undefined,
         includedPhotos: Number(query.includedPhotos) || 1,
         gallerySize: 15,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,

@@ -12,7 +12,7 @@ export const zapdataOfferSchema = z.object({
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
   paidAmount: z.coerce.number().positive().optional().default(7.9),
-  pricingBaseAmount: z.coerce.number().positive().optional(),
+  firstExtraAmount: z.coerce.number().positive().optional(),
   generationCount: z.coerce.number().int().min(1).max(20).optional().default(15),
   productName: z.string().trim().min(1).max(120).optional(),
   produto: z.string().trim().min(1).max(120).optional(),
@@ -103,37 +103,25 @@ export function normalizeZapdataPayload(
       readNumberValue(data.paidAmount) ??
       readNumberValue(variables.paidAmount) ??
       readNumberValue(flowVariables.paidAmount),
-    pricingBaseAmount:
-      readNumberValue(data.pricingBaseAmount) ??
-      readNumberValue(data.pricing_base_amount) ??
-      readNumberValue(data.upsellBaseAmount) ??
-      readNumberValue(data.upsell_base_amount) ??
-      readNumberValue(data.galleryPricingBaseAmount) ??
-      readNumberValue(data.gallery_pricing_base_amount) ??
-      readNumberValue(data.valorBaseUpsell) ??
-      readNumberValue(data.valor_base_upsell) ??
-      readNumberValue(data.valorTabela) ??
-      readNumberValue(data.valor_tabela) ??
-      readNumberValue(variables.pricingBaseAmount) ??
-      readNumberValue(variables.pricing_base_amount) ??
-      readNumberValue(variables.upsellBaseAmount) ??
-      readNumberValue(variables.upsell_base_amount) ??
-      readNumberValue(variables.galleryPricingBaseAmount) ??
-      readNumberValue(variables.gallery_pricing_base_amount) ??
-      readNumberValue(variables.valorBaseUpsell) ??
-      readNumberValue(variables.valor_base_upsell) ??
-      readNumberValue(variables.valorTabela) ??
-      readNumberValue(variables.valor_tabela) ??
-      readNumberValue(flowVariables.pricingBaseAmount) ??
-      readNumberValue(flowVariables.pricing_base_amount) ??
-      readNumberValue(flowVariables.upsellBaseAmount) ??
-      readNumberValue(flowVariables.upsell_base_amount) ??
-      readNumberValue(flowVariables.galleryPricingBaseAmount) ??
-      readNumberValue(flowVariables.gallery_pricing_base_amount) ??
-      readNumberValue(flowVariables.valorBaseUpsell) ??
-      readNumberValue(flowVariables.valor_base_upsell) ??
-      readNumberValue(flowVariables.valorTabela) ??
-      readNumberValue(flowVariables.valor_tabela),
+    firstExtraAmount:
+      readNumberValue(data.firstExtraAmount) ??
+      readNumberValue(data.first_extra_amount) ??
+      readNumberValue(data.extraPhotoAmount) ??
+      readNumberValue(data.extra_photo_amount) ??
+      readNumberValue(data.primeiraFotoExtra) ??
+      readNumberValue(data.primeira_foto_extra) ??
+      readNumberValue(variables.firstExtraAmount) ??
+      readNumberValue(variables.first_extra_amount) ??
+      readNumberValue(variables.extraPhotoAmount) ??
+      readNumberValue(variables.extra_photo_amount) ??
+      readNumberValue(variables.primeiraFotoExtra) ??
+      readNumberValue(variables.primeira_foto_extra) ??
+      readNumberValue(flowVariables.firstExtraAmount) ??
+      readNumberValue(flowVariables.first_extra_amount) ??
+      readNumberValue(flowVariables.extraPhotoAmount) ??
+      readNumberValue(flowVariables.extra_photo_amount) ??
+      readNumberValue(flowVariables.primeiraFotoExtra) ??
+      readNumberValue(flowVariables.primeira_foto_extra),
     generationCount:
       readNumberValue(data.generationCount) ??
       readNumberValue(variables.generationCount) ??
