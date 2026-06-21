@@ -16,6 +16,15 @@ export type MercadoPagoPayment = {
   external_reference?: string;
   transaction_amount?: number;
   date_approved?: string;
+  fee_details?: {
+    amount?: number;
+    fee_payer?: string;
+    type?: string;
+  }[];
+  transaction_details?: {
+    net_received_amount?: number;
+    total_paid_amount?: number;
+  };
   payer?: {
     email?: string;
     first_name?: string;

@@ -26,6 +26,22 @@ function isPaid(payment: MercadoPagoPayment) {
   );
 }
 
+function getNetReceivedAmount(payment: MercadoPagoPayment, grossAmount: number) {
+  const netReceived = payment.transaction_details?.net_received_amount;
+  if (typeof netReceived === "number" && Number.isFinite(netReceived)) {
+    return Math.max(0, netReceived);
+  }
+
+  const feeAmount = (payment.fee_details ?? []).reduce((sum, fee) => {
+    const amount = fee.amount;
+    return typeof amount === "number" && Number.isFinite(amount)
+      ? sum + amount
+      : sum;
+  }, 0);
+
+  return Math.max(0, grossAmount - feeAmount);
+}
+
 export async function settleMercadoPagoPayment(paymentId: string | number) {
   const payment = await getPayment(paymentId);
   const orderId = payment.external_reference;
@@ -162,13 +178,16 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     });
 
     if (totalUpsellCents > 0) {
+      const grossUpsellAmount = totalUpsellCents / 100;
+      const netUpsellAmount = getNetReceivedAmount(payment, grossUpsellAmount);
+
       try {
         await reportGallerySaleToBi({
           paymentId: String(payment.id),
           customerName: project?.customer_name ?? "Cliente",
           phone: project?.phone ?? "",
           paidAt: payment.date_approved ?? new Date().toISOString(),
-          upsellAmount: totalUpsellCents / 100,
+          upsellAmount: netUpsellAmount,
           attendantName,
         });
         await supabase
