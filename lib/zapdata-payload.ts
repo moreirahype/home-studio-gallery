@@ -91,11 +91,17 @@ export function normalizeZapdataPayload(
       readText(data.initialContext) ??
       readText(data.contexto_inicial) ??
       readText(variables.contexto_inicial) ??
-      readText(flowVariables.contexto_inicial),
+      readText(flowVariables.contexto_inicial) ??
+      readText(data.resposta1) ??
+      readText(variables.resposta1) ??
+      readText(flowVariables.resposta1),
     contexto_inicial:
       readText(data.contexto_inicial) ??
       readText(variables.contexto_inicial) ??
-      readText(flowVariables.contexto_inicial),
+      readText(flowVariables.contexto_inicial) ??
+      readText(data.resposta1) ??
+      readText(variables.resposta1) ??
+      readText(flowVariables.resposta1),
     contexto_final:
       readText(data.contexto_final) ??
       readText(variables.contexto_final) ??
