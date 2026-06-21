@@ -199,6 +199,7 @@ export function Gallery({
   const [creatingPix, setCreatingPix] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [pixPayment, setPixPayment] = useState<{
     orderId: string;
@@ -334,6 +335,17 @@ export function Gallery({
   }, [refreshAccess]);
 
   useEffect(() => {
+    const coarsePointer =
+      typeof window !== "undefined" &&
+      window.matchMedia("(pointer: coarse)").matches;
+    const mobileUserAgent =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    setIsMobileDevice(coarsePointer || mobileUserAgent);
+  }, []);
+
+  useEffect(() => {
     if (
       token === "demo" ||
       galleryPhotos === undefined ||
@@ -403,6 +415,22 @@ export function Gallery({
     number: number;
     url: string;
   }) {
+    const fileName = `home-studio-foto-${String(download.number).padStart(
+      2,
+      "0",
+    )}.jpg`;
+
+    if (!isMobileDevice) {
+      const link = document.createElement("a");
+      link.href = download.url;
+      link.download = fileName;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    }
+
     setSavingPhotoId(download.photoId);
     setCheckoutError("");
 
@@ -411,11 +439,9 @@ export function Gallery({
       if (!response.ok) throw new Error("Falha ao buscar imagem.");
 
       const blob = await response.blob();
-      const file = new File(
-        [blob],
-        `home-studio-foto-${String(download.number).padStart(2, "0")}.jpg`,
-        { type: blob.type || "image/jpeg" },
-      );
+      const file = new File([blob], fileName, {
+        type: blob.type || "image/jpeg",
+      });
       const shareData = {
         files: [file],
         title: `Foto ${String(download.number).padStart(2, "0")}`,
@@ -980,12 +1006,16 @@ export function Gallery({
                       >
                         {savingPhotoId === download.photoId
                           ? "Abrindo..."
-                          : `Salvar foto ${String(download.number).padStart(2, "0")} no celular`}
+                          : isMobileDevice
+                            ? `Salvar foto ${String(download.number).padStart(2, "0")} no celular`
+                            : `Baixar foto ${String(download.number).padStart(2, "0")}`}
                       </button>
                     ))}
                     <small>
-                      O botão abre as opções nativas para salvar a imagem no
-                      celular. Esta galeria continua disponível por 7 dias.
+                      {isMobileDevice
+                        ? "O botão abre as opções nativas para salvar a imagem no celular."
+                        : "No computador, o botão baixa a imagem direto."}{" "}
+                      Esta galeria continua disponível por 7 dias.
                     </small>
                   </div>
                 )}
