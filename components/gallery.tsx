@@ -441,7 +441,7 @@ export function Gallery({
     } catch {
       window.open(download.url, "_blank", "noopener,noreferrer");
       setCheckoutError(
-        "Se a foto abrir em outra tela, toque e segure na imagem para salvar no app Fotos.",
+        "Se a foto abrir em outra tela, toque e segure na imagem para salvar no celular.",
       );
     } finally {
       setSavingPhotoId(null);
@@ -979,14 +979,13 @@ export function Gallery({
                         type="button"
                       >
                         {savingPhotoId === download.photoId
-                          ? "Abrindo Fotos..."
-                          : `Salvar foto ${String(download.number).padStart(2, "0")} no Fotos`}
+                          ? "Abrindo..."
+                          : `Salvar foto ${String(download.number).padStart(2, "0")} no celular`}
                       </button>
                     ))}
                     <small>
-                      No celular, o botão abre as opções nativas para salvar a
-                      imagem no app Fotos. Esta galeria continua disponível por
-                      7 dias.
+                      O botão abre as opções nativas para salvar a imagem no
+                      celular. Esta galeria continua disponível por 7 dias.
                     </small>
                   </div>
                 )}
