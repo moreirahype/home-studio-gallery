@@ -237,6 +237,7 @@ export async function GET(request: NextRequest) {
   const relatedGalleries = (repeatShoots ?? []).flatMap((shoot, index) => {
     const repeatProject = repeatProjectMap.get(shoot.project_id as string);
     if (
+      !["generating", "ready"].includes(shoot.status ?? "") ||
       !repeatProject?.gallery_token ||
       isGalleryExpired(repeatProject.created_at, repeatProject.expires_at)
     ) {

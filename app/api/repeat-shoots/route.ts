@@ -84,13 +84,13 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     );
   }
-  const photoCount = isExpress
+  let photoCount = isExpress
     ? 5
     : Math.min(20, parseCount(parsed.data.generationCount, 15));
-  const includedPhotos = isExpress
+  let includedPhotos = isExpress
     ? 1
     : Math.min(photoCount, parseCount(parsed.data.includedPhotos, 1));
-  const paidAmountCents = isExpress
+  let paidAmountCents = isExpress
     ? 490
     : parseAmountCents(parsed.data.paidAmount, 790);
   let sourceProjectId: string | null = null;
@@ -118,11 +118,22 @@ export async function POST(request: NextRequest) {
           includedPhotos: Number(sourceProject.included_photos ?? 1),
         });
     }
+
+    if (sourceProject && !isExpress) {
+      photoCount = 15;
+      includedPhotos = 1;
+      paidAmountCents = Number(sourceProject.paid_amount_cents ?? 790);
+    }
   }
 
   const firstExtraAmountCents = isExpress
     ? null
-    : parseAmountCents(parsed.data.firstExtraAmount, inheritedFirstExtraAmountCents);
+    : sourceProjectId
+      ? inheritedFirstExtraAmountCents
+      : parseAmountCents(
+          parsed.data.firstExtraAmount,
+          inheritedFirstExtraAmountCents,
+        );
   const pricingBaseAmountCents = firstExtraAmountCents
     ? getPricingBaseAmountCentsFromFirstExtraAmountCents({
         firstExtraAmountCents,
