@@ -200,6 +200,8 @@ export function Gallery({
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [manualPassword, setManualPassword] = useState("");
+  const [manualReleasing, setManualReleasing] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [pixPayment, setPixPayment] = useState<{
     orderId: string;
@@ -490,18 +492,31 @@ export function Gallery({
     });
   }
 
-  async function releaseIncludedPhotos() {
+  async function releaseSelectedPhotos(manual = false) {
     if (token === "demo") {
       approveTestPayment();
       return;
     }
 
-    setReleasing(true);
+    if (manual && !manualPassword.trim()) {
+      setCheckoutError("Digite a senha de liberação manual.");
+      return;
+    }
+
+    if (manual) {
+      setManualReleasing(true);
+    } else {
+      setReleasing(true);
+    }
     setCheckoutError("");
     const response = await fetch("/api/downloads", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ galleryToken: token, photoIds: selected }),
+      body: JSON.stringify({
+        galleryToken: token,
+        photoIds: selected,
+        ...(manual ? { manualPassword: manualPassword.trim() } : {}),
+      }),
     });
     const result = (await response.json()) as {
       ok: boolean;
@@ -514,6 +529,7 @@ export function Gallery({
       }[];
     };
     setReleasing(false);
+    setManualReleasing(false);
 
     if (!response.ok || !result.ok || !result.downloads) {
       setCheckoutError(result.error ?? "Não foi possível liberar as fotos.");
@@ -533,6 +549,7 @@ export function Gallery({
       ),
     }));
     setTestPaymentApproved(true);
+    if (manual) setManualPassword("");
     void refreshAccess();
   }
 
@@ -584,7 +601,7 @@ export function Gallery({
       return;
     }
 
-    await releaseIncludedPhotos();
+    await releaseSelectedPhotos();
   }
 
   async function checkPaymentAndRelease() {
@@ -622,7 +639,7 @@ export function Gallery({
       return;
     }
 
-    await releaseIncludedPhotos();
+    await releaseSelectedPhotos();
   }
 
   return (
@@ -1289,7 +1306,7 @@ export function Gallery({
                 )}
                 <button
                   className="primary-button modal-primary"
-                  disabled={releasing || creatingPix}
+                  disabled={releasing || creatingPix || manualReleasing}
                   onClick={continueCheckout}
                   type="button"
                 >
@@ -1301,6 +1318,26 @@ export function Gallery({
                     ? "Continuar para o Pix"
                     : "Liberar minhas fotos"}
                 </button>
+                <div className="manual-release-box">
+                  <span>Liberação manual</span>
+                  <div>
+                    <input
+                      autoComplete="off"
+                      onChange={(event) => setManualPassword(event.target.value)}
+                      placeholder="Senha de liberação"
+                      type="password"
+                      value={manualPassword}
+                    />
+                    <button
+                      className="secondary-button"
+                      disabled={manualReleasing || releasing || creatingPix}
+                      onClick={() => void releaseSelectedPhotos(true)}
+                      type="button"
+                    >
+                      {manualReleasing ? "Liberando..." : "Liberar com senha"}
+                    </button>
+                  </div>
+                </div>
                 {checkoutError && <p className="form-error">{checkoutError}</p>}
               </>
             )}

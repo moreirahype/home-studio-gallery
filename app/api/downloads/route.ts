@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isGalleryExpired } from "@/lib/gallery-expiration";
+import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const requestSchema = z.object({
   galleryToken: z.string().min(8),
   photoIds: z.array(z.string().min(1)).min(1).max(20),
+  manualPassword: z.string().optional(),
 });
 
 async function authorizeIncludedPhotos({
@@ -60,6 +62,56 @@ async function authorizeIncludedPhotos({
   return true;
 }
 
+async function markManualRelease({
+  supabase,
+  projectId,
+  photoIds,
+}: {
+  supabase: ReturnType<typeof getSupabaseAdmin>;
+  projectId: string;
+  photoIds: string[];
+}) {
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      project_id: projectId,
+      amount_cents: 0,
+      status: "paid",
+      paid_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (orderError || !order) {
+    throw new Error(orderError?.message ?? "Falha ao registrar liberação manual.");
+  }
+
+  const { error: itemError } = await supabase.from("order_items").insert({
+    order_id: order.id,
+    kind: "photos",
+    description: "Liberação manual",
+    quantity: photoIds.length,
+    amount_cents: 0,
+    metadata: { photoIds, manual: true },
+  });
+
+  if (itemError) {
+    throw new Error(itemError.message);
+  }
+
+  const { error: photosError } = await supabase.from("order_photos").upsert(
+    photoIds.map((photoId) => ({
+      order_id: order.id,
+      photo_id: photoId,
+    })),
+    { onConflict: "order_id,photo_id" },
+  );
+
+  if (photosError) {
+    throw new Error(photosError.message);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const parsed = requestSchema.safeParse(await request.json());
 
@@ -109,9 +161,25 @@ export async function POST(request: NextRequest) {
   }
 
   const uniquePhotoIds = [...new Set(parsed.data.photoIds)];
+  const manualReleasePassword =
+    process.env.GALLERY_MANUAL_RELEASE_PASSWORD ??
+    process.env.MANUAL_RELEASE_PASSWORD;
+  const manualReleaseRequested = Boolean(parsed.data.manualPassword);
+  const manualReleaseAuthorized =
+    manualReleaseRequested &&
+    safeCompare(parsed.data.manualPassword ?? null, manualReleasePassword);
   let authorized = false;
 
-  if (uniquePhotoIds.length <= project.included_photos) {
+  if (manualReleaseRequested && !manualReleaseAuthorized) {
+    return NextResponse.json(
+      { ok: false, error: "Senha de liberação inválida." },
+      { status: 403 },
+    );
+  }
+
+  if (manualReleaseAuthorized) {
+    authorized = true;
+  } else if (uniquePhotoIds.length <= project.included_photos) {
     try {
       authorized = await authorizeIncludedPhotos({
         supabase,
@@ -186,6 +254,27 @@ export async function POST(request: NextRequest) {
       { ok: false, error: signed.error?.message ?? views.error?.message },
       { status: 500 },
     );
+  }
+
+  if (manualReleaseAuthorized) {
+    try {
+      await markManualRelease({
+        supabase,
+        projectId: project.id,
+        photoIds: uniquePhotoIds,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Não foi possível salvar a liberação manual.",
+        },
+        { status: 500 },
+      );
+    }
   }
 
   return NextResponse.json({

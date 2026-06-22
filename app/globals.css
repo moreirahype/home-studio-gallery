@@ -1081,6 +1081,43 @@ p {
   font-size: 0.66rem;
 }
 
+.manual-release-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.manual-release-box > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.manual-release-box > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.manual-release-box input {
+  min-height: 48px;
+  min-width: 0;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+
+.manual-release-box .secondary-button {
+  white-space: nowrap;
+}
+
 .install-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1596,6 +1633,10 @@ p {
 
   .post-purchase-offer {
     padding: 17px;
+  }
+
+  .manual-release-box > div {
+    grid-template-columns: 1fr;
   }
 
   .install-card {
