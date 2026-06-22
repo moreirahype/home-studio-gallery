@@ -47,6 +47,17 @@ export async function POST(request: NextRequest) {
           { status: 500 },
         );
       }
+      if (settlement.paid && settlement.metaReported === false) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              settlement.metaReportError ??
+              "Falha ao registrar Purchase na Meta.",
+          },
+          { status: 500 },
+        );
+      }
     } catch (error) {
       return NextResponse.json(
         {

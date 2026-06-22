@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackBrowserPurchase } from "@/lib/meta-browser";
 
 const MAX_PHOTOS = 20;
 const DEFAULT_GALLERY_SIZE = 15;
@@ -834,6 +835,11 @@ export function Gallery({
       return;
     }
 
+    trackBrowserPurchase({
+      paymentId: pixPayment.paymentId,
+      orderId: pixPayment.orderId,
+      value: pixPayment.amount,
+    });
     await releaseSelectedPhotos();
   }
 

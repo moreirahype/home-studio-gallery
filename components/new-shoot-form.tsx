@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { trackBrowserPurchase } from "@/lib/meta-browser";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -193,6 +194,11 @@ export function NewShootForm({
       return;
     }
 
+    trackBrowserPurchase({
+      paymentId: pixPayment.paymentId,
+      orderId: pixPayment.orderId,
+      value: pixPayment.amount,
+    });
     window.location.href = pixPayment.galleryUrl;
   }
 

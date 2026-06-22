@@ -48,13 +48,15 @@ export async function reportMetaPurchase({
   const pixelId = process.env.META_PIXEL_ID;
   const accessToken = process.env.META_ACCESS_TOKEN;
 
-  if (!pixelId || !accessToken || value <= 0) {
-    return { skipped: true };
-  }
+  if (!pixelId) throw new Error("META_PIXEL_ID não configurado.");
+  if (!accessToken) throw new Error("META_ACCESS_TOKEN não configurado.");
+  if (value <= 0) throw new Error("O valor do Purchase deve ser positivo.");
 
   const { firstName, lastName } = splitName(customerName);
+  const graphVersion = process.env.META_GRAPH_API_VERSION?.trim();
+  const graphPath = graphVersion ? `${graphVersion}/${pixelId}` : pixelId;
   const response = await fetch(
-    `https://graph.facebook.com/v20.0/${pixelId}/events?access_token=${accessToken}`,
+    `https://graph.facebook.com/${graphPath}/events?access_token=${accessToken}`,
     {
       method: "POST",
       headers: {
@@ -99,6 +101,10 @@ export async function reportMetaPurchase({
     throw new Error(
       result.error?.message ?? `Meta respondeu HTTP ${response.status}.`,
     );
+  }
+
+  if (!result.events_received) {
+    throw new Error("A Meta não confirmou o recebimento do evento Purchase.");
   }
 
   return result;

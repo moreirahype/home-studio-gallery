@@ -153,7 +153,14 @@ export function defaultGalleryAttendant({
 }: {
   amount: number;
 }) {
-  return `Galeria ${amount.toFixed(2)}`;
+  const amountCents = Math.round(amount * 100);
+  const nearestTenCents = Math.round(amountCents / 10) * 10;
+  const commercialAmountCents =
+    Math.abs(amountCents - nearestTenCents) <= 1
+      ? nearestTenCents
+      : amountCents;
+
+  return `Galeria ${(commercialAmountCents / 100).toFixed(2)}`;
 }
 
 export function previewValue(value?: string) {
