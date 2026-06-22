@@ -11,6 +11,10 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const MAX_MANUAL_PHOTOS = 20;
 
+function compactPaths(paths: Array<string | null | undefined>) {
+  return [...new Set(paths.filter((path): path is string => Boolean(path)))];
+}
+
 function parseMoney(value: FormDataEntryValue | null, fallback: number) {
   const parsed = Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -43,7 +47,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("projects")
     .select(
-      "id, gallery_token, customer_name, phone, context_final, paid_amount_cents, included_photos, generation_count, created_at, expires_at",
+      "id, gallery_token, customer_name, phone, context_final, paid_amount_cents, included_photos, generation_count, bi_attendant_name, created_at, expires_at",
     )
     .eq("niche_id", "manual")
     .order("created_at", { ascending: false })
@@ -57,7 +61,10 @@ export async function GET(request: NextRequest) {
 
   let { data, error } = await query;
 
-  if (error?.message.includes("expires_at")) {
+  if (
+    error?.message.includes("expires_at") ||
+    error?.message.includes("bi_attendant_name")
+  ) {
     let fallbackQuery = supabase
       .from("projects")
       .select(
@@ -77,7 +84,11 @@ export async function GET(request: NextRequest) {
 
     const fallback = await fallbackQuery;
     data =
-      fallback.data?.map((project) => ({ ...project, expires_at: null })) ??
+      fallback.data?.map((project) => ({
+        ...project,
+        bi_attendant_name: null,
+        expires_at: null,
+      })) ??
       null;
     error = fallback.error;
   }
@@ -101,6 +112,7 @@ export async function GET(request: NextRequest) {
         paidAmount: Number(project.paid_amount_cents ?? 0) / 100,
         includedPhotos: project.included_photos,
         generationCount: project.generation_count,
+        attendantName: project.bi_attendant_name,
         createdAt: project.created_at,
         expiresAt: expiresAt.toISOString(),
         expired: expiresAt.getTime() < Date.now(),
@@ -161,6 +173,11 @@ export async function POST(request: NextRequest) {
     });
   const contextFinal =
     String(formData.get("contextFinal") ?? "").trim() || "Galeria manual";
+  const attendantMode = String(formData.get("attendantMode") ?? "default");
+  const attendantName =
+    attendantMode === "sheila"
+      ? "Sheila"
+      : `Galeria ${(firstExtraAmountCents / 100).toFixed(2)}`;
   const supabase = getSupabaseAdmin();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + GALLERY_RETENTION_DAYS);
@@ -177,7 +194,7 @@ export async function POST(request: NextRequest) {
     paid_amount_cents: paidAmountCents,
     pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: files.length,
-    bi_attendant_name: `Galeria ${(firstExtraAmountCents / 100).toFixed(2)}`,
+    bi_attendant_name: attendantName,
     expires_at: expiresAt.toISOString(),
     status: "ready",
   };
@@ -304,4 +321,100 @@ export async function POST(request: NextRequest) {
     galleryUrl: buildGalleryUrl(galleryToken, appUrl),
     photos: files.length,
   });
+}
+
+export async function DELETE(request: NextRequest) {
+  const body = (await request.json().catch(() => ({}))) as {
+    projectId?: string;
+    confirmation?: string;
+  };
+
+  if (body.confirmation?.trim().toLowerCase() !== "excluir") {
+    return NextResponse.json(
+      { ok: false, error: 'Digite "excluir" para confirmar.' },
+      { status: 400 },
+    );
+  }
+
+  if (!body.projectId) {
+    return NextResponse.json(
+      { ok: false, error: "Galeria inválida." },
+      { status: 400 },
+    );
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, niche_id, source_image_path")
+    .eq("id", body.projectId)
+    .maybeSingle();
+
+  if (!project || project.niche_id !== "manual") {
+    return NextResponse.json(
+      { ok: false, error: "Galeria manual não encontrada." },
+      { status: 404 },
+    );
+  }
+
+  const [{ data: photos }, { data: videoJobs }] = await Promise.all([
+    supabase
+      .from("photos")
+      .select("original_path, preview_path")
+      .eq("project_id", project.id),
+    supabase
+      .from("video_jobs")
+      .select("id, output_path")
+      .eq("project_id", project.id),
+  ]);
+  const videoJobIds = (videoJobs ?? []).map((job) => job.id);
+  const { data: videoClips } = videoJobIds.length
+    ? await supabase
+        .from("video_clips")
+        .select("path")
+        .in("video_job_id", videoJobIds)
+    : { data: [] };
+
+  await Promise.all([
+    supabase.storage
+      .from("photo-originals")
+      .remove(compactPaths((photos ?? []).map((photo) => photo.original_path))),
+    supabase.storage
+      .from("photo-previews")
+      .remove(compactPaths((photos ?? []).map((photo) => photo.preview_path))),
+    supabase.storage
+      .from("videos")
+      .remove(compactPaths((videoJobs ?? []).map((job) => job.output_path))),
+    supabase.storage
+      .from("video-clips")
+      .remove(compactPaths((videoClips ?? []).map((clip) => clip.path))),
+    supabase.storage
+      .from("source-images")
+      .remove(compactPaths([project.source_image_path])),
+  ]);
+
+  const { error: ordersError } = await supabase
+    .from("orders")
+    .delete()
+    .eq("project_id", project.id);
+  if (ordersError) {
+    return NextResponse.json(
+      { ok: false, error: ordersError.message },
+      { status: 500 },
+    );
+  }
+
+  const { error: deleteError } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", project.id);
+
+  if (deleteError) {
+    return NextResponse.json(
+      { ok: false, error: deleteError.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
 }

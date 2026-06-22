@@ -183,22 +183,37 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
   }
 
   if (!biReported) {
-    const { data: attribution } = await supabase
+    let { data: attribution, error: attributionError } = await supabase
       .from("projects")
       .select(
-        "included_photos, pricing_base_amount_cents",
+        "included_photos, pricing_base_amount_cents, bi_attendant_name",
       )
       .eq("id", order.project_id)
       .maybeSingle();
+
+    if (attributionError?.message.includes("bi_attendant_name")) {
+      const fallback = await supabase
+        .from("projects")
+        .select("included_photos, pricing_base_amount_cents")
+        .eq("id", order.project_id)
+        .maybeSingle();
+      attribution = fallback.data
+        ? { ...fallback.data, bi_attendant_name: null }
+        : null;
+      attributionError = fallback.error;
+    }
+
     const firstExtraAmountCents = attribution?.pricing_base_amount_cents
       ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
           pricingBaseAmountCents: Number(attribution.pricing_base_amount_cents),
           includedPhotos: Number(attribution.included_photos ?? 1),
         })
       : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
-    const attendantName = defaultGalleryAttendant({
-      amount: firstExtraAmountCents / 100,
-    });
+    const attendantName =
+      attribution?.bi_attendant_name?.trim() ||
+      defaultGalleryAttendant({
+        amount: firstExtraAmountCents / 100,
+      });
 
     if (totalUpsellCents > 0) {
       const grossUpsellAmount = totalUpsellCents / 100;

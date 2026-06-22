@@ -1388,7 +1388,8 @@ p {
   letter-spacing: 0.02em;
 }
 
-.manual-form input {
+.manual-form input,
+.manual-form select {
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
@@ -1553,6 +1554,24 @@ p {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.danger-button {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgb(154 48 37 / 28%);
+  border-radius: 999px;
+  background: transparent;
+  color: #9a3025;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .text-field {

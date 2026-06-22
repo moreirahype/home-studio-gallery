@@ -87,6 +87,17 @@ export function ManualGalleryForm() {
             />
           </label>
 
+          <label>
+            Atendente das vendas da galeria
+            <select defaultValue="default" name="attendantMode">
+              <option value="default">Automático: Galeria + valor da 1ª extra</option>
+              <option value="sheila">Sheila</option>
+            </select>
+            <small>
+              O automático ficará como, por exemplo, Galeria 9.90.
+            </small>
+          </label>
+
           <div className="manual-grid three">
             <label>
               Entrada já paga

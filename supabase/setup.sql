@@ -55,6 +55,7 @@ create table if not exists public.projects (
     check (paid_amount_cents >= 0),
   generation_count smallint not null default 15
     check (generation_count between 1 and 20),
+  bi_attendant_name text not null default 'Galeria',
   status public.project_status not null default 'queued',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -76,6 +77,7 @@ create table if not exists public.zapdata_leads (
     check (paid_amount_cents >= 0),
   generation_count smallint not null default 15
     check (generation_count between 1 and 20),
+  bi_attendant_name text not null default 'Galeria',
   status text not null default 'pending_payment'
     check (status in ('pending_payment', 'converted', 'expired', 'failed')),
   consumed_at timestamptz,

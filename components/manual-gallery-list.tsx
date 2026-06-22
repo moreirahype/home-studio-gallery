@@ -10,6 +10,7 @@ type ManualGallery = {
   paidAmount: number;
   includedPhotos: number;
   generationCount: number;
+  attendantName: string | null;
   createdAt: string;
   expiresAt: string;
   expired: boolean;
@@ -32,6 +33,7 @@ export function ManualGalleryList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function loadGalleries(query = search) {
     setLoading(true);
@@ -73,6 +75,47 @@ export function ManualGalleryList() {
     await navigator.clipboard.writeText(gallery.galleryUrl);
     setCopiedId(gallery.id);
     window.setTimeout(() => setCopiedId(null), 2200);
+  }
+
+  async function deleteGallery(gallery: ManualGallery) {
+    const confirmation = window.prompt(
+      `Para excluir definitivamente a galeria de ${gallery.customerName}, digite excluir:`,
+    );
+    if (confirmation?.trim().toLowerCase() !== "excluir") return;
+
+    setDeletingId(gallery.id);
+    setError("");
+
+    try {
+      const response = await fetch("/api/manual-gallery", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectId: gallery.id,
+          confirmation,
+        }),
+      });
+      const result = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error ?? "Não foi possível excluir a galeria.");
+      }
+
+      setGalleries((current) =>
+        current.filter((item) => item.id !== gallery.id),
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Não foi possível excluir a galeria.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   useEffect(() => {
@@ -143,6 +186,10 @@ export function ManualGalleryList() {
                   <dt>Expira</dt>
                   <dd>{dateTime.format(new Date(gallery.expiresAt))}</dd>
                 </div>
+                <div>
+                  <dt>Atendente</dt>
+                  <dd>{gallery.attendantName ?? "Galeria automática"}</dd>
+                </div>
               </dl>
               <p>{gallery.contextFinal}</p>
               <div className="manual-card-actions">
@@ -160,6 +207,14 @@ export function ManualGalleryList() {
                   type="button"
                 >
                   {copiedId === gallery.id ? "Copiado" : "Copiar link"}
+                </button>
+                <button
+                  className="danger-button"
+                  disabled={deletingId === gallery.id}
+                  onClick={() => void deleteGallery(gallery)}
+                  type="button"
+                >
+                  {deletingId === gallery.id ? "Excluindo..." : "Excluir"}
                 </button>
               </div>
             </article>
