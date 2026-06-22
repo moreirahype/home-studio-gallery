@@ -37,6 +37,11 @@ const money = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+type DownloadFile = {
+  url: string;
+  fileName: string;
+};
+
 export type GalleryOffer = {
   paidAmount: number;
   pricingBaseAmount: number;
@@ -137,6 +142,104 @@ function getVideoPrice(videoCount: number) {
     videoPricesByQuantity[safeCount] ??
     videoPricesByQuantity[5] + (safeCount - 5) * 8.9
   );
+}
+
+function createCrc32Table() {
+  return Array.from({ length: 256 }, (_, index) => {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) {
+      value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    }
+    return value >>> 0;
+  });
+}
+
+const crc32Table = createCrc32Table();
+
+function crc32(data: Uint8Array) {
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc = crc32Table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function toArrayBuffer(data: Uint8Array) {
+  return data.buffer.slice(
+    data.byteOffset,
+    data.byteOffset + data.byteLength,
+  ) as ArrayBuffer;
+}
+
+function createZip(files: { name: string; data: Uint8Array }[]) {
+  const encoder = new TextEncoder();
+  const parts: ArrayBuffer[] = [];
+  const centralDirectory: ArrayBuffer[] = [];
+  let offset = 0;
+
+  function header(size: number) {
+    const buffer = new ArrayBuffer(size);
+    return { buffer, view: new DataView(buffer) };
+  }
+
+  for (const file of files) {
+    const name = encoder.encode(file.name);
+    const nameBuffer = toArrayBuffer(name);
+    const dataBuffer = toArrayBuffer(file.data);
+    const checksum = crc32(file.data);
+    const local = header(30);
+    local.view.setUint32(0, 0x04034b50, true);
+    local.view.setUint16(4, 20, true);
+    local.view.setUint16(6, 0, true);
+    local.view.setUint16(8, 0, true);
+    local.view.setUint16(10, 0, true);
+    local.view.setUint16(12, 0, true);
+    local.view.setUint32(14, checksum, true);
+    local.view.setUint32(18, file.data.byteLength, true);
+    local.view.setUint32(22, file.data.byteLength, true);
+    local.view.setUint16(26, name.byteLength, true);
+    local.view.setUint16(28, 0, true);
+    parts.push(local.buffer, nameBuffer, dataBuffer);
+
+    const central = header(46);
+    central.view.setUint32(0, 0x02014b50, true);
+    central.view.setUint16(4, 20, true);
+    central.view.setUint16(6, 20, true);
+    central.view.setUint16(8, 0, true);
+    central.view.setUint16(10, 0, true);
+    central.view.setUint16(12, 0, true);
+    central.view.setUint16(14, 0, true);
+    central.view.setUint32(16, checksum, true);
+    central.view.setUint32(20, file.data.byteLength, true);
+    central.view.setUint32(24, file.data.byteLength, true);
+    central.view.setUint16(28, name.byteLength, true);
+    central.view.setUint16(30, 0, true);
+    central.view.setUint16(32, 0, true);
+    central.view.setUint16(34, 0, true);
+    central.view.setUint16(36, 0, true);
+    central.view.setUint32(38, 0, true);
+    central.view.setUint32(42, offset, true);
+    centralDirectory.push(central.buffer, nameBuffer);
+    offset += local.buffer.byteLength + name.byteLength + file.data.byteLength;
+  }
+
+  const centralDirectorySize = centralDirectory.reduce(
+    (size, part) => size + part.byteLength,
+    0,
+  );
+  const end = header(22);
+  end.view.setUint32(0, 0x06054b50, true);
+  end.view.setUint16(4, 0, true);
+  end.view.setUint16(6, 0, true);
+  end.view.setUint16(8, files.length, true);
+  end.view.setUint16(10, files.length, true);
+  end.view.setUint32(12, centralDirectorySize, true);
+  end.view.setUint32(16, offset, true);
+  end.view.setUint16(20, 0, true);
+
+  return new Blob([...parts, ...centralDirectory, end.buffer], {
+    type: "application/zip",
+  });
 }
 
 function AddIcon() {
@@ -482,20 +585,10 @@ export function Gallery({
     }
   }
 
-  function downloadDesktopFile(url: string, fileName: string) {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.rel = "noopener";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }
-
   async function downloadAllUnlockedFiles() {
     if (isMobileDevice || savingAllFiles) return;
 
-    const files = [
+    const files: DownloadFile[] = [
       ...downloadLinks.map((download) => ({
         url: download.url,
         fileName: `home-studio-foto-${String(download.number).padStart(
@@ -521,11 +614,39 @@ export function Gallery({
     ];
 
     setSavingAllFiles(true);
-    for (const file of files) {
-      downloadDesktopFile(file.url, file.fileName);
-      await new Promise((resolve) => window.setTimeout(resolve, 220));
+    setCheckoutError("");
+
+    try {
+      const zipFiles = await Promise.all(
+        files.map(async (file) => {
+          const response = await fetch(file.url);
+          if (!response.ok) {
+            throw new Error(`Falha ao baixar ${file.fileName}.`);
+          }
+
+          return {
+            name: file.fileName,
+            data: new Uint8Array(await response.arrayBuffer()),
+          };
+        }),
+      );
+      const zip = createZip(zipFiles);
+      const url = URL.createObjectURL(zip);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "home-studio-arquivos.zip";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      setCheckoutError(
+        "Não foi possível montar o ZIP. Tente baixar os arquivos um por um.",
+      );
+    } finally {
+      setSavingAllFiles(false);
     }
-    setSavingAllFiles(false);
   }
 
   function approveTestPayment() {
@@ -769,7 +890,7 @@ export function Gallery({
                 onClick={() => void downloadAllUnlockedFiles()}
                 type="button"
               >
-                {savingAllFiles ? "Baixando..." : "Baixar tudo"}
+                {savingAllFiles ? "Preparando ZIP..." : "Baixar tudo em ZIP"}
               </button>
             )}
             {downloadLinks.map((download) => (
