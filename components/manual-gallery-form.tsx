@@ -57,26 +57,24 @@ export function ManualGalleryForm() {
           Suba as imagens finais, configure a oferta e gere uma galeria com
           marca d&apos;água, seleção, Pix e liberação automática.
         </p>
+        <a className="manual-list-link" href="/manual/galerias">
+          Ver galerias manuais criadas
+        </a>
 
         <form className="manual-form" onSubmit={createGallery}>
-          <label>
-            Senha interna
-            <input
-              name="password"
-              placeholder="Senha de criação"
-              required
-              type="password"
-            />
-          </label>
-
           <div className="manual-grid">
             <label>
               Nome do cliente
-              <input name="customerName" placeholder="Opcional" />
+              <input name="customerName" placeholder="Ex: Maria Silva" required />
             </label>
             <label>
               Telefone
-              <input name="phone" placeholder="Opcional" />
+              <input
+                inputMode="tel"
+                name="phone"
+                placeholder="Ex: 32991997096"
+                required
+              />
             </label>
           </div>
 
