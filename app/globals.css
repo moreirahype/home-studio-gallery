@@ -457,6 +457,11 @@ p {
   font-size: 0.78rem;
   font-weight: 850;
   text-decoration: none;
+  cursor: pointer;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
 }
 
 .file-status {
