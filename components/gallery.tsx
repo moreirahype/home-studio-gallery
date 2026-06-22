@@ -61,15 +61,20 @@ export type GalleryPhoto = {
 function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
   const includedPhotos = Math.min(
     MAX_PHOTOS,
-    Math.max(1, Math.round(offer?.includedPhotos ?? DEFAULT_INCLUDED_PHOTOS)),
+    Math.max(0, Math.round(offer?.includedPhotos ?? DEFAULT_INCLUDED_PHOTOS)),
   );
-  const paidAmount = Math.max(0.01, offer?.paidAmount ?? DEFAULT_PAID_AMOUNT);
-  const pricingReferenceQuantity = Math.min(MAX_PHOTOS - 1, includedPhotos);
+  const paidAmount = Math.max(0, offer?.paidAmount ?? DEFAULT_PAID_AMOUNT);
+  const pricingReferenceQuantity = Math.min(
+    MAX_PHOTOS - 1,
+    Math.max(1, includedPhotos),
+  );
   const defaultPricingBaseAmount =
-    DEFAULT_FIRST_EXTRA_AMOUNT *
-    (basePricesByQuantity[pricingReferenceQuantity] /
-      (basePricesByQuantity[pricingReferenceQuantity + 1] -
-        basePricesByQuantity[pricingReferenceQuantity]));
+    includedPhotos === 0
+      ? DEFAULT_FIRST_EXTRA_AMOUNT
+      : DEFAULT_FIRST_EXTRA_AMOUNT *
+        (basePricesByQuantity[pricingReferenceQuantity] /
+          (basePricesByQuantity[pricingReferenceQuantity + 1] -
+            basePricesByQuantity[pricingReferenceQuantity]));
   const pricingBaseAmount = Math.max(
     0.01,
     offer?.pricingBaseAmount ?? defaultPricingBaseAmount,
@@ -97,6 +102,14 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
 }
 
 function createPriceCurve(offer: GalleryOffer) {
+  if (offer.includedPhotos === 0) {
+    const scale = offer.pricingBaseAmount / basePricesByQuantity[1];
+    return basePricesByQuantity.map((basePrice, quantity) => {
+      if (quantity === 0) return 0;
+      return Math.round(basePrice * scale * 100) / 100;
+    });
+  }
+
   const baseAtIncluded = basePricesByQuantity[offer.includedPhotos];
   const scale = offer.pricingBaseAmount / baseAtIncluded;
 
@@ -119,10 +132,17 @@ function createMilestones(includedPhotos: number, gallerySize: number) {
   );
 
   if (!milestones.some((milestone) => milestone.quantity === includedPhotos)) {
-    milestones.unshift({
-      quantity: includedPhotos,
-      label: `${includedPhotos} incluídas`,
-    });
+    if (includedPhotos > 0) {
+      milestones.unshift({
+        quantity: includedPhotos,
+        label: `${includedPhotos} incluídas`,
+      });
+    }
+  } else if (includedPhotos === 0 && milestones[0]) {
+    milestones[0] = {
+      ...milestones[0],
+      label: "1 foto",
+    };
   } else {
     milestones[0] = {
       ...milestones[0],
@@ -325,7 +345,7 @@ export function Gallery({
   function getPricing(count: number) {
     const total = count ? prices[count] : 0;
     const referenceUnit =
-      (offer.pricingBaseAmount / offer.includedPhotos) * 1.25;
+      (offer.pricingBaseAmount / Math.max(1, offer.includedPhotos)) * 1.25;
     const fullPrice =
       offer.paidAmount +
       Math.max(0, count - offer.includedPhotos) * referenceUnit;
@@ -333,7 +353,9 @@ export function Gallery({
     const discount = count ? Math.round((savings / fullPrice) * 100) : 0;
     const unitPrice = count ? total / count : 0;
     const dueNow =
-      count > offer.includedPhotos ? Math.max(0, total - offer.paidAmount) : 0;
+      count > offer.includedPhotos
+        ? Math.max(0, total - offer.paidAmount)
+        : 0;
     const nextMilestone = milestones.find(
       (milestone) => milestone.quantity > count,
     );
@@ -844,10 +866,14 @@ export function Gallery({
               : "Agora escolha as fotos que você mais amou."}
           </h1>
           <p>
-            Você já tem {offer.includedPhotos}{" "}
-            {offer.includedPhotos === 1 ? "foto incluída" : "fotos incluídas"}.
-            Se quiser levar mais, o melhor desconto será aplicado
-            automaticamente.
+            {offer.includedPhotos > 0
+              ? `Você já tem ${offer.includedPhotos} ${
+                  offer.includedPhotos === 1
+                    ? "foto incluída"
+                    : "fotos incluídas"
+                }.`
+              : "Escolha as fotos que quiser levar."}{" "}
+            O melhor desconto será aplicado automaticamente.
           </p>
         </div>
         <div className="gallery-status">
@@ -859,8 +885,11 @@ export function Gallery({
             fotos disponíveis
           </strong>
           <small>
-            Crédito de {money.format(offer.paidAmount)} reconhecido. Galeria
-            disponível por 7 dias; depois disso, os arquivos são excluídos.
+            {offer.paidAmount > 0
+              ? `Crédito de ${money.format(offer.paidAmount)} reconhecido.`
+              : "Nenhum pagamento registrado ainda."}{" "}
+            Galeria disponível por 7 dias; depois disso, os arquivos são
+            excluídos.
           </small>
         </div>
       </header>
@@ -951,7 +980,9 @@ export function Gallery({
             <h2 id="deal-title">
               {hasUnlockedPurchases
                 ? "Quer liberar mais fotos?"
-                : offer.includedPhotos === 1
+                : offer.includedPhotos === 0
+                  ? "Escolha suas favoritas."
+                  : offer.includedPhotos === 1
                   ? "Sua foto já está garantida."
                   : `Suas ${offer.includedPhotos} fotos já estão garantidas.`}
             </h2>
@@ -1133,8 +1164,9 @@ export function Gallery({
               <span>
                 {selectionIsIncluded ? (
                   <>
-                    Até {offer.includedPhotos}{" "}
-                    {offer.includedPhotos === 1 ? "foto já paga" : "fotos já pagas"}
+                    {offer.includedPhotos === 1
+                      ? "1 foto já paga"
+                      : `${offer.includedPhotos} fotos já pagas`}
                   </>
                 ) : (
                   <>

@@ -126,7 +126,13 @@ export function ManualGalleryList() {
                   <dt>Fotos</dt>
                   <dd>
                     {gallery.generationCount} geradas ·{" "}
-                    {gallery.includedPhotos} incluída
+                    {gallery.includedPhotos === 0
+                      ? "nenhuma incluída"
+                      : `${gallery.includedPhotos} ${
+                          gallery.includedPhotos === 1
+                            ? "incluída"
+                            : "incluídas"
+                        }`}
                   </dd>
                 </div>
                 <div>

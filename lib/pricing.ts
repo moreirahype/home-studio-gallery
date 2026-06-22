@@ -15,6 +15,8 @@ export function getPricingBaseAmountCentsFromFirstExtraAmountCents({
   firstExtraAmountCents: number;
   includedPhotos: number;
 }) {
+  if (includedPhotos <= 0) return Math.max(1, firstExtraAmountCents);
+
   const safeIncluded = Math.min(
     MAX_PHOTOS - 1,
     Math.max(1, Math.round(includedPhotos)),
@@ -43,6 +45,8 @@ export function getFirstExtraAmountCentsFromPricingBaseAmountCents({
   pricingBaseAmountCents: number;
   includedPhotos: number;
 }) {
+  if (includedPhotos <= 0) return Math.max(1, pricingBaseAmountCents);
+
   const safeIncluded = Math.min(
     MAX_PHOTOS - 1,
     Math.max(1, Math.round(includedPhotos)),
@@ -68,6 +72,21 @@ export function getAdditionalPhotoAmountCents({
   pricingBaseAmountCents?: number | null;
 }) {
   if (selectedCount <= includedPhotos) return 0;
+
+  if (includedPhotos <= 0) {
+    const safeSelected = Math.min(
+      MAX_PHOTOS,
+      Math.max(1, Math.round(selectedCount)),
+    );
+    const firstExtraAmount =
+      Math.max(
+        1,
+        pricingBaseAmountCents ?? DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
+      ) / 100;
+    const scale = firstExtraAmount / basePricesByQuantity[1];
+
+    return Math.round(basePricesByQuantity[safeSelected] * scale * 100);
+  }
 
   const safeIncluded = Math.min(
     MAX_PHOTOS,

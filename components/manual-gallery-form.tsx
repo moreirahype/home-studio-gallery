@@ -92,7 +92,7 @@ export function ManualGalleryForm() {
               Entrada já paga
               <input
                 defaultValue="7.90"
-                min="0.01"
+                min="0"
                 name="paidAmount"
                 required
                 step="0.01"
@@ -104,7 +104,7 @@ export function ManualGalleryForm() {
               <input
                 defaultValue="1"
                 max="20"
-                min="1"
+                min="0"
                 name="includedPhotos"
                 required
                 step="1"

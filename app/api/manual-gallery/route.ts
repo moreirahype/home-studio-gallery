@@ -16,6 +16,11 @@ function parseMoney(value: FormDataEntryValue | null, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseNonNegativeMoney(value: FormDataEntryValue | null, fallback: number) {
+  const parsed = Number(String(value ?? "").replace(",", "."));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 function parseInteger(value: FormDataEntryValue | null, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.round(parsed) : fallback;
@@ -140,11 +145,11 @@ export async function POST(request: NextRequest) {
   const galleryToken = randomUUID().replaceAll("-", "");
   const appUrl = process.env.APP_URL ?? request.nextUrl.origin;
   const paidAmountCents = Math.round(
-    parseMoney(formData.get("paidAmount"), 7.9) * 100,
+    parseNonNegativeMoney(formData.get("paidAmount"), 7.9) * 100,
   );
   const includedPhotos = Math.min(
     files.length,
-    Math.max(1, parseInteger(formData.get("includedPhotos"), 1)),
+    Math.max(0, parseInteger(formData.get("includedPhotos"), 1)),
   );
   const firstExtraAmountCents = Math.round(
     parseMoney(formData.get("firstExtraAmount"), 9.9) * 100,

@@ -50,9 +50,9 @@ create table if not exists public.projects (
   niche_id text not null default 'universal',
   receipt_id text unique,
   included_photos smallint not null default 1
-    check (included_photos between 1 and 20),
+    check (included_photos between 0 and 20),
   paid_amount_cents integer not null default 790
-    check (paid_amount_cents > 0),
+    check (paid_amount_cents >= 0),
   generation_count smallint not null default 15
     check (generation_count between 1 and 20),
   status public.project_status not null default 'queued',
@@ -71,9 +71,9 @@ create table if not exists public.zapdata_leads (
   context_final text not null,
   niche_id text not null default 'universal',
   included_photos smallint not null default 1
-    check (included_photos between 1 and 20),
+    check (included_photos between 0 and 20),
   paid_amount_cents integer not null default 790
-    check (paid_amount_cents > 0),
+    check (paid_amount_cents >= 0),
   generation_count smallint not null default 15
     check (generation_count between 1 and 20),
   status text not null default 'pending_payment'
