@@ -173,10 +173,10 @@ export async function POST(request: NextRequest) {
   const contextFinal =
     String(formData.get("contextFinal") ?? "").trim() || "Galeria manual";
   const attendantMode = String(formData.get("attendantMode") ?? "default");
-  const attendantName =
-    attendantMode === "sheila"
-      ? "Sheila"
-      : `Galeria ${(firstExtraAmountCents / 100).toFixed(2)}`;
+  const attendantPrefix = attendantMode === "sheila" ? "Sheila" : "Manual";
+  const attendantName = `${attendantPrefix} ${(
+    firstExtraAmountCents / 100
+  ).toFixed(2)}`;
   const supabase = getSupabaseAdmin();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + GALLERY_RETENTION_DAYS);

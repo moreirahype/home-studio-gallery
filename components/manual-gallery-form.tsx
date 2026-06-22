@@ -156,13 +156,11 @@ export function ManualGalleryForm() {
           <label>
             Atendente das vendas da galeria
             <select defaultValue="default" name="attendantMode">
-              <option value="default">
-                Autom&aacute;tico: Galeria {firstExtraAmount || "XX"}
-              </option>
-              <option value="sheila">Sheila</option>
+              <option value="default">Manual {firstExtraAmount || "XX"}</option>
+              <option value="sheila">Sheila {firstExtraAmount || "XX"}</option>
             </select>
             <small>
-              O nome acompanhar&#225; o valor definido para a 1&ordf; foto extra.
+              O valor escolhido ser&#225; acrescentado ao nome do atendente.
             </small>
           </label>
 
