@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { trackBrowserPurchase } from "@/lib/meta-browser";
 
@@ -201,6 +201,48 @@ export function NewShootForm({
     });
     window.location.href = pixPayment.galleryUrl;
   }
+
+  useEffect(() => {
+    if (!submitted || !pixPayment) return;
+
+    let stopped = false;
+    let paymentHandled = false;
+
+    async function pollPayment() {
+      if (stopped || paymentHandled || !pixPayment) return;
+
+      const response = await fetch("/api/checkout/status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryToken: pixPayment.galleryToken,
+          orderId: pixPayment.orderId,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        paid?: boolean;
+      };
+
+      if (!stopped && response.ok && result.ok && result.paid) {
+        paymentHandled = true;
+        trackBrowserPurchase({
+          paymentId: pixPayment.paymentId,
+          orderId: pixPayment.orderId,
+          value: pixPayment.amount,
+        });
+        window.location.href = pixPayment.galleryUrl;
+      }
+    }
+
+    void pollPayment();
+    const interval = window.setInterval(() => void pollPayment(), 5000);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [pixPayment, submitted]);
 
   async function copyPixCode() {
     if (!pixPayment?.qrCode) return;

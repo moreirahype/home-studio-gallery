@@ -15,10 +15,15 @@ export function trackBrowserPurchase({
 }) {
   if (typeof window === "undefined" || !window.fbq || value <= 0) return;
 
+  const eventId = `mp-${paymentId}-${orderId}`;
+  const storageKey = `meta-purchase:${eventId}`;
+  if (window.sessionStorage.getItem(storageKey)) return;
+
   window.fbq(
     "track",
     "Purchase",
     { value: Number(value.toFixed(2)), currency: "BRL" },
-    { eventID: `mp-${paymentId}-${orderId}` },
+    { eventID: eventId },
   );
+  window.sessionStorage.setItem(storageKey, "sent");
 }

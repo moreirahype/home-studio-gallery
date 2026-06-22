@@ -848,6 +848,52 @@ export function Gallery({
     await releaseSelectedPhotos();
   }
 
+  useEffect(() => {
+    if (!pixReady || !pixPayment || token === "demo" || testPaymentApproved) {
+      return;
+    }
+
+    let stopped = false;
+    let paymentHandled = false;
+
+    async function pollPayment() {
+      if (stopped || paymentHandled || !pixPayment) return;
+
+      const response = await fetch("/api/checkout/status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryToken: token,
+          orderId: pixPayment.orderId,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        paid?: boolean;
+      };
+
+      if (!stopped && response.ok && result.ok && result.paid) {
+        paymentHandled = true;
+        trackBrowserPurchase({
+          paymentId: pixPayment.paymentId,
+          orderId: pixPayment.orderId,
+          value: pixPayment.amount,
+        });
+        await releaseSelectedPhotos();
+      }
+    }
+
+    void pollPayment();
+    const interval = window.setInterval(() => void pollPayment(), 5000);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+    // The checkout snapshot must remain stable while this Pix is pending.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pixPayment, pixReady, testPaymentApproved, token]);
+
   return (
     <main className="gallery-shell">
       <nav className="gallery-nav" aria-label="Galeria">
