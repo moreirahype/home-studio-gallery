@@ -200,6 +200,7 @@ export function Gallery({
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [manualReleaseOpen, setManualReleaseOpen] = useState(false);
   const [manualPassword, setManualPassword] = useState("");
   const [manualReleasing, setManualReleasing] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
@@ -395,6 +396,7 @@ export function Gallery({
     setCheckoutError("");
     setPixPayment(null);
     setPixCopied(false);
+    setManualReleaseOpen(false);
     setCheckoutOpen(true);
   }
 
@@ -1318,32 +1320,48 @@ export function Gallery({
                     ? "Continuar para o Pix"
                     : "Liberar minhas fotos"}
                 </button>
-                <div className="manual-release-box">
-                  <span>Liberação manual</span>
-                  <div>
-                    <input
-                      autoComplete="off"
-                      onChange={(event) => setManualPassword(event.target.value)}
-                      placeholder="Senha de liberação"
-                      type="password"
-                      value={manualPassword}
-                    />
-                    <button
-                      className="secondary-button"
-                      disabled={manualReleasing || releasing || creatingPix}
-                      onClick={() => void releaseSelectedPhotos(true)}
-                      type="button"
-                    >
-                      {manualReleasing ? "Liberando..." : "Liberar com senha"}
-                    </button>
-                  </div>
-                </div>
                 {checkoutError && <p className="form-error">{checkoutError}</p>}
               </>
             )}
           </section>
         </div>
       )}
+      <section className="manual-release-footer" aria-label="Liberação manual">
+        <button
+          className="manual-release-toggle"
+          onClick={() => setManualReleaseOpen((current) => !current)}
+          type="button"
+        >
+          Liberação manual
+        </button>
+        {manualReleaseOpen && (
+          <div className="manual-release-box">
+            <p>
+              Selecione as fotos na galeria, digite a senha e libere sem Pix.
+            </p>
+            <div>
+              <input
+                autoComplete="off"
+                onChange={(event) => setManualPassword(event.target.value)}
+                placeholder="Senha de liberação"
+                type="password"
+                value={manualPassword}
+              />
+              <button
+                className="secondary-button"
+                disabled={
+                  !selected.length || manualReleasing || releasing || creatingPix
+                }
+                onClick={() => void releaseSelectedPhotos(true)}
+                type="button"
+              >
+                {manualReleasing ? "Liberando..." : "Liberar com senha"}
+              </button>
+            </div>
+            {checkoutError && <p className="form-error">{checkoutError}</p>}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
