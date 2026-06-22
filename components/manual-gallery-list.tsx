@@ -6,7 +6,6 @@ type ManualGallery = {
   id: string;
   customerName: string | null;
   phone: string | null;
-  contextFinal: string | null;
   paidAmount: number;
   includedPhotos: number;
   generationCount: number;
@@ -34,6 +33,10 @@ export function ManualGalleryList() {
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
 
   async function loadGalleries(query = search) {
     setLoading(true);
@@ -118,6 +121,61 @@ export function ManualGalleryList() {
     }
   }
 
+  function beginEdit(gallery: ManualGallery) {
+    setEditingId(gallery.id);
+    setEditName(gallery.customerName ?? "");
+    setEditPhone(gallery.phone ?? "");
+    setError("");
+  }
+
+  async function saveEdit(gallery: ManualGallery) {
+    setSavingId(gallery.id);
+    setError("");
+
+    try {
+      const response = await fetch("/api/manual-gallery", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectId: gallery.id,
+          customerName: editName,
+          phone: editPhone,
+        }),
+      });
+      const result = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        customerName?: string;
+        phone?: string;
+      };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error ?? "Não foi possível salvar os dados.");
+      }
+
+      setGalleries((current) =>
+        current.map((item) =>
+          item.id === gallery.id
+            ? {
+                ...item,
+                customerName: result.customerName ?? editName.trim(),
+                phone: result.phone ?? editPhone.replace(/\D/g, ""),
+              }
+            : item,
+        ),
+      );
+      setEditingId(null);
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Não foi possível salvar os dados.",
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   useEffect(() => {
     void loadGalleries("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -161,8 +219,48 @@ export function ManualGalleryList() {
             >
               <div>
                 <span>{gallery.expired ? "Expirada" : "Ativa"}</span>
-                <h2>{gallery.customerName}</h2>
-                <p>{gallery.phone}</p>
+                {editingId === gallery.id ? (
+                  <div className="manual-edit-fields">
+                    <label>
+                      Nome
+                      <input
+                        onChange={(event) => setEditName(event.target.value)}
+                        value={editName}
+                      />
+                    </label>
+                    <label>
+                      Telefone
+                      <input
+                        inputMode="tel"
+                        onChange={(event) => setEditPhone(event.target.value)}
+                        value={editPhone}
+                      />
+                    </label>
+                    <div>
+                      <button
+                        className="primary-button"
+                        disabled={savingId === gallery.id}
+                        onClick={() => void saveEdit(gallery)}
+                        type="button"
+                      >
+                        {savingId === gallery.id ? "Salvando..." : "Salvar"}
+                      </button>
+                      <button
+                        className="secondary-button"
+                        disabled={savingId === gallery.id}
+                        onClick={() => setEditingId(null)}
+                        type="button"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2>{gallery.customerName}</h2>
+                    <p>{gallery.phone}</p>
+                  </>
+                )}
               </div>
               <dl>
                 <div>
@@ -191,7 +289,6 @@ export function ManualGalleryList() {
                   <dd>{gallery.attendantName ?? "Galeria automática"}</dd>
                 </div>
               </dl>
-              <p>{gallery.contextFinal}</p>
               <div className="manual-card-actions">
                 <a
                   className="secondary-button"
@@ -207,6 +304,13 @@ export function ManualGalleryList() {
                   type="button"
                 >
                   {copiedId === gallery.id ? "Copiado" : "Copiar link"}
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={() => beginEdit(gallery)}
+                  type="button"
+                >
+                  Editar nome e telefone
                 </button>
                 <button
                   className="danger-button"

@@ -146,15 +146,6 @@ export function ManualGalleryForm() {
           </div>
 
           <label>
-            Contexto do ensaio
-            <input
-              defaultValue="Galeria manual"
-              name="contextFinal"
-              placeholder="Ex: aniversário, profissional, gestante..."
-            />
-          </label>
-
-          <label>
             Atendente das vendas da galeria
             <select defaultValue="default" name="attendantMode">
               <option value="default">Automático: Galeria + valor da 1ª extra</option>

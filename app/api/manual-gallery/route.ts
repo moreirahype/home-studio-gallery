@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("projects")
     .select(
-      "id, gallery_token, customer_name, phone, context_final, paid_amount_cents, included_photos, generation_count, bi_attendant_name, created_at, expires_at",
+      "id, gallery_token, customer_name, phone, paid_amount_cents, included_photos, generation_count, bi_attendant_name, created_at, expires_at",
     )
     .eq("niche_id", "manual")
     .order("created_at", { ascending: false })
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     let fallbackQuery = supabase
       .from("projects")
       .select(
-        "id, gallery_token, customer_name, phone, context_final, paid_amount_cents, included_photos, generation_count, created_at",
+        "id, gallery_token, customer_name, phone, paid_amount_cents, included_photos, generation_count, created_at",
       )
       .eq("niche_id", "manual")
       .order("created_at", { ascending: false })
@@ -108,7 +108,6 @@ export async function GET(request: NextRequest) {
         id: project.id,
         customerName: project.customer_name,
         phone: project.phone,
-        contextFinal: project.context_final,
         paidAmount: Number(project.paid_amount_cents ?? 0) / 100,
         includedPhotos: project.included_photos,
         generationCount: project.generation_count,
@@ -320,6 +319,66 @@ export async function POST(request: NextRequest) {
     projectId,
     galleryUrl: buildGalleryUrl(galleryToken, appUrl),
     photos: files.length,
+  });
+}
+
+export async function PATCH(request: NextRequest) {
+  const body = (await request.json().catch(() => ({}))) as {
+    projectId?: string;
+    customerName?: string;
+    phone?: string;
+  };
+  const customerName = body.customerName?.trim() ?? "";
+  const phone = String(body.phone ?? "").replace(/\D/g, "");
+
+  if (!body.projectId) {
+    return NextResponse.json(
+      { ok: false, error: "Galeria inválida." },
+      { status: 400 },
+    );
+  }
+
+  if (customerName.length < 2) {
+    return NextResponse.json(
+      { ok: false, error: "Informe o nome do cliente." },
+      { status: 400 },
+    );
+  }
+
+  if (phone.length < 10) {
+    return NextResponse.json(
+      { ok: false, error: "Informe um telefone válido do cliente." },
+      { status: 400 },
+    );
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: project, error } = await supabase
+    .from("projects")
+    .update({ customer_name: customerName, phone })
+    .eq("id", body.projectId)
+    .eq("niche_id", "manual")
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { ok: false, error: error.message },
+      { status: 500 },
+    );
+  }
+
+  if (!project) {
+    return NextResponse.json(
+      { ok: false, error: "Galeria manual não encontrada." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    customerName,
+    phone,
   });
 }
 

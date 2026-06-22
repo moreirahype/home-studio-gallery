@@ -1556,6 +1556,39 @@ p {
   gap: 8px;
 }
 
+.manual-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.manual-edit-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.manual-edit-fields input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+}
+
+.manual-edit-fields > div {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .danger-button {
   min-height: 48px;
   padding: 0 18px;
@@ -1923,7 +1956,8 @@ p {
   }
 
   .manual-search,
-  .manual-gallery-card dl {
+  .manual-gallery-card dl,
+  .manual-edit-fields {
     grid-template-columns: 1fr;
   }
 
