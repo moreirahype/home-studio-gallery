@@ -1,6 +1,7 @@
 import { reportGallerySaleToBi } from "@/lib/home-studio-bi";
 import { startProjectGeneration } from "@/lib/generation";
 import { getPayment, type MercadoPagoPayment } from "@/lib/mercado-pago";
+import { reportMetaPurchase } from "@/lib/meta-conversions";
 import {
   DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
   getFirstExtraAmountCentsFromPricingBaseAmountCents,
@@ -51,7 +52,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, project_id, status, bi_reported_at, projects(customer_name, phone, paid_amount_cents)",
+      "id, project_id, status, bi_reported_at, projects(customer_name, phone, paid_amount_cents, gallery_token)",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -82,6 +83,9 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     .select("kind, amount_cents, metadata")
     .eq("order_id", order.id);
   const orderItems = (items ?? []) as OrderItem[];
+  const project = Array.isArray(order.projects)
+    ? order.projects[0]
+    : order.projects;
   const photoIds = orderItems.flatMap((item) =>
     item.kind === "photos" ? (item.metadata.photoIds ?? []) : [],
   );
@@ -151,15 +155,34 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
 
   let biReported = Boolean(order.bi_reported_at);
   let biReportError: string | undefined;
+  let metaReported = false;
+  let metaReportError: string | undefined;
+  const totalUpsellCents = orderItems.reduce(
+    (sum, item) => sum + item.amount_cents,
+    0,
+  );
+
+  if (totalUpsellCents > 0) {
+    try {
+      await reportMetaPurchase({
+        eventId: `mp-${payment.id}-${order.id}`,
+        value: totalUpsellCents / 100,
+        customerName: project?.customer_name ?? "Cliente",
+        phone: project?.phone ?? "",
+        email: payment.payer?.email,
+        eventSourceUrl: project?.gallery_token
+          ? `${process.env.APP_URL ?? "https://home-studio-gallery.vercel.app"}/g/${project.gallery_token}`
+          : undefined,
+        contentIds: orderItems.map((item) => `gallery-${item.kind}`),
+      });
+      metaReported = true;
+    } catch (error) {
+      metaReportError =
+        error instanceof Error ? error.message : "Falha desconhecida na Meta.";
+    }
+  }
 
   if (!biReported) {
-    const totalUpsellCents = orderItems.reduce(
-      (sum, item) => sum + item.amount_cents,
-      0,
-    );
-    const project = Array.isArray(order.projects)
-      ? order.projects[0]
-      : order.projects;
     const { data: attribution } = await supabase
       .from("projects")
       .select(
@@ -207,5 +230,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     orderId: order.id,
     biReported,
     biReportError,
+    metaReported,
+    metaReportError,
   };
 }

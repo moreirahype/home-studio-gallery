@@ -199,6 +199,7 @@ export function Gallery({
   const [creatingPix, setCreatingPix] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
+  const [savingAllFiles, setSavingAllFiles] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [manualReleaseOpen, setManualReleaseOpen] = useState(false);
   const [manualPassword, setManualPassword] = useState("");
@@ -277,6 +278,9 @@ export function Gallery({
   const videoPrice = videoAdded ? getVideoPrice(videoPhotoIds.length || 1) : 0;
   const checkoutAmount =
     pricing.dueNow + videoPrice;
+  const unlockedVideoCount =
+    (videoAccess?.url ? 1 : 0) + (videoAccess?.clips?.length ?? 0);
+  const unlockedFileCount = downloadLinks.length + unlockedVideoCount;
 
   const refreshAccess = useCallback(async () => {
     if (token === "demo") return;
@@ -476,6 +480,52 @@ export function Gallery({
     } finally {
       setSavingPhotoId(null);
     }
+  }
+
+  function downloadDesktopFile(url: string, fileName: string) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  async function downloadAllUnlockedFiles() {
+    if (isMobileDevice || savingAllFiles) return;
+
+    const files = [
+      ...downloadLinks.map((download) => ({
+        url: download.url,
+        fileName: `home-studio-foto-${String(download.number).padStart(
+          2,
+          "0",
+        )}.jpg`,
+      })),
+      ...(videoAccess?.url
+        ? [
+            {
+              url: videoAccess.url,
+              fileName: "home-studio-video.mp4",
+            },
+          ]
+        : []),
+      ...(videoAccess?.clips ?? []).map((clip) => ({
+        url: clip.url,
+        fileName: `home-studio-video-${String(clip.number).padStart(
+          2,
+          "0",
+        )}.mp4`,
+      })),
+    ];
+
+    setSavingAllFiles(true);
+    for (const file of files) {
+      downloadDesktopFile(file.url, file.fileName);
+      await new Promise((resolve) => window.setTimeout(resolve, 220));
+    }
+    setSavingAllFiles(false);
   }
 
   function approveTestPayment() {
@@ -712,6 +762,16 @@ export function Gallery({
             </div>
           </div>
           <div className="owned-actions">
+            {!isMobileDevice && unlockedFileCount > 1 && (
+              <button
+                className="primary-button"
+                disabled={savingAllFiles}
+                onClick={() => void downloadAllUnlockedFiles()}
+                type="button"
+              >
+                {savingAllFiles ? "Baixando..." : "Baixar tudo"}
+              </button>
+            )}
             {downloadLinks.map((download) => (
               <button
                 className="secondary-button"
