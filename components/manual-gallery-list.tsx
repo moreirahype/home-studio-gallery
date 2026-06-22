@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { formatBrazilianMobile } from "@/lib/phone";
+
 type ManualGallery = {
   id: string;
   customerName: string | null;
@@ -232,6 +234,9 @@ export function ManualGalleryList() {
                       Telefone
                       <input
                         inputMode="tel"
+                        onBlur={() =>
+                          setEditPhone(formatBrazilianMobile(editPhone))
+                        }
                         onChange={(event) => setEditPhone(event.target.value)}
                         value={editPhone}
                       />

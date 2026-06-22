@@ -6,6 +6,10 @@ import {
   galleryExpiresAt,
 } from "@/lib/gallery-expiration";
 import { createWatermarkedPreview } from "@/lib/photo-processing";
+import {
+  formatBrazilianMobile,
+  normalizeBrazilianMobile,
+} from "@/lib/phone";
 import { getPricingBaseAmountCentsFromFirstExtraAmountCents } from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -28,10 +32,6 @@ function parseNonNegativeMoney(value: FormDataEntryValue | null, fallback: numbe
 function parseInteger(value: FormDataEntryValue | null, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.round(parsed) : fallback;
-}
-
-function normalizePhone(value: FormDataEntryValue | null) {
-  return String(value ?? "").replace(/\D/g, "");
 }
 
 function buildGalleryUrl(token: string, origin: string) {
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       return {
         id: project.id,
         customerName: project.customer_name,
-        phone: project.phone,
+        phone: formatBrazilianMobile(project.phone),
         paidAmount: Number(project.paid_amount_cents ?? 0) / 100,
         includedPhotos: project.included_photos,
         generationCount: project.generation_count,
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
   }
 
   const customerName = String(formData.get("customerName") ?? "").trim();
-  const phone = normalizePhone(formData.get("phone"));
+  const phone = normalizeBrazilianMobile(String(formData.get("phone") ?? ""));
 
   if (customerName.length < 2) {
     return NextResponse.json(
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (phone.length < 10) {
+  if (!phone) {
     return NextResponse.json(
       { ok: false, error: "Informe um telefone válido do cliente." },
       { status: 400 },
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     Math.max(0, parseInteger(formData.get("includedPhotos"), 1)),
   );
   const firstExtraAmountCents = Math.round(
-    parseMoney(formData.get("firstExtraAmount"), 9.9) * 100,
+    parseMoney(formData.get("firstExtraAmount"), 7.9) * 100,
   );
   const pricingBaseAmountCents =
     getPricingBaseAmountCentsFromFirstExtraAmountCents({
@@ -329,7 +329,7 @@ export async function PATCH(request: NextRequest) {
     phone?: string;
   };
   const customerName = body.customerName?.trim() ?? "";
-  const phone = String(body.phone ?? "").replace(/\D/g, "");
+  const phone = normalizeBrazilianMobile(body.phone);
 
   if (!body.projectId) {
     return NextResponse.json(
@@ -345,7 +345,7 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  if (phone.length < 10) {
+  if (!phone) {
     return NextResponse.json(
       { ok: false, error: "Informe um telefone válido do cliente." },
       { status: 400 },
@@ -378,7 +378,7 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     customerName,
-    phone,
+    phone: formatBrazilianMobile(phone),
   });
 }
 

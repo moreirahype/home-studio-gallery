@@ -17,6 +17,8 @@ type OrderItem = {
     photoIds?: string[];
     videoPhotoIds?: string[];
     repeatShootId?: string;
+    fbp?: string;
+    fbc?: string;
   };
 };
 
@@ -161,6 +163,9 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     (sum, item) => sum + item.amount_cents,
     0,
   );
+  const metaTracking = orderItems.find(
+    (item) => item.metadata.fbp || item.metadata.fbc,
+  )?.metadata;
 
   if (totalUpsellCents > 0) {
     try {
@@ -174,9 +179,16 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
           ? `${process.env.APP_URL ?? "https://home-studio-gallery.vercel.app"}/g/${project.gallery_token}`
           : undefined,
         contentIds: orderItems.map((item) => `gallery-${item.kind}`),
+        fbp: metaTracking?.fbp,
+        fbc: metaTracking?.fbc,
       });
       metaReported = true;
     } catch (error) {
+      console.error("Falha ao registrar Purchase na Meta.", {
+        paymentId: String(payment.id),
+        orderId: order.id,
+        error,
+      });
       metaReportError =
         error instanceof Error ? error.message : "Falha desconhecida na Meta.";
     }

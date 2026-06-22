@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 
+import { formatBrazilianMobile } from "@/lib/phone";
+
 const MAX_MANUAL_UPLOAD_BYTES = 3.4 * 1024 * 1024;
 
 async function optimizeManualPhoto(file: File, targetBytes: number) {
@@ -42,6 +44,7 @@ async function optimizeManualPhoto(file: File, targetBytes: number) {
 }
 
 export function ManualGalleryForm() {
+  const [firstExtraAmount, setFirstExtraAmount] = useState("7.90");
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("Criando galeria...");
   const [error, setError] = useState("");
@@ -139,7 +142,12 @@ export function ManualGalleryForm() {
               <input
                 inputMode="tel"
                 name="phone"
-                placeholder="Ex: 32991997096"
+                onBlur={(event) => {
+                  event.currentTarget.value = formatBrazilianMobile(
+                    event.currentTarget.value,
+                  );
+                }}
+                placeholder="Ex: (32) 99199-7096"
                 required
               />
             </label>
@@ -148,11 +156,13 @@ export function ManualGalleryForm() {
           <label>
             Atendente das vendas da galeria
             <select defaultValue="default" name="attendantMode">
-              <option value="default">Automático: Galeria + valor da 1ª extra</option>
+              <option value="default">
+                Autom&aacute;tico: Galeria {firstExtraAmount || "XX"}
+              </option>
               <option value="sheila">Sheila</option>
             </select>
             <small>
-              O automático ficará como, por exemplo, Galeria 9.90.
+              O nome acompanhar&#225; o valor definido para a 1&ordf; foto extra.
             </small>
           </label>
 
@@ -183,12 +193,13 @@ export function ManualGalleryForm() {
             <label>
               1ª foto extra
               <input
-                defaultValue="9.90"
                 min="0.01"
                 name="firstExtraAmount"
+                onChange={(event) => setFirstExtraAmount(event.target.value)}
                 required
                 step="0.01"
                 type="number"
+                value={firstExtraAmount}
               />
             </label>
           </div>

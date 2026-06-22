@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin();
+  const metaTracking = {
+    fbp: request.cookies.get("_fbp")?.value,
+    fbc: request.cookies.get("_fbc")?.value,
+  };
   let { data: project, error: projectError } = await supabase
     .from("projects")
     .select(
@@ -187,7 +191,7 @@ export async function POST(request: NextRequest) {
       description: "Fotos adicionais",
       quantity: selectedPhotoIds.length,
       amount_cents: photoAmountCents,
-      metadata: { photoIds: selectedPhotoIds },
+      metadata: { photoIds: selectedPhotoIds, ...metaTracking },
     });
   }
   if (videoAmountCents > 0) {
@@ -198,7 +202,7 @@ export async function POST(request: NextRequest) {
         videoPhotoIds.length === 1 ? "Vídeo da foto" : "Vídeos das fotos",
       quantity: videoPhotoIds.length,
       amount_cents: videoAmountCents,
-      metadata: { videoPhotoIds },
+      metadata: { videoPhotoIds, ...metaTracking },
     });
   }
 

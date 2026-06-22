@@ -9,6 +9,8 @@ type MetaPurchaseEvent = {
   email?: string | null;
   eventSourceUrl?: string;
   contentIds?: string[];
+  fbp?: string | null;
+  fbc?: string | null;
 };
 
 function normalizeHashInput(value?: string | null) {
@@ -23,7 +25,12 @@ function sha256(value?: string | null) {
 }
 
 function sha256Phone(value?: string | null) {
-  const digits = value?.replace(/\D/g, "");
+  const localDigits = value?.replace(/\D/g, "");
+  const digits = localDigits
+    ? localDigits.startsWith("55")
+      ? localDigits
+      : `55${localDigits}`
+    : undefined;
   return sha256(digits);
 }
 
@@ -44,6 +51,8 @@ export async function reportMetaPurchase({
   email,
   eventSourceUrl,
   contentIds = ["home-studio-gallery"],
+  fbp,
+  fbc,
 }: MetaPurchaseEvent) {
   const pixelId = process.env.META_PIXEL_ID;
   const accessToken = process.env.META_ACCESS_TOKEN;
@@ -76,6 +85,8 @@ export async function reportMetaPurchase({
               fn: sha256(firstName),
               ln: sha256(lastName),
               external_id: sha256(eventId),
+              ...(fbp ? { fbp } : {}),
+              ...(fbc ? { fbc } : {}),
             },
             custom_data: {
               currency,

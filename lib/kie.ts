@@ -24,7 +24,7 @@ export function getKieImageModel() {
   return (
     process.env.KIE_IMAGE_MODEL ??
     process.env.KIE_MODEL ??
-    "gpt-image-2-image-to-image"
+    "nano-banana-2"
   );
 }
 
@@ -48,13 +48,13 @@ STRICT IDENTITY LOCK:
 - Change only clothing, environment, lighting, pose and styling as needed for the requested theme.
 - Client theme/context: ${contextFinal}`;
 
-  if (model === "nano-banana-pro") {
+  if (["nano-banana-pro", "nano-banana-2"].includes(model)) {
     return {
       prompt: finalPrompt,
       image_input: [sourceImageUrl],
       aspect_ratio: "auto",
       resolution: "1K",
-      output_format: "png",
+      output_format: model === "nano-banana-2" ? "jpg" : "png",
     };
   }
 

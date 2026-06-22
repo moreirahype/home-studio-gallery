@@ -291,13 +291,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const metaTracking = {
+    fbp: request.cookies.get("_fbp")?.value,
+    fbc: request.cookies.get("_fbc")?.value,
+  };
   const { error: itemError } = await supabase.from("order_items").insert({
     order_id: order.id,
     kind: "new_shoot",
     description: "Novo ensaio",
     quantity: 1,
     amount_cents: paidAmountCents,
-    metadata: { repeatShootId: requestId },
+    metadata: { repeatShootId: requestId, ...metaTracking },
   });
 
   if (itemError) {
