@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   const phone = String(formData.get("phone") ?? "").replace(/\D/g, "") || null;
   const supabase = getSupabaseAdmin();
 
-  const { error: projectError } = await supabase.from("projects").insert({
+  const projectPayload = {
     id: projectId,
     gallery_token: galleryToken,
     customer_name: customerName,
@@ -84,7 +84,46 @@ export async function POST(request: NextRequest) {
     generation_count: files.length,
     bi_attendant_name: `Galeria ${(firstExtraAmountCents / 100).toFixed(2)}`,
     status: "ready",
-  });
+  };
+  let compatibleProjectPayload = projectPayload;
+  let { error: projectError } = await supabase
+    .from("projects")
+    .insert(compatibleProjectPayload);
+
+  if (projectError?.message.includes("pricing_base_amount_cents")) {
+    const { pricing_base_amount_cents: ignored, ...legacyPricingPayload } =
+      compatibleProjectPayload;
+    void ignored;
+    compatibleProjectPayload = legacyPricingPayload as typeof projectPayload;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(compatibleProjectPayload);
+    projectError = fallbackInsert.error;
+  }
+
+  if (projectError?.message.includes("bi_attendant_name")) {
+    const { bi_attendant_name: ignored, ...legacyAttributionPayload } =
+      compatibleProjectPayload;
+    void ignored;
+    compatibleProjectPayload = legacyAttributionPayload as typeof projectPayload;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(compatibleProjectPayload);
+    projectError = fallbackInsert.error;
+  }
+
+  if (
+    projectError?.code === "42703" ||
+    projectError?.message.includes("generation_count")
+  ) {
+    const { generation_count: ignored, ...legacyGenerationPayload } =
+      compatibleProjectPayload;
+    void ignored;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(legacyGenerationPayload);
+    projectError = fallbackInsert.error;
+  }
 
   if (projectError) {
     return NextResponse.json(
