@@ -71,44 +71,16 @@ async function markManualRelease({
   projectId: string;
   photoIds: string[];
 }) {
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      project_id: projectId,
-      amount_cents: 0,
-      status: "paid",
-      paid_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  if (orderError || !order) {
-    throw new Error(orderError?.message ?? "Falha ao registrar liberação manual.");
-  }
-
-  const { error: itemError } = await supabase.from("order_items").insert({
-    order_id: order.id,
-    kind: "photos",
-    description: "Liberação manual",
-    quantity: photoIds.length,
-    amount_cents: 0,
-    metadata: { photoIds, manual: true },
-  });
-
-  if (itemError) {
-    throw new Error(itemError.message);
-  }
-
-  const { error: photosError } = await supabase.from("order_photos").upsert(
+  const { error } = await supabase.from("project_included_photos").upsert(
     photoIds.map((photoId) => ({
-      order_id: order.id,
+      project_id: projectId,
       photo_id: photoId,
     })),
-    { onConflict: "order_id,photo_id" },
+    { onConflict: "project_id,photo_id" },
   );
 
-  if (photosError) {
-    throw new Error(photosError.message);
+  if (error) {
+    throw new Error(error.message);
   }
 }
 
