@@ -454,7 +454,8 @@ export function Gallery({
           photoId: photo.photoId,
           number: photo.number,
           url: photo.downloadUrl as string,
-        })),
+        }))
+        .sort((first, second) => first.number - second.number),
     );
     if (typeof result.photoCredit === "number") {
       setPhotoCredit(result.photoCredit);
@@ -732,7 +733,11 @@ export function Gallery({
       return;
     }
 
-    setDownloadLinks(result.downloads);
+    setDownloadLinks(
+      [...result.downloads].sort(
+        (first, second) => first.number - second.number,
+      ),
+    );
     setUnlockedPhotoIds((current) => [
       ...new Set([...current, ...result.downloads!.map((item) => item.photoId)]),
     ]);

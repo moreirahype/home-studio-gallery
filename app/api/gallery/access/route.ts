@@ -117,6 +117,7 @@ export async function GET(request: NextRequest) {
         .eq("project_id", project.id)
         .eq("status", "ready")
         .in("id", [...unlockedPhotoIds])
+        .order("position", { ascending: true })
     : { data: [], error: null };
 
   if (photosError) {

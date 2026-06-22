@@ -196,7 +196,8 @@ export async function POST(request: NextRequest) {
     .select("id, position, original_path")
     .eq("project_id", project.id)
     .in("id", uniquePhotoIds)
-    .eq("status", "ready");
+    .eq("status", "ready")
+    .order("position", { ascending: true });
 
   if (error || !photos || photos.length !== uniquePhotoIds.length) {
     return NextResponse.json(
