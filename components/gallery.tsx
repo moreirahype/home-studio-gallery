@@ -694,14 +694,18 @@ export function Gallery({
           </div>
           <div className="owned-actions">
             {downloadLinks.map((download) => (
-              <a
+              <button
                 className="secondary-button"
-                download
-                href={download.url}
                 key={download.photoId}
+                onClick={() => void savePhotoToDevice(download)}
+                type="button"
               >
-                Baixar foto {String(download.number).padStart(2, "0")}
-              </a>
+                {savingPhotoId === download.photoId
+                  ? "Abrindo..."
+                  : isMobileDevice
+                    ? `Salvar foto ${String(download.number).padStart(2, "0")}`
+                    : `Baixar foto ${String(download.number).padStart(2, "0")}`}
+              </button>
             ))}
             {videoAccess?.status === "generating" && (
               <span className="file-status">Vídeo em produção...</span>
