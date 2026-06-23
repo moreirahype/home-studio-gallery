@@ -400,6 +400,12 @@ export function Gallery({
   )}`;
   const hasUnlockedPurchases =
     unlockedPhotoIds.length > 0 || photoCredit > offer.paidAmount + 0.005;
+  const selectedUnlockedCount = selected.filter((photoId) =>
+    unlockedPhotoIds.includes(photoId),
+  ).length;
+  const selectedLockedCount = selected.length - selectedUnlockedCount;
+  const selectionOnlyUnlocked =
+    selected.length > 0 && selectedLockedCount === 0;
   const selectionIsIncluded = selected.length > 0 && pricing.dueNow === 0;
   const videoPrice = videoAdded ? getVideoPrice(videoPhotoIds.length || 1) : 0;
   const checkoutAmount =
@@ -507,8 +513,6 @@ export function Gallery({
   }, [refreshAccess, videoAccess?.status]);
 
   function togglePhoto(id: string) {
-    if (unlockedPhotoIds.includes(id)) return;
-
     setSelected((current) =>
       current.includes(id)
         ? current.filter((photoId) => photoId !== id)
@@ -528,6 +532,7 @@ export function Gallery({
     if (!selected.length) return;
     setTestPaymentApproved(false);
     setPixReady(false);
+    setVideoAdded(selectionOnlyUnlocked);
     setVideoPhotoIds(selected.slice(0, 1));
     setVideoPickerOpen(false);
     setCheckoutError("");
@@ -1212,9 +1217,25 @@ export function Gallery({
         <div className="checkout-summary">
           <div className="checkout-count">
             <span>
-              {selected.length
-                ? `${selected.length} ${selected.length === 1 ? "foto selecionada" : "fotos selecionadas"}`
-                : "Nenhuma foto selecionada"}
+              {selectionOnlyUnlocked
+                ? `${selectedUnlockedCount} ${
+                    selectedUnlockedCount === 1
+                      ? "foto liberada selecionada"
+                      : "fotos liberadas selecionadas"
+                  }`
+                : selectedUnlockedCount > 0
+                  ? `${selectedLockedCount} ${
+                      selectedLockedCount === 1 ? "nova" : "novas"
+                    } + ${selectedUnlockedCount} ${
+                      selectedUnlockedCount === 1 ? "liberada" : "liberadas"
+                    }`
+                  : selected.length
+                    ? `${selected.length} ${
+                        selected.length === 1
+                          ? "foto selecionada"
+                          : "fotos selecionadas"
+                      }`
+                    : "Nenhuma foto selecionada"}
             </span>
             {targetPhotoCount > offer.includedPhotos &&
               pricing.discount > 0 && (
@@ -1226,12 +1247,16 @@ export function Gallery({
           <div className="checkout-pricing">
             <strong>
               {selectionIsIncluded
-                ? "Incluída"
+                ? selectionOnlyUnlocked
+                  ? "Liberada"
+                  : "Incluída"
                 : money.format(pricing.dueNow)}
             </strong>
             {selected.length > 0 && (
               <span>
-                {selectionIsIncluded ? (
+                {selectionOnlyUnlocked ? (
+                  <>Pronta para transformar em vídeo ou baixar</>
+                ) : selectionIsIncluded ? (
                   <>
                     {offer.includedPhotos === 1
                       ? "1 foto já paga"
@@ -1256,6 +1281,8 @@ export function Gallery({
           <span>
             {testPaymentApproved
               ? "Baixar fotos liberadas"
+              : selectionOnlyUnlocked
+              ? "Transformar em vídeo"
               : selectionIsIncluded
               ? selected.length === 1
                 ? "Baixar foto incluída"
@@ -1564,7 +1591,9 @@ export function Gallery({
                     {[
                       pricing.dueNow > 0
                         ? `Fotos adicionais: ${money.format(pricing.dueNow)}`
-                        : "Fotos escolhidas já incluídas",
+                        : selectionOnlyUnlocked
+                          ? "Fotos já liberadas"
+                          : "Fotos escolhidas já incluídas",
                       videoAdded && videoPrice > 0
                         ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "vídeo" : "vídeos"}: ${money.format(videoPrice)}`
                         : null,
