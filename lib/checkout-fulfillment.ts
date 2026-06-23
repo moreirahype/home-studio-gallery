@@ -22,6 +22,28 @@ type OrderItem = {
   };
 };
 
+type SettlementOrder = {
+  id: string;
+  project_id: string;
+  status: string;
+  bi_reported_at: string | null;
+  meta_reported_at?: string | null;
+  projects:
+    | {
+        customer_name: string | null;
+        phone: string | null;
+        paid_amount_cents: number | null;
+        gallery_token: string | null;
+      }
+    | {
+        customer_name: string | null;
+        phone: string | null;
+        paid_amount_cents: number | null;
+        gallery_token: string | null;
+      }[]
+    | null;
+};
+
 function isPaid(payment: MercadoPagoPayment) {
   return (
     payment.status === "approved" ||
@@ -51,13 +73,27 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
   if (!orderId) return { paid: false, reason: "missing_external_reference" };
 
   const supabase = getSupabaseAdmin();
-  const { data: order } = await supabase
+  let supportsMetaReportedAt = true;
+  let orderQuery = await supabase
     .from("orders")
     .select(
-      "id, project_id, status, bi_reported_at, projects(customer_name, phone, paid_amount_cents, gallery_token)",
+      "id, project_id, status, bi_reported_at, meta_reported_at, projects(customer_name, phone, paid_amount_cents, gallery_token)",
     )
     .eq("id", orderId)
     .maybeSingle();
+
+  if (orderQuery.error?.message.includes("meta_reported_at")) {
+    supportsMetaReportedAt = false;
+    orderQuery = await supabase
+      .from("orders")
+      .select(
+        "id, project_id, status, bi_reported_at, projects(customer_name, phone, paid_amount_cents, gallery_token)",
+      )
+      .eq("id", orderId)
+      .maybeSingle();
+  }
+
+  const order = orderQuery.data as SettlementOrder | null;
 
   if (!order) return { paid: false, reason: "order_not_found" };
 
@@ -157,7 +193,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
 
   let biReported = Boolean(order.bi_reported_at);
   let biReportError: string | undefined;
-  let metaReported = false;
+  let metaReported = Boolean(order.meta_reported_at);
   let metaReportError: string | undefined;
   const totalUpsellCents = orderItems.reduce(
     (sum, item) => sum + item.amount_cents,
@@ -167,7 +203,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     (item) => item.metadata.fbp || item.metadata.fbc,
   )?.metadata;
 
-  if (totalUpsellCents > 0) {
+  if (totalUpsellCents > 0 && !metaReported) {
     try {
       await reportMetaPurchase({
         eventId: `mp-${payment.id}-${order.id}`,
@@ -182,6 +218,12 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
         fbp: metaTracking?.fbp,
         fbc: metaTracking?.fbc,
       });
+      if (supportsMetaReportedAt) {
+        await supabase
+          .from("orders")
+          .update({ meta_reported_at: new Date().toISOString() })
+          .eq("id", order.id);
+      }
       metaReported = true;
     } catch (error) {
       console.error("Falha ao registrar Purchase na Meta.", {
