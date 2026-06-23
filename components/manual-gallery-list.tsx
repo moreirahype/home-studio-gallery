@@ -6,6 +6,7 @@ import { formatBrazilianMobile } from "@/lib/phone";
 
 type ManualGallery = {
   id: string;
+  kind: "manual" | "automatic";
   customerName: string | null;
   phone: string | null;
   paidAmount: number;
@@ -186,15 +187,20 @@ export function ManualGalleryList() {
   return (
     <main className="manual-page">
       <section className="manual-panel manual-list-panel">
-        <span className="section-kicker">GALERIAS MANUAIS</span>
-        <h1>Links criados manualmente</h1>
+        <span className="section-kicker">GALERIAS CRIADAS</span>
+        <h1>Links manuais e automáticos</h1>
         <p>
           Consulte por nome ou telefone, copie o link do cliente e acompanhe a
           expiração de 7 dias.
         </p>
-        <a className="manual-list-link" href="/manual">
-          Criar nova galeria manual
-        </a>
+        <div className="manual-page-actions">
+          <a className="manual-action-link" href="/manual">
+            Criar com fotos prontas
+          </a>
+          <a className="manual-action-link" href="/automatico">
+            Criar gerando com IA
+          </a>
+        </div>
 
         <form className="manual-search" onSubmit={searchGalleries}>
           <input
@@ -210,7 +216,7 @@ export function ManualGalleryList() {
         {error && <p className="form-error">{error}</p>}
         {loading && <p className="manual-empty">Carregando galerias...</p>}
         {!loading && !galleries.length && (
-          <p className="manual-empty">Nenhuma galeria manual encontrada.</p>
+          <p className="manual-empty">Nenhuma galeria encontrada.</p>
         )}
 
         <div className="manual-gallery-list">
@@ -220,7 +226,12 @@ export function ManualGalleryList() {
               key={gallery.id}
             >
               <div>
-                <span>{gallery.expired ? "Expirada" : "Ativa"}</span>
+                <div className="manual-card-tags">
+                  <span>{gallery.expired ? "Expirada" : "Ativa"}</span>
+                  <span>
+                    {gallery.kind === "automatic" ? "Automática" : "Manual"}
+                  </span>
+                </div>
                 {editingId === gallery.id ? (
                   <div className="manual-edit-fields">
                     <label>

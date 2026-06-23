@@ -14,17 +14,18 @@ async function optimizeReference(file: File) {
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Nao foi possivel preparar a foto.");
+  if (!context) throw new Error("Não foi possível preparar a foto.");
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/jpeg", 0.86),
   );
-  if (!blob) throw new Error("Nao foi possivel reduzir a foto.");
+  if (!blob) throw new Error("Não foi possível reduzir a foto.");
   return new File([blob], "referencia.jpg", { type: "image/jpeg" });
 }
 
 export function AutoGalleryForm() {
+  const [firstExtraAmount, setFirstExtraAmount] = useState("7.90");
   const [referenceLabel, setReferenceLabel] = useState("Nenhuma foto selecionada");
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("Criando galeria...");
@@ -39,14 +40,14 @@ export function AutoGalleryForm() {
     const reference = formData.get("reference");
 
     setLoading(true);
-    setLoadingLabel("Preparando referencia...");
+    setLoadingLabel("Preparando referência...");
     setError("");
     setGalleryUrl("");
     setTasks(null);
 
     try {
       if (!(reference instanceof File) || !reference.size) {
-        throw new Error("Selecione uma foto de referencia.");
+        throw new Error("Selecione uma foto de referência.");
       }
 
       formData.set("reference", await optimizeReference(reference));
@@ -64,18 +65,19 @@ export function AutoGalleryForm() {
       };
 
       if (!response.ok || !result.ok || !result.galleryUrl) {
-        throw new Error(result.error ?? "Nao foi possivel criar a galeria.");
+        throw new Error(result.error ?? "Não foi possível criar a galeria.");
       }
 
       setGalleryUrl(result.galleryUrl);
       setTasks(result.generationTasks ?? null);
       form.reset();
       setReferenceLabel("Nenhuma foto selecionada");
+      setFirstExtraAmount("7.90");
     } catch (caught) {
       setError(
         caught instanceof Error
           ? caught.message
-          : "Nao foi possivel criar a galeria.",
+          : "Não foi possível criar a galeria.",
       );
     } finally {
       setLoading(false);
@@ -90,27 +92,22 @@ export function AutoGalleryForm() {
   return (
     <main className="manual-page">
       <section className="manual-panel">
-        <span className="section-kicker">GERACAO AUTOMATICA</span>
+        <span className="section-kicker">GERAÇÃO AUTOMÁTICA</span>
         <h1>Criar galeria gerando as fotos</h1>
         <p>
-          Use esta pagina quando quiser criar uma galeria direto por aqui:
-          envie a referencia, descreva o ensaio e a IA ja comeca a gerar.
+          Use esta página quando quiser criar uma galeria direto por aqui:
+          envie a referência, descreva o ensaio e a IA já começa a gerar.
         </p>
-        <a className="manual-list-link" href="/manual">
-          Criar galeria com fotos prontas
-        </a>
+        <div className="manual-page-actions">
+          <a className="manual-action-link primary" href="/manual/galerias">
+            Ver todas as galerias criadas
+          </a>
+          <a className="manual-action-link" href="/manual">
+            Criar galeria com fotos prontas
+          </a>
+        </div>
 
         <form className="manual-form" onSubmit={createGallery}>
-          <label>
-            Senha
-            <input
-              name="password"
-              placeholder="Senha de criacao"
-              required
-              type="password"
-            />
-          </label>
-
           <div className="manual-grid">
             <label>
               Nome do cliente
@@ -133,7 +130,7 @@ export function AutoGalleryForm() {
           </div>
 
           <label className="manual-upload-label">
-            <span>Foto de referencia</span>
+            <span>Foto de referência</span>
             <input
               accept="image/jpeg,image/png,image/webp"
               className="manual-file-input"
@@ -148,7 +145,7 @@ export function AutoGalleryForm() {
               <span className="manual-upload-icon">+</span>
               <span className="manual-upload-copy">
                 <strong>Selecionar foto do cliente</strong>
-                <small>Use uma imagem nitida e com o rosto bem visivel.</small>
+                <small>Use uma imagem nítida e com o rosto bem visível.</small>
               </span>
               <span className="manual-upload-cta">Escolher foto</span>
             </span>
@@ -156,10 +153,10 @@ export function AutoGalleryForm() {
           </label>
 
           <label className="text-field">
-            Descricao do ensaio
+            Descrição do ensaio
             <textarea
               name="contextFinal"
-              placeholder="Ex: ensaio de aniversario de 40 anos com baloes dourados, confetes, bolo e vestido vermelho"
+              placeholder="Ex: ensaio de aniversário de 40 anos com balões dourados, confetes, bolo e vestido vermelho"
               required
               rows={4}
             />
@@ -167,15 +164,18 @@ export function AutoGalleryForm() {
 
           <label>
             Atendente das vendas da galeria
-            <select defaultValue="auto" name="attendantMode">
-              <option value="auto">Galeria + valor da 1a extra</option>
-              <option value="sheila">Sheila + valor da 1a extra</option>
+            <select defaultValue="default" name="attendantMode">
+              <option value="default">Manual {firstExtraAmount || "XX"}</option>
+              <option value="sheila">Sheila {firstExtraAmount || "XX"}</option>
             </select>
+            <small>
+              O valor escolhido será acrescentado ao nome do atendente.
+            </small>
           </label>
 
           <div className="manual-grid three">
             <label>
-              Entrada ja paga
+              Entrada já paga
               <input
                 defaultValue="7.90"
                 min="0"
@@ -186,7 +186,7 @@ export function AutoGalleryForm() {
               />
             </label>
             <label>
-              Fotos incluidas
+              Fotos incluídas
               <input
                 defaultValue="1"
                 max="20"
@@ -212,21 +212,32 @@ export function AutoGalleryForm() {
           </div>
 
           <label>
-            1a foto extra
+            1ª foto extra
             <input
-              defaultValue="7.90"
               min="0.01"
               name="firstExtraAmount"
+              onChange={(event) => setFirstExtraAmount(event.target.value)}
               required
               step="0.01"
               type="number"
+              value={firstExtraAmount}
+            />
+          </label>
+
+          <label>
+            Senha
+            <input
+              name="password"
+              placeholder="Senha de criação"
+              required
+              type="password"
             />
           </label>
 
           {error && <p className="form-error">{error}</p>}
 
           <button className="primary-button" disabled={loading} type="submit">
-            {loading ? loadingLabel : "Criar e gerar galeria"}
+            {loading ? loadingLabel : "Gerar fotos e criar galeria"}
           </button>
         </form>
 
@@ -238,8 +249,8 @@ export function AutoGalleryForm() {
             </a>
             <small>
               {tasks === null
-                ? "Geracao iniciada."
-                : `${tasks} fotos enviadas para geracao.`}
+                ? "Geração iniciada."
+                : `${tasks} fotos enviadas para geração.`}
             </small>
             <button
               className="secondary-button"

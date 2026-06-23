@@ -157,12 +157,14 @@ export function ManualGalleryForm() {
           Suba as imagens finais, configure a oferta e gere uma galeria com
           marca d&apos;água, seleção, Pix e liberação automática.
         </p>
-        <a className="manual-list-link" href="/manual/galerias">
-          Ver galerias manuais criadas
-        </a>
-        <a className="manual-list-link" href="/gerar">
-          Criar galeria gerando com IA
-        </a>
+        <div className="manual-page-actions">
+          <a className="manual-action-link primary" href="/manual/galerias">
+            Ver todas as galerias criadas
+          </a>
+          <a className="manual-action-link" href="/automatico">
+            Criar galeria gerando com IA
+          </a>
+        </div>
 
         <form className="manual-form" onSubmit={createGallery}>
           <div className="manual-grid">

@@ -1,7 +1,7 @@
-import { AutoGalleryForm } from "@/components/auto-gallery-form";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function AutoGalleryPage() {
-  return <AutoGalleryForm />;
+export default function LegacyAutoGalleryPage() {
+  redirect("/automatico");
 }

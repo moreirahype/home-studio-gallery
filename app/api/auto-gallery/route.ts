@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   if (!safeCompare(password, getAdminPassword())) {
     return NextResponse.json(
-      { ok: false, error: "Senha invalida." },
+      { ok: false, error: "Senha inválida." },
       { status: 403 },
     );
   }
@@ -53,14 +53,14 @@ export async function POST(request: NextRequest) {
   const reference = formData.get("reference");
   if (!(reference instanceof File) || !reference.size) {
     return NextResponse.json(
-      { ok: false, error: "Envie uma foto de referencia." },
+      { ok: false, error: "Envie uma foto de referência." },
       { status: 400 },
     );
   }
 
   if (reference.size > 15 * 1024 * 1024) {
     return NextResponse.json(
-      { ok: false, error: "A foto deve ter no maximo 15 MB." },
+      { ok: false, error: "A foto deve ter no máximo 15 MB." },
       { status: 400 },
     );
   }
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
   if (!phone) {
     return NextResponse.json(
-      { ok: false, error: "Informe um telefone valido do cliente." },
+      { ok: false, error: "Informe um telefone válido do cliente." },
       { status: 400 },
     );
   }
@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
       firstExtraAmountCents,
       includedPhotos,
     });
-  const attendantMode = String(formData.get("attendantMode") ?? "auto");
-  const attendantPrefix = attendantMode === "sheila" ? "Sheila" : "Galeria";
+  const attendantMode = String(formData.get("attendantMode") ?? "default");
+  const attendantPrefix = attendantMode === "sheila" ? "Sheila" : "Manual";
   const attendantName = `${attendantPrefix} ${(firstExtraAmountCents / 100).toFixed(2)}`;
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
   if (signedReference.error || !signedReference.data?.signedUrl) {
     await supabase.storage.from("source-images").remove([referencePath]);
     return NextResponse.json(
-      { ok: false, error: "Falha ao preparar a foto de referencia." },
+      { ok: false, error: "Falha ao preparar a foto de referência." },
       { status: 500 },
     );
   }
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : "Falha ao iniciar a geracao.",
+            : "Falha ao iniciar a geração.",
       },
       { status: 502 },
     );
