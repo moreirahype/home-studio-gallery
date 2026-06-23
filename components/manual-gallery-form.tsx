@@ -160,6 +160,9 @@ export function ManualGalleryForm() {
         <a className="manual-list-link" href="/manual/galerias">
           Ver galerias manuais criadas
         </a>
+        <a className="manual-list-link" href="/gerar">
+          Criar galeria gerando com IA
+        </a>
 
         <form className="manual-form" onSubmit={createGallery}>
           <div className="manual-grid">
