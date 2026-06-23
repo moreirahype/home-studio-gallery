@@ -1179,12 +1179,26 @@ export function Gallery({
             >
               <span
                 className="photo-placeholder"
-                style={{
-                  background: displayUrl
-                    ? `center / cover no-repeat url("${displayUrl}")`
-                    : `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
-                }}
-              />
+                style={
+                  displayUrl
+                    ? undefined
+                    : {
+                        background: `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
+                      }
+                }
+              >
+                {displayUrl && (
+                  <img
+                    alt=""
+                    className="photo-image"
+                    decoding="async"
+                    draggable={false}
+                    fetchPriority={photo.number <= 4 ? "high" : "auto"}
+                    loading={photo.number <= 4 ? "eager" : "lazy"}
+                    src={displayUrl}
+                  />
+                )}
+              </span>
               <span className="photo-shade" />
               {!isUnlocked && (
                 <span className="watermark-pattern" aria-hidden="true">

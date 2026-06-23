@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
-import sharp from "sharp";
 import { NextRequest, NextResponse } from "next/server";
 import {
   GALLERY_RETENTION_DAYS,
   galleryExpiresAt,
 } from "@/lib/gallery-expiration";
-import { createWatermarkedPreview } from "@/lib/photo-processing";
+import {
+  createOptimizedOriginal,
+  createWatermarkedPreview,
+} from "@/lib/photo-processing";
 import {
   formatBrazilianMobile,
   normalizeBrazilianMobile,
@@ -261,13 +263,10 @@ export async function POST(request: NextRequest) {
     for (const [index, file] of files.entries()) {
       const position = index + 1;
       const input = Buffer.from(await file.arrayBuffer());
-      const original = await sharp(input)
-        .rotate()
-        .jpeg({ quality: 95, mozjpeg: true })
-        .toBuffer();
+      const original = await createOptimizedOriginal(input);
       const preview = await createWatermarkedPreview(original);
       const originalPath = `${projectId}/${String(position).padStart(2, "0")}.jpg`;
-      const previewPath = `${projectId}/${String(position).padStart(2, "0")}.jpg`;
+      const previewPath = `${projectId}/${String(position).padStart(2, "0")}.webp`;
 
       const [originalUpload, previewUpload] = await Promise.all([
         supabase.storage.from("photo-originals").upload(originalPath, original, {
@@ -275,7 +274,7 @@ export async function POST(request: NextRequest) {
           upsert: true,
         }),
         supabase.storage.from("photo-previews").upload(previewPath, preview, {
-          contentType: "image/jpeg",
+          contentType: "image/webp",
           upsert: true,
         }),
       ]);

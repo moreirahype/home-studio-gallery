@@ -19,14 +19,16 @@ export async function createWatermarkedPreview(
 ) {
   const image = sharp(original).rotate();
   const metadata = await image.metadata();
-  const width = Math.min(metadata.width ?? 1024, 1200);
-  const height = Math.round(
-    width * ((metadata.height ?? 1280) / (metadata.width ?? 1024)),
-  );
+  const sourceWidth = metadata.width ?? 1024;
+  const sourceHeight = metadata.height ?? 1280;
+  const maxSide = 720;
+  const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
   const escapedLabel = escapeXml(label);
-  const columns = Math.max(4, Math.ceil(width / 230));
-  const rows = Math.max(8, Math.ceil(height / 145));
-  const fontSize = Math.max(22, Math.round(width / 30));
+  const columns = Math.max(4, Math.ceil(width / 150));
+  const rows = Math.max(8, Math.ceil(height / 100));
+  const fontSize = Math.max(15, Math.round(width / 22));
   const marks = Array.from({ length: columns * rows }, (_, index) => {
     const column = index % columns;
     const row = Math.floor(index / columns);
@@ -49,8 +51,21 @@ export async function createWatermarkedPreview(
   );
 
   return image
-    .resize({ width, withoutEnlargement: true })
+    .resize({ width, height, fit: "inside", withoutEnlargement: true })
     .composite([{ input: overlay, gravity: "center" }])
-    .jpeg({ quality: 78, mozjpeg: true })
+    .webp({ quality: 52, effort: 4 })
+    .toBuffer();
+}
+
+export async function createOptimizedOriginal(original: Buffer) {
+  return sharp(original)
+    .rotate()
+    .resize({
+      width: 1200,
+      height: 1200,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 84, mozjpeg: true, progressive: true })
     .toBuffer();
 }

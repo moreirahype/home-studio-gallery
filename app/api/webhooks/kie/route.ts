@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getTaskDetails } from "@/lib/kie";
-import { createWatermarkedPreview } from "@/lib/photo-processing";
+import {
+  createOptimizedOriginal,
+  createWatermarkedPreview,
+} from "@/lib/photo-processing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { unauthorized } from "@/lib/http";
 import { safeCompare } from "@/lib/security";
@@ -260,17 +263,18 @@ export async function POST(request: NextRequest) {
       throw new Error(`Download respondeu HTTP ${imageResponse.status}.`);
     }
 
-    const original = Buffer.from(await imageResponse.arrayBuffer());
+    const downloadedImage = Buffer.from(await imageResponse.arrayBuffer());
+    const original = await createOptimizedOriginal(downloadedImage);
     const preview = await createWatermarkedPreview(original);
-    const originalPath = `${photo.project_id}/${photo.position}.png`;
-    const previewPath = `${photo.project_id}/${photo.position}.jpg`;
+    const originalPath = `${photo.project_id}/${photo.position}.jpg`;
+    const previewPath = `${photo.project_id}/${photo.position}.webp`;
     const [originalUpload, previewUpload] = await Promise.all([
       supabase.storage.from("photo-originals").upload(originalPath, original, {
-        contentType: imageResponse.headers.get("content-type") ?? "image/png",
+        contentType: "image/jpeg",
         upsert: true,
       }),
       supabase.storage.from("photo-previews").upload(previewPath, preview, {
-        contentType: "image/jpeg",
+        contentType: "image/webp",
         upsert: true,
       }),
     ]);
