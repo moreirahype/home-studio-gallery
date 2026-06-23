@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (order.mercado_pago_payment_id) {
-    await settleMercadoPagoPayment(order.mercado_pago_payment_id);
-  }
+  const settlement = order.mercado_pago_payment_id
+    ? await settleMercadoPagoPayment(order.mercado_pago_payment_id)
+    : null;
 
   const { data: refreshed } = await supabase
     .from("orders")
@@ -47,5 +47,7 @@ export async function POST(request: NextRequest) {
     ok: true,
     paid: refreshed?.status === "paid",
     status: refreshed?.status ?? order.status,
+    metaReported: settlement?.paid ? settlement.metaReported : undefined,
+    metaReportError: settlement?.paid ? settlement.metaReportError : undefined,
   });
 }

@@ -293,9 +293,11 @@ export async function POST(request: NextRequest) {
       : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS);
   const generationCount =
     savedLead?.generation_count ?? parsed.data.generationCount;
-  const galleryAttendant = defaultGalleryAttendant({
-    amount: (firstExtraAmountCents ?? paidAmountCents) / 100,
-  });
+  const galleryAttendant =
+    savedLead?.bi_attendant_name?.trim() ||
+    defaultGalleryAttendant({
+      amount: (firstExtraAmountCents ?? paidAmountCents) / 100,
+    });
   const generationPrompts = buildGenerationPrompts(contextFinal).slice(
     0,
     generationCount,
