@@ -515,6 +515,10 @@ p {
   isolation: isolate;
 }
 
+.photo-card.unlocked {
+  cursor: default;
+}
+
 .photo-card::after {
   position: absolute;
   z-index: 3;

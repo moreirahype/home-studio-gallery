@@ -507,6 +507,8 @@ export function Gallery({
   }, [refreshAccess, videoAccess?.status]);
 
   function togglePhoto(id: string) {
+    if (unlockedPhotoIds.includes(id)) return;
+
     setSelected((current) =>
       current.includes(id)
         ? current.filter((photoId) => photoId !== id)
@@ -515,7 +517,11 @@ export function Gallery({
   }
 
   function selectAll() {
-    setSelected(photos.map((photo) => photo.id));
+    setSelected(
+      photos
+        .filter((photo) => !unlockedPhotoIds.includes(photo.id))
+        .map((photo) => photo.id),
+    );
   }
 
   function handlePrimaryAction() {
@@ -1153,9 +1159,15 @@ export function Gallery({
 
           return (
             <button
-              aria-label={`${isSelected ? "Remover" : "Selecionar"} foto ${photo.number}`}
+              aria-label={
+                isUnlocked
+                  ? `Foto ${photo.number} liberada`
+                  : `${isSelected ? "Remover" : "Selecionar"} foto ${photo.number}`
+              }
               aria-pressed={isSelected}
-              className={`photo-card ${isSelected ? "selected" : ""}`}
+              className={`photo-card ${isSelected ? "selected" : ""} ${
+                isUnlocked ? "unlocked" : ""
+              }`}
               key={photo.id}
               onClick={() => togglePhoto(photo.id)}
               type="button"
