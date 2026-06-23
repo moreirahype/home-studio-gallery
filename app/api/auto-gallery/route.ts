@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
       includedPhotos,
     });
   const attendantMode = String(formData.get("attendantMode") ?? "default");
-  const attendantPrefix = attendantMode === "sheila" ? "Sheila" : "Manual";
+  const attendantPrefix =
+    attendantMode === "sheila" ? "Sheila Turbo" : "Manual Turbo";
   const attendantName = `${attendantPrefix} ${(firstExtraAmountCents / 100).toFixed(2)}`;
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
