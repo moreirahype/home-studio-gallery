@@ -327,6 +327,12 @@ export async function POST(request: NextRequest) {
         process.env.APP_URL ?? request.nextUrl.origin,
       ).toString(),
     });
+    const transactionData = payment.point_of_interaction?.transaction_data;
+    if (!transactionData?.qr_code && !transactionData?.ticket_url) {
+      throw new Error(
+        "O Mercado Pago criou o pagamento, mas não devolveu o Pix Copia e Cola. Confira se a chave Pix está habilitada na conta produtiva.",
+      );
+    }
 
     await supabase
       .from("orders")
@@ -347,10 +353,9 @@ export async function POST(request: NextRequest) {
       amount: paidAmountCents / 100,
       photoCount,
       includedPhotos,
-      qrCode: payment.point_of_interaction?.transaction_data?.qr_code,
-      qrCodeBase64:
-        payment.point_of_interaction?.transaction_data?.qr_code_base64,
-      ticketUrl: payment.point_of_interaction?.transaction_data?.ticket_url,
+      qrCode: transactionData.qr_code,
+      qrCodeBase64: transactionData.qr_code_base64,
+      ticketUrl: transactionData.ticket_url,
       status: "pending_payment",
     });
   } catch (paymentError) {

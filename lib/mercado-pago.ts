@@ -57,11 +57,23 @@ async function mercadoPagoFetch<T>(path: string, init?: RequestInit) {
   const body = (await response.json().catch(() => ({}))) as T & {
     message?: string;
     error?: string;
+    cause?: { code?: number; description?: string }[];
   };
 
   if (!response.ok) {
+    const cause = body.cause?.[0];
+    if (
+      cause?.code === 13253 ||
+      cause?.description?.includes("Collector user without key enabled")
+    ) {
+      throw new Error(
+        "O Mercado Pago recusou o Pix porque a conta vendedora ainda não tem uma chave Pix habilitada. Ative uma chave Pix na conta produtiva do Mercado Pago e tente novamente.",
+      );
+    }
+
     throw new Error(
-      body.message ??
+      cause?.description ??
+        body.message ??
         body.error ??
         `Mercado Pago respondeu HTTP ${response.status}.`,
     );
