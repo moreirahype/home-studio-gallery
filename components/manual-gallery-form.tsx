@@ -45,6 +45,9 @@ async function optimizeManualPhoto(file: File, targetBytes: number) {
 
 export function ManualGalleryForm() {
   const [firstExtraAmount, setFirstExtraAmount] = useState("7.90");
+  const [selectedPhotosLabel, setSelectedPhotosLabel] = useState(
+    "Nenhuma foto selecionada",
+  );
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("Criando galeria...");
   const [error, setError] = useState("");
@@ -63,6 +66,11 @@ export function ManualGalleryForm() {
       const files = formData
         .getAll("photos")
         .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+
+      if (!files.length) {
+        throw new Error("Selecione pelo menos uma foto para criar a galeria.");
+      }
+
       const targetBytes = Math.min(
         800 * 1024,
         Math.floor(MAX_MANUAL_UPLOAD_BYTES / Math.max(1, files.length)),
@@ -102,6 +110,7 @@ export function ManualGalleryForm() {
 
       setGalleryUrl(result.galleryUrl);
       form.reset();
+      setSelectedPhotosLabel("Nenhuma foto selecionada");
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -116,6 +125,27 @@ export function ManualGalleryForm() {
   async function copyGalleryUrl() {
     if (!galleryUrl) return;
     await navigator.clipboard.writeText(galleryUrl);
+  }
+
+  function updateSelectedPhotosLabel(files: FileList | null) {
+    const selectedFiles = Array.from(files ?? []);
+    if (!selectedFiles.length) {
+      setSelectedPhotosLabel("Nenhuma foto selecionada");
+      return;
+    }
+
+    const previewNames = selectedFiles
+      .slice(0, 3)
+      .map((file) => file.name)
+      .join(", ");
+    const remainingCount = selectedFiles.length - 3;
+    setSelectedPhotosLabel(
+      remainingCount > 0
+        ? `${selectedFiles.length} fotos selecionadas: ${previewNames} +${remainingCount}`
+        : `${selectedFiles.length} foto${
+            selectedFiles.length > 1 ? "s" : ""
+          } selecionada${selectedFiles.length > 1 ? "s" : ""}: ${previewNames}`,
+    );
   }
 
   return (
@@ -202,16 +232,32 @@ export function ManualGalleryForm() {
             </label>
           </div>
 
-          <label>
-            Fotos finais
+          <label className="manual-upload-label">
+            <span>Fotos finais</span>
             <input
               accept="image/*"
+              className="manual-file-input"
               multiple
               name="photos"
-              required
+              onChange={(event) =>
+                updateSelectedPhotosLabel(event.currentTarget.files)
+              }
               type="file"
             />
-            <small>Envie de 1 a 20 imagens. A ordem do upload vira Foto 01, 02...</small>
+            <span className="manual-upload-box">
+              <span className="manual-upload-icon">+</span>
+              <span className="manual-upload-copy">
+                <strong>Selecionar fotos da galeria</strong>
+                <small>
+                  Clique aqui para escolher as imagens finais do cliente.
+                </small>
+              </span>
+              <span className="manual-upload-cta">Escolher arquivos</span>
+            </span>
+            <small>{selectedPhotosLabel}</small>
+            <small>
+              Envie de 1 a 20 imagens. A ordem do upload vira Foto 01, 02...
+            </small>
           </label>
 
           {error && <p className="form-error">{error}</p>}
