@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isGalleryExpired } from "@/lib/gallery-expiration";
+import { getClaimedPhotoAccess } from "@/lib/photo-access";
 import { getAdditionalPhotoAmountCents } from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -62,22 +63,27 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const unlockedPhotoIds = new Set<string>();
-  const claims = await supabase
-    .from("project_included_photos")
-    .select("photo_id")
-    .eq("project_id", project.id);
-
-  if (claims.error && !["42P01", "PGRST205"].includes(claims.error.code ?? "")) {
+  let claimedAccess: Awaited<ReturnType<typeof getClaimedPhotoAccess>>;
+  try {
+    claimedAccess = await getClaimedPhotoAccess({
+      supabase,
+      projectId: project.id,
+      includedPhotos: project.included_photos,
+    });
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, error: claims.error.message },
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel carregar as fotos liberadas.",
+      },
       { status: 500 },
     );
   }
 
-  for (const claim of claims.data ?? []) {
-    unlockedPhotoIds.add(claim.photo_id as string);
-  }
+  const unlockedPhotoIds = new Set(claimedAccess.accessiblePhotoIds);
 
   const { data: paidPhotos, error: paidError } = await supabase
     .from("order_photos")

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isGalleryExpired } from "@/lib/gallery-expiration";
+import {
+  getClaimedPhotoAccess,
+  insertIncludedPhotoClaims,
+  insertManualPhotoReleases,
+} from "@/lib/photo-access";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -21,67 +26,25 @@ async function authorizeIncludedPhotos({
   includedPhotos: number;
   photoIds: string[];
 }) {
-  const { data: existingClaims, error } = await supabase
-    .from("project_included_photos")
-    .select("photo_id")
-    .eq("project_id", projectId);
-
-  if (error) {
-    if (["42P01", "PGRST205"].includes(error.code ?? "")) {
-      return photoIds.length <= includedPhotos;
-    }
-    throw new Error(error.message);
-  }
-
-  const claimedPhotoIds = new Set(
-    (existingClaims ?? []).map((claim) => claim.photo_id as string),
-  );
+  const claimedAccess = await getClaimedPhotoAccess({
+    supabase,
+    projectId,
+    includedPhotos,
+  });
+  const claimedPhotoIds = claimedAccess.includedPhotoIds;
   const mergedPhotoIds = new Set([...claimedPhotoIds, ...photoIds]);
 
   if (mergedPhotoIds.size > includedPhotos) {
     return photoIds.every((photoId) => claimedPhotoIds.has(photoId));
   }
 
-  const newClaims = photoIds
-    .filter((photoId) => !claimedPhotoIds.has(photoId))
-    .map((photoId) => ({
-      project_id: projectId,
-      photo_id: photoId,
-    }));
-
-  if (newClaims.length) {
-    const { error: insertError } = await supabase
-      .from("project_included_photos")
-      .insert(newClaims);
-
-    if (insertError && insertError.code !== "23505") {
-      throw new Error(insertError.message);
-    }
-  }
+  await insertIncludedPhotoClaims({
+    supabase,
+    projectId,
+    photoIds: photoIds.filter((photoId) => !claimedPhotoIds.has(photoId)),
+  });
 
   return true;
-}
-
-async function markManualRelease({
-  supabase,
-  projectId,
-  photoIds,
-}: {
-  supabase: ReturnType<typeof getSupabaseAdmin>;
-  projectId: string;
-  photoIds: string[];
-}) {
-  const { error } = await supabase.from("project_included_photos").upsert(
-    photoIds.map((photoId) => ({
-      project_id: projectId,
-      photo_id: photoId,
-    })),
-    { onConflict: "project_id,photo_id" },
-  );
-
-  if (error) {
-    throw new Error(error.message);
-  }
 }
 
 export async function POST(request: NextRequest) {
@@ -174,26 +137,26 @@ export async function POST(request: NextRequest) {
   }
 
   if (!authorized) {
-    const [claimResult, paidResult] = await Promise.all([
-      supabase
-        .from("project_included_photos")
-        .select("photo_id")
-        .eq("project_id", project.id)
-        .in("photo_id", uniquePhotoIds),
+    const [paidResult, claimedAccessResult] = await Promise.all([
       supabase
         .from("order_photos")
         .select("photo_id, orders!inner(status, project_id)")
         .eq("orders.project_id", project.id)
         .eq("orders.status", "paid")
         .in("photo_id", uniquePhotoIds),
+      getClaimedPhotoAccess({
+        supabase,
+        projectId: project.id,
+        includedPhotos: project.included_photos,
+      }).then(
+        (access) => ({ access, error: null as Error | null }),
+        (error: Error) => ({ access: null, error }),
+      ),
     ]);
 
-    if (
-      claimResult.error &&
-      !["42P01", "PGRST205"].includes(claimResult.error.code ?? "")
-    ) {
+    if (claimedAccessResult.error) {
       return NextResponse.json(
-        { ok: false, error: claimResult.error.message },
+        { ok: false, error: claimedAccessResult.error.message },
         { status: 500 },
       );
     }
@@ -206,7 +169,7 @@ export async function POST(request: NextRequest) {
     }
 
     const accessiblePhotoIds = new Set([
-      ...(claimResult.data ?? []).map((row) => row.photo_id as string),
+      ...(claimedAccessResult.access?.accessiblePhotoIds ?? []),
       ...(paidResult.data ?? []).map((row) => row.photo_id as string),
     ]);
     authorized = uniquePhotoIds.every((photoId) =>
@@ -261,7 +224,7 @@ export async function POST(request: NextRequest) {
 
   if (manualReleaseAuthorized) {
     try {
-      await markManualRelease({
+      await insertManualPhotoReleases({
         supabase,
         projectId: project.id,
         photoIds: uniquePhotoIds,

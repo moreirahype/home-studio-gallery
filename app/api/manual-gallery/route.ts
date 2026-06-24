@@ -12,6 +12,7 @@ import {
   formatBrazilianMobile,
   normalizeBrazilianMobile,
 } from "@/lib/phone";
+import { insertIncludedPhotoClaims } from "@/lib/photo-access";
 import { getPricingBaseAmountCentsFromFirstExtraAmountCents } from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -290,6 +291,7 @@ export async function POST(request: NextRequest) {
       }
 
       rows.push({
+        id: randomUUID(),
         project_id: projectId,
         position,
         generation_prompt: contextFinal,
@@ -301,6 +303,12 @@ export async function POST(request: NextRequest) {
 
     const { error: photosError } = await supabase.from("photos").insert(rows);
     if (photosError) throw new Error(photosError.message);
+
+    await insertIncludedPhotoClaims({
+      supabase,
+      projectId,
+      photoIds: rows.slice(0, includedPhotos).map((photo) => photo.id),
+    });
   } catch (error) {
     await supabase.from("projects").delete().eq("id", projectId);
     return NextResponse.json(
