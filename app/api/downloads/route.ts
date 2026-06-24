@@ -174,14 +174,44 @@ export async function POST(request: NextRequest) {
   }
 
   if (!authorized) {
-    const { data: paidPhotos } = await supabase
-      .from("order_photos")
-      .select("photo_id, orders!inner(status, project_id)")
-      .eq("orders.project_id", project.id)
-      .eq("orders.status", "paid")
-      .in("photo_id", uniquePhotoIds);
-    authorized = new Set((paidPhotos ?? []).map((row) => row.photo_id)).size ===
-      uniquePhotoIds.length;
+    const [claimResult, paidResult] = await Promise.all([
+      supabase
+        .from("project_included_photos")
+        .select("photo_id")
+        .eq("project_id", project.id)
+        .in("photo_id", uniquePhotoIds),
+      supabase
+        .from("order_photos")
+        .select("photo_id, orders!inner(status, project_id)")
+        .eq("orders.project_id", project.id)
+        .eq("orders.status", "paid")
+        .in("photo_id", uniquePhotoIds),
+    ]);
+
+    if (
+      claimResult.error &&
+      !["42P01", "PGRST205"].includes(claimResult.error.code ?? "")
+    ) {
+      return NextResponse.json(
+        { ok: false, error: claimResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    if (paidResult.error) {
+      return NextResponse.json(
+        { ok: false, error: paidResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    const accessiblePhotoIds = new Set([
+      ...(claimResult.data ?? []).map((row) => row.photo_id as string),
+      ...(paidResult.data ?? []).map((row) => row.photo_id as string),
+    ]);
+    authorized = uniquePhotoIds.every((photoId) =>
+      accessiblePhotoIds.has(photoId),
+    );
   }
 
   if (!authorized) {
