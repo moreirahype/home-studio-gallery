@@ -1386,7 +1386,7 @@ export function Gallery({
                 ? "Baixar foto incluída"
                 : "Baixar fotos incluídas"
               : pricing.dueNow > 0
-                ? "Pagar adicionais no PIX"
+                ? "Pagar adicionais no Pix"
                 : "Escolha suas fotos"}
           </span>
           {selected.length > 0 && <span aria-hidden="true">→</span>}

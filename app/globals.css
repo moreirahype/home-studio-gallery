@@ -774,7 +774,6 @@ p {
   width: 100%;
 }
 
-.checkout-button,
 .checkout-modal .modal-primary {
   background: linear-gradient(135deg, #2f8f4e, #1f6f3b);
   color: white;
@@ -783,7 +782,6 @@ p {
     inset 0 0 0 1px rgb(255 255 255 / 16%);
 }
 
-.checkout-button:hover:not(:disabled),
 .checkout-modal .modal-primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #36a45b, #247c43);
 }
