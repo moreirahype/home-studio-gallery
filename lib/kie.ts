@@ -1,4 +1,5 @@
 const KIE_API_URL = "https://api.kie.ai/api/v1";
+export const KIE_IMAGE_FALLBACK_MODEL = "gpt-image-2-image-to-image";
 export const KIE_VIDEO_MODEL = "bytedance/seedance-1.5-pro";
 
 type CreateTaskResponse = {
@@ -26,6 +27,10 @@ export function getKieImageModel() {
     process.env.KIE_MODEL ??
     "nano-banana-2"
   );
+}
+
+export function getKieFallbackImageModel() {
+  return process.env.KIE_IMAGE_FALLBACK_MODEL ?? KIE_IMAGE_FALLBACK_MODEL;
 }
 
 function buildImageInput({
@@ -70,11 +75,13 @@ export async function createImageTask({
   sourceImageUrl,
   contextFinal,
   callbackUrl,
+  model: requestedModel,
 }: {
   prompt: string;
   sourceImageUrl: string;
   contextFinal: string;
   callbackUrl: string;
+  model?: string;
 }) {
   const apiKey = process.env.KIE_API_KEY;
 
@@ -82,7 +89,7 @@ export async function createImageTask({
     throw new Error("KIE_API_KEY não configurada.");
   }
 
-  const model = getKieImageModel();
+  const model = requestedModel ?? getKieImageModel();
 
   if (model.includes("text-to-image")) {
     throw new Error(
@@ -112,6 +119,55 @@ export async function createImageTask({
   }
 
   return taskId;
+}
+
+export async function createImageTaskWithFallback({
+  prompt,
+  sourceImageUrl,
+  contextFinal,
+  callbackUrl,
+  preferredModel = getKieImageModel(),
+  fallbackModel = getKieFallbackImageModel(),
+}: {
+  prompt: string;
+  sourceImageUrl: string;
+  contextFinal: string;
+  callbackUrl: string;
+  preferredModel?: string;
+  fallbackModel?: string;
+}) {
+  try {
+    return {
+      taskId: await createImageTask({
+        prompt,
+        sourceImageUrl,
+        contextFinal,
+        callbackUrl,
+        model: preferredModel,
+      }),
+      model: preferredModel,
+      fallbackUsed: false,
+      primaryError: null,
+    };
+  } catch (error) {
+    if (!fallbackModel || fallbackModel === preferredModel) {
+      throw error;
+    }
+
+    return {
+      taskId: await createImageTask({
+        prompt,
+        sourceImageUrl,
+        contextFinal,
+        callbackUrl,
+        model: fallbackModel,
+      }),
+      model: fallbackModel,
+      fallbackUsed: true,
+      primaryError:
+        error instanceof Error ? error.message : "Falha no modelo principal.",
+    };
+  }
 }
 
 export async function getTaskDetails(taskId: string) {

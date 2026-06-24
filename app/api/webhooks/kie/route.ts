@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getTaskDetails } from "@/lib/kie";
+import {
+  createImageTask,
+  getKieFallbackImageModel,
+  getTaskDetails,
+} from "@/lib/kie";
 import {
   createOptimizedOriginal,
   createWatermarkedPreview,
@@ -67,6 +71,93 @@ function extractUrls(value: unknown): string[] {
   }
 
   return [];
+}
+
+function getPhotoProject(photo: {
+  projects?:
+    | {
+        source_image_url?: string | null;
+        source_image_path?: string | null;
+        context_final?: string | null;
+      }
+    | {
+        source_image_url?: string | null;
+        source_image_path?: string | null;
+        context_final?: string | null;
+      }[];
+}) {
+  return Array.isArray(photo.projects) ? photo.projects[0] : photo.projects;
+}
+
+async function startFallbackImageTask({
+  photo,
+  request,
+}: {
+  photo: {
+    id: string;
+    project_id: string;
+    generation_prompt: string;
+    error_message: string | null;
+    projects?:
+      | {
+          source_image_url?: string | null;
+          source_image_path?: string | null;
+          context_final?: string | null;
+        }
+      | {
+          source_image_url?: string | null;
+          source_image_path?: string | null;
+          context_final?: string | null;
+        }[];
+  };
+  request: NextRequest;
+}) {
+  if (photo.error_message?.startsWith("Fallback ")) return null;
+
+  const callbackSecret = process.env.KIE_CALLBACK_SECRET;
+  if (!callbackSecret) throw new Error("KIE_CALLBACK_SECRET nÃ£o configurada.");
+
+  const supabase = getSupabaseAdmin();
+  const project = getPhotoProject(photo);
+  let sourceImageUrl = project?.source_image_url ?? "";
+
+  if (project?.source_image_path) {
+    const signedSource = await supabase.storage
+      .from("source-images")
+      .createSignedUrl(project.source_image_path, 60 * 60 * 6);
+
+    if (signedSource.error || !signedSource.data?.signedUrl) {
+      throw new Error("NÃ£o foi possÃ­vel abrir a foto de referÃªncia.");
+    }
+
+    sourceImageUrl = signedSource.data.signedUrl;
+  }
+
+  if (!sourceImageUrl) {
+    throw new Error("Foto de referÃªncia indisponÃ­vel para fallback.");
+  }
+
+  const callbackUrl = new URL("/api/webhooks/kie", request.nextUrl.origin);
+  callbackUrl.searchParams.set("secret", callbackSecret);
+  const fallbackModel = getKieFallbackImageModel();
+  const fallbackTaskId = await createImageTask({
+    prompt: photo.generation_prompt,
+    sourceImageUrl,
+    contextFinal: project?.context_final ?? "",
+    callbackUrl: callbackUrl.toString(),
+    model: fallbackModel,
+  });
+
+  await supabase
+    .from("photos")
+    .update({
+      kie_task_id: fallbackTaskId,
+      status: "generating",
+      error_message: `Fallback ${fallbackModel} iniciado apÃ³s falha da task original.`,
+    })
+    .eq("id", photo.id);
+
+  return { fallbackTaskId, fallbackModel };
 }
 
 async function handleVideoTask(
@@ -193,7 +284,9 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: photo } = await supabase
     .from("photos")
-    .select("id, project_id, position")
+    .select(
+      "id, project_id, position, generation_prompt, error_message, projects!inner(source_image_url, source_image_path, context_final)",
+    )
     .eq("kie_task_id", taskId)
     .maybeSingle();
 
@@ -243,6 +336,19 @@ export async function POST(request: NextRequest) {
   if (state === "fail") {
     const errorMessage =
       task.failMsg || parsed.data.failMsg || "A KIE não concluiu a imagem.";
+    const fallback = await startFallbackImageTask({ photo, request });
+
+    if (fallback) {
+      return NextResponse.json({
+        ok: true,
+        taskId,
+        state,
+        fallbackStarted: true,
+        fallbackTaskId: fallback.fallbackTaskId,
+        fallbackModel: fallback.fallbackModel,
+      });
+    }
+
     await supabase
       .from("photos")
       .update({ status: "failed", error_message: errorMessage })

@@ -1,4 +1,4 @@
-import { createImageTask } from "@/lib/kie";
+import { createImageTaskWithFallback } from "@/lib/kie";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function startProjectGeneration({
@@ -65,7 +65,7 @@ export async function startProjectGeneration({
 
   const results = await Promise.allSettled(
     (photos ?? []).map(async (photo) => {
-      const taskId = await createImageTask({
+      const task = await createImageTaskWithFallback({
         prompt: photo.generation_prompt,
         sourceImageUrl,
         contextFinal: project.context_final,
@@ -73,14 +73,20 @@ export async function startProjectGeneration({
       });
       const { error } = await supabase
         .from("photos")
-        .update({ kie_task_id: taskId, status: "generating" })
+        .update({
+          kie_task_id: task.taskId,
+          status: "generating",
+          error_message: task.fallbackUsed
+            ? `Fallback ${task.model} iniciado: ${task.primaryError}`
+            : null,
+        })
         .eq("id", photo.id);
 
       if (error) {
         throw new Error(error.message);
       }
 
-      return { photoId: photo.id, position: photo.position, taskId };
+      return { photoId: photo.id, position: photo.position, taskId: task.taskId };
     }),
   );
   const started = results
