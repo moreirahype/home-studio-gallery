@@ -315,6 +315,7 @@ export function Gallery({
   const [downloadLinks, setDownloadLinks] = useState<PhotoDownload[]>([]);
   const [unlockedPhotoIds, setUnlockedPhotoIds] = useState<string[]>([]);
   const [blockedPhotoIds, setBlockedPhotoIds] = useState<string[]>([]);
+  const [previewOverrides, setPreviewOverrides] = useState<Record<string, string>>({});
   const [unlockedViews, setUnlockedViews] = useState<Record<string, string>>({});
   const [photoCredit, setPhotoCredit] = useState(offer.paidAmount);
   const [videoAccess, setVideoAccess] = useState<{
@@ -820,6 +821,7 @@ export function Gallery({
         ok?: boolean;
         error?: string;
         blockedPhotoIds?: string[];
+        blockedPreviews?: { photoId: string; previewUrl?: string }[];
       };
 
       if (!response.ok || !result.ok) {
@@ -828,6 +830,12 @@ export function Gallery({
       }
 
       const blocked = new Set(result.blockedPhotoIds ?? selected);
+      const previews = Object.fromEntries(
+        (result.blockedPreviews ?? [])
+          .filter((preview) => preview.previewUrl)
+          .map((preview) => [preview.photoId, preview.previewUrl as string]),
+      );
+      setPreviewOverrides((current) => ({ ...current, ...previews }));
       setBlockedPhotoIds((current) => [...new Set([...current, ...blocked])]);
       setUnlockedPhotoIds((current) =>
         current.filter((photoId) => !blocked.has(photoId)),
@@ -844,6 +852,7 @@ export function Gallery({
       setManualPassword("");
       setTestPaymentApproved(false);
       await refreshAccess();
+      router.refresh();
     } catch {
       setCheckoutError("Não foi possível bloquear as fotos. Tente novamente.");
     } finally {
@@ -1264,7 +1273,10 @@ export function Gallery({
           const selectionPosition = selected.indexOf(photo.id);
           const isSelected = selectionPosition >= 0;
           const isUnlocked = unlockedPhotoIds.includes(photo.id);
-          const displayUrl = unlockedViews[photo.id] ?? photo.previewUrl;
+          const displayUrl =
+            unlockedViews[photo.id] ??
+            previewOverrides[photo.id] ??
+            photo.previewUrl;
           const tone =
             "tone" in photo && typeof photo.tone === "number" ? photo.tone : 0;
 

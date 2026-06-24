@@ -363,6 +363,7 @@ export async function POST(request: NextRequest) {
       }),
       supabase.storage.from("photo-previews").upload(previewPath, preview, {
         contentType: "image/webp",
+        cacheControl: "0",
         upsert: true,
       }),
     ]);

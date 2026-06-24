@@ -9,6 +9,7 @@ import {
 } from "@/lib/photo-access";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { ensureWatermarkedPreviews } from "@/lib/watermarked-previews";
 
 const requestSchema = z.object({
   galleryToken: z.string().min(8),
@@ -122,10 +123,20 @@ export async function POST(request: NextRequest) {
 
   if (blockRequested) {
     try {
+      const blockedPreviews = await ensureWatermarkedPreviews({
+        supabase,
+        projectId: project.id,
+        photoIds: uniquePhotoIds,
+      });
       await deleteClaimedPhotoAccess({
         supabase,
         projectId: project.id,
         photoIds: uniquePhotoIds,
+      });
+      return NextResponse.json({
+        ok: true,
+        blockedPhotoIds: uniquePhotoIds,
+        blockedPreviews,
       });
     } catch (error) {
       return NextResponse.json(
@@ -139,8 +150,6 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
-
-    return NextResponse.json({ ok: true, blockedPhotoIds: uniquePhotoIds });
   }
 
   if (manualReleaseAuthorized) {
