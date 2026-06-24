@@ -1304,6 +1304,7 @@ export function Gallery({
             : unlockedViews[photo.id] ??
               previewOverrides[photo.id] ??
               photo.previewUrl;
+          const shouldShowWatermark = !isUnlocked && Boolean(displayUrl);
           const tone =
             "tone" in photo && typeof photo.tone === "number" ? photo.tone : 0;
 
@@ -1320,6 +1321,9 @@ export function Gallery({
               }`}
               key={photo.id}
               onClick={() => togglePhoto(photo.id)}
+              onContextMenu={(event) => {
+                if (!isUnlocked) event.preventDefault();
+              }}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" && event.key !== " ") return;
                 event.preventDefault();
@@ -1358,6 +1362,15 @@ export function Gallery({
                 )}
               </span>
               <span className="photo-shade" />
+              {shouldShowWatermark && (
+                <span aria-hidden="true" className="photo-watermark">
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <span className="photo-watermark-line" key={index}>
+                      HOMESTUDIO.IA HOMESTUDIO.IA HOMESTUDIO.IA
+                    </span>
+                  ))}
+                </span>
+              )}
               {isUnlocked && (
                 <span className="unlocked-badge">Liberada</span>
               )}
