@@ -12,12 +12,36 @@ type PhotoPosition = {
   position: number;
 };
 
+type PaidPhotoCreditItem = {
+  amount_cents: number | string | null;
+  metadata?: unknown;
+};
+
+function metadataPhotoIds(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object") return [];
+  const photoIds = (metadata as { photoIds?: unknown }).photoIds;
+  return Array.isArray(photoIds)
+    ? photoIds.filter((photoId): photoId is string => typeof photoId === "string")
+    : [];
+}
+
 function isMissingReleaseKind(error: { code?: string; message?: string } | null) {
   return Boolean(
     error &&
       (error.code === "42703" ||
         error.message?.includes("release_kind") ||
         error.message?.includes("schema cache")),
+  );
+}
+
+function isBlockedReleaseKindUnsupported(
+  error: { code?: string; message?: string } | null,
+) {
+  return Boolean(
+    error &&
+      (error.code === "23514" ||
+        error.message?.includes("release_kind") ||
+        error.message?.includes("project_included_photos_release_kind_check")),
   );
 }
 
@@ -88,6 +112,7 @@ export async function getClaimedPhotoAccess({
       return {
         includedPhotoIds: new Set<string>(),
         manualPhotoIds: new Set<string>(),
+        blockedPhotoIds: new Set<string>(),
         accessiblePhotoIds: new Set<string>(),
       };
     }
@@ -98,9 +123,12 @@ export async function getClaimedPhotoAccess({
   const safeIncluded = Math.max(0, Math.round(includedPhotos));
   const manualClaimIds = new Set<string>();
   const includedClaimIds = new Set<string>();
+  const blockedClaimIds = new Set<string>();
 
   for (const claim of claims.data ?? []) {
-    if (claim.release_kind === "manual") {
+    if (claim.release_kind === "blocked") {
+      blockedClaimIds.add(claim.photo_id);
+    } else if (claim.release_kind === "manual") {
       manualClaimIds.add(claim.photo_id);
     } else {
       includedClaimIds.add(claim.photo_id);
@@ -117,10 +145,16 @@ export async function getClaimedPhotoAccess({
     ).slice(0, safeIncluded),
   );
 
+  const accessiblePhotoIds = new Set([...cappedIncludedIds, ...manualClaimIds]);
+  for (const photoId of blockedClaimIds) {
+    accessiblePhotoIds.delete(photoId);
+  }
+
   return {
     includedPhotoIds: cappedIncludedIds,
     manualPhotoIds: manualClaimIds,
-    accessiblePhotoIds: new Set([...cappedIncludedIds, ...manualClaimIds]),
+    blockedPhotoIds: blockedClaimIds,
+    accessiblePhotoIds,
   };
 }
 
@@ -181,7 +215,10 @@ export async function insertManualPhotoReleases({
     .from("project_included_photos")
     .upsert(rows, { onConflict: "project_id,photo_id" });
 
-  if (isMissingReleaseKind(result.error)) {
+  if (
+    isMissingReleaseKind(result.error) ||
+    isBlockedReleaseKindUnsupported(result.error)
+  ) {
     result = await supabase.from("project_included_photos").upsert(
       rows.map(({ release_kind: ignored, ...row }) => {
         void ignored;
@@ -208,14 +245,71 @@ export async function deleteClaimedPhotoAccess({
   const uniquePhotoIds = [...new Set(photoIds)];
   if (!uniquePhotoIds.length) return;
 
-  const { error } = await supabase
+  const rows = uniquePhotoIds.map((photoId) => ({
+    project_id: projectId,
+    photo_id: photoId,
+    release_kind: "blocked",
+  }));
+  let result = await supabase
     .from("project_included_photos")
+    .upsert(rows, { onConflict: "project_id,photo_id" });
+
+  if (isMissingReleaseKind(result.error)) {
+    result = await supabase
+      .from("project_included_photos")
+      .delete()
+      .eq("project_id", projectId)
+      .in("photo_id", uniquePhotoIds);
+  }
+
+  if (result.error) {
+    if (["42P01", "PGRST205"].includes(result.error.code ?? "")) return;
+    throw new Error(result.error.message);
+  }
+
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("project_id", projectId);
+
+  if (ordersError) throw new Error(ordersError.message);
+
+  const orderIds = (orders ?? []).map((order) => order.id as string);
+  if (!orderIds.length) return;
+
+  const { error: paidDeleteError } = await supabase
+    .from("order_photos")
     .delete()
-    .eq("project_id", projectId)
+    .in("order_id", orderIds)
     .in("photo_id", uniquePhotoIds);
 
-  if (error) {
-    if (["42P01", "PGRST205"].includes(error.code ?? "")) return;
-    throw new Error(error.message);
+  if (paidDeleteError) {
+    throw new Error(paidDeleteError.message);
   }
+}
+
+export function getAvailablePaidPhotoCreditCents({
+  items,
+  initialCreditCents,
+  blockedPhotoIds,
+}: {
+  items: PaidPhotoCreditItem[];
+  initialCreditCents: number;
+  blockedPhotoIds: Set<string>;
+}) {
+  return items.reduce((total, item) => {
+    const amount = Number(item.amount_cents || 0);
+    if (!amount) return total;
+
+    const photoIds = metadataPhotoIds(item.metadata);
+    if (!photoIds.length) return total + amount;
+
+    const availableCount = photoIds.filter(
+      (photoId) => !blockedPhotoIds.has(photoId),
+    ).length;
+
+    if (!availableCount) return total;
+
+    return total + Math.round(amount * (availableCount / photoIds.length));
+  }, initialCreditCents);
 }

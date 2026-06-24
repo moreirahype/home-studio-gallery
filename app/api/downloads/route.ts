@@ -34,6 +34,11 @@ async function authorizeIncludedPhotos({
     includedPhotos,
   });
   const claimedPhotoIds = claimedAccess.includedPhotoIds;
+
+  if (photoIds.some((photoId) => claimedAccess.blockedPhotoIds.has(photoId))) {
+    return false;
+  }
+
   const mergedPhotoIds = new Set([...claimedPhotoIds, ...photoIds]);
 
   if (mergedPhotoIds.size > includedPhotos) {
@@ -196,7 +201,12 @@ export async function POST(request: NextRequest) {
 
     const accessiblePhotoIds = new Set([
       ...(claimedAccessResult.access?.accessiblePhotoIds ?? []),
-      ...(paidResult.data ?? []).map((row) => row.photo_id as string),
+      ...(paidResult.data ?? [])
+        .map((row) => row.photo_id as string)
+        .filter(
+          (photoId) =>
+            !claimedAccessResult.access?.blockedPhotoIds.has(photoId),
+        ),
     ]);
     authorized = uniquePhotoIds.every((photoId) =>
       accessiblePhotoIds.has(photoId),

@@ -1386,7 +1386,7 @@ export function Gallery({
                 ? "Baixar foto incluída"
                 : "Baixar fotos incluídas"
               : pricing.dueNow > 0
-                ? "Pagar adicionais no Pix"
+                ? "Pagar adicionais no PIX"
                 : "Escolha suas fotos"}
           </span>
           {selected.length > 0 && <span aria-hidden="true">→</span>}
@@ -1612,9 +1612,7 @@ export function Gallery({
                     </small>
                   </span>
                   <span className="addon-action">
-                    {videoAdded
-                      ? money.format(videoPrice)
-                      : `Adicionar por ${money.format(getVideoPrice(1))}`}
+                    {videoAdded ? "ADICIONADO" : "ADICIONAR"}
                   </span>
                 </button>
                 {videoAdded && selected.length > 1 && (

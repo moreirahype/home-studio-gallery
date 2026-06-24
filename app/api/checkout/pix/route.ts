@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isGalleryExpired } from "@/lib/gallery-expiration";
 import { createPixPayment } from "@/lib/mercado-pago";
-import { getClaimedPhotoAccess } from "@/lib/photo-access";
+import {
+  getAvailablePaidPhotoCreditCents,
+  getClaimedPhotoAccess,
+} from "@/lib/photo-access";
 import { getAdditionalPhotoAmountCents, getVideoAmountCents } from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -131,19 +134,23 @@ export async function POST(request: NextRequest) {
     .eq("orders.status", "paid");
 
   for (const row of paidPhotos ?? []) {
-    unlockedPhotoIds.add(row.photo_id as string);
+    const photoId = row.photo_id as string;
+    if (!claimedAccess.blockedPhotoIds.has(photoId)) {
+      unlockedPhotoIds.add(photoId);
+    }
   }
 
   const { data: paidPhotoItems } = await supabase
     .from("order_items")
-    .select("amount_cents, orders!inner(status, project_id)")
+    .select("amount_cents, metadata, orders!inner(status, project_id)")
     .eq("kind", "photos")
     .eq("orders.project_id", project.id)
     .eq("orders.status", "paid");
-  const paidPhotoCreditCents = (paidPhotoItems ?? []).reduce(
-    (total, item) => total + Number(item.amount_cents || 0),
-    project.paid_amount_cents,
-  );
+  const paidPhotoCreditCents = getAvailablePaidPhotoCreditCents({
+    items: paidPhotoItems ?? [],
+    initialCreditCents: project.paid_amount_cents,
+    blockedPhotoIds: claimedAccess.blockedPhotoIds,
+  });
   const targetPhotoCount = new Set([
     ...unlockedPhotoIds,
     ...selectedPhotoIds,
