@@ -288,6 +288,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     photoCredit: photoCreditCents / 100,
+    blockedPhotoIds: [...claimedAccess.blockedPhotoIds],
     photos: validPhotos.map((photo, index) => ({
       photoId: photo.id,
       number: photo.position,

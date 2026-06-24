@@ -2,6 +2,7 @@ import { reportGallerySaleToBi } from "@/lib/home-studio-bi";
 import { startProjectGeneration } from "@/lib/generation";
 import { getPayment, type MercadoPagoPayment } from "@/lib/mercado-pago";
 import { reportMetaPurchase } from "@/lib/meta-conversions";
+import { clearBlockedPhotoAccess } from "@/lib/photo-access";
 import {
   DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
   getFirstExtraAmountCentsFromPricingBaseAmountCents,
@@ -129,13 +130,19 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
   );
 
   if (photoIds.length) {
+    const uniquePhotoIds = [...new Set(photoIds)];
     await supabase.from("order_photos").upsert(
-      [...new Set(photoIds)].map((photoId) => ({
+      uniquePhotoIds.map((photoId) => ({
         order_id: order.id,
         photo_id: photoId,
       })),
       { onConflict: "order_id,photo_id" },
     );
+    await clearBlockedPhotoAccess({
+      supabase,
+      projectId: order.project_id,
+      photoIds: uniquePhotoIds,
+    });
   }
 
   const videoItem = orderItems.find((item) => item.kind === "video");

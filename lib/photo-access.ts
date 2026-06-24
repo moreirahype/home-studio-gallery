@@ -269,7 +269,9 @@ export async function deleteClaimedPhotoAccess({
   }
 
   if (result.error) {
-    if (["42P01", "PGRST205"].includes(result.error.code ?? "")) return;
+    if (["42P01", "PGRST205"].includes(result.error.code ?? "")) {
+      throw blockedAccessSchemaError();
+    }
     throw new Error(result.error.message);
   }
 
@@ -292,6 +294,30 @@ export async function deleteClaimedPhotoAccess({
   if (paidDeleteError) {
     throw new Error(paidDeleteError.message);
   }
+}
+
+export async function clearBlockedPhotoAccess({
+  supabase,
+  projectId,
+  photoIds,
+}: {
+  supabase: SupabaseAdmin;
+  projectId: string;
+  photoIds: string[];
+}) {
+  const uniquePhotoIds = [...new Set(photoIds)];
+  if (!uniquePhotoIds.length) return;
+
+  const result = await supabase
+    .from("project_included_photos")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("release_kind", "blocked")
+    .in("photo_id", uniquePhotoIds);
+
+  if (isMissingReleaseKind(result.error)) return;
+  if (["42P01", "PGRST205"].includes(result.error?.code ?? "")) return;
+  if (result.error) throw new Error(result.error.message);
 }
 
 export function getAvailablePaidPhotoCreditCents({

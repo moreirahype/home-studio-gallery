@@ -314,6 +314,7 @@ export function Gallery({
   const [pixReady, setPixReady] = useState(false);
   const [downloadLinks, setDownloadLinks] = useState<PhotoDownload[]>([]);
   const [unlockedPhotoIds, setUnlockedPhotoIds] = useState<string[]>([]);
+  const [blockedPhotoIds, setBlockedPhotoIds] = useState<string[]>([]);
   const [unlockedViews, setUnlockedViews] = useState<Record<string, string>>({});
   const [photoCredit, setPhotoCredit] = useState(offer.paidAmount);
   const [videoAccess, setVideoAccess] = useState<{
@@ -380,7 +381,19 @@ export function Gallery({
     };
   }
 
-  const targetPhotoCount = new Set([...unlockedPhotoIds, ...selected]).size;
+  const selectedBlockedCount = selected.filter(
+    (photoId) =>
+      blockedPhotoIds.includes(photoId) && !unlockedPhotoIds.includes(photoId),
+  ).length;
+  const normalTargetPhotoCount = new Set([
+    ...unlockedPhotoIds,
+    ...selected,
+  ]).size;
+  const blockedTargetFloor = offer.includedPhotos + selectedBlockedCount;
+  const targetPhotoCount = Math.max(
+    normalTargetPhotoCount,
+    blockedTargetFloor,
+  );
   const basePricing = getPricing(targetPhotoCount);
   const pricing = {
     ...basePricing,
@@ -417,7 +430,8 @@ export function Gallery({
   const selectedLockedCount = selected.length - selectedUnlockedCount;
   const selectionOnlyUnlocked =
     selected.length > 0 && selectedLockedCount === 0;
-  const selectionIsIncluded = selected.length > 0 && pricing.dueNow === 0;
+  const selectionIsIncluded =
+    selected.length > 0 && selectedBlockedCount === 0 && pricing.dueNow === 0;
   const videoPrice = videoAdded ? getVideoPrice(videoPhotoIds.length || 1) : 0;
   const checkoutAmount =
     pricing.dueNow + videoPrice;
@@ -434,6 +448,7 @@ export function Gallery({
     const result = (await response.json()) as {
       ok: boolean;
       photoCredit?: number;
+      blockedPhotoIds?: string[];
       photos?: {
         photoId: string;
         number: number;
@@ -457,6 +472,7 @@ export function Gallery({
     if (!response.ok || !result.ok) return;
     const unlocked = result.photos ?? [];
     setUnlockedPhotoIds(unlocked.map((photo) => photo.photoId));
+    setBlockedPhotoIds(result.blockedPhotoIds ?? []);
     setUnlockedViews(
       Object.fromEntries(
         unlocked
@@ -751,18 +767,24 @@ export function Gallery({
       return;
     }
 
+    const downloads = result.downloads;
+
     setDownloadLinks(
-      [...result.downloads].sort(
+      [...downloads].sort(
         (first, second) => first.number - second.number,
       ),
     );
     setUnlockedPhotoIds((current) => [
-      ...new Set([...current, ...result.downloads!.map((item) => item.photoId)]),
+      ...new Set([...current, ...downloads.map((item) => item.photoId)]),
     ]);
+    const released = new Set(downloads.map((download) => download.photoId));
+    setBlockedPhotoIds((current) =>
+      current.filter((photoId) => !released.has(photoId)),
+    );
     setUnlockedViews((current) => ({
       ...current,
       ...Object.fromEntries(
-        result.downloads!
+        downloads
           .filter((item) => item.viewUrl)
           .map((item) => [item.photoId, item.viewUrl as string]),
       ),
@@ -783,44 +805,50 @@ export function Gallery({
     setManualBlocking(true);
     setCheckoutError("");
 
-    const response = await fetch("/api/downloads", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        galleryToken: token,
-        photoIds: selected,
-        manualPassword: manualPassword.trim(),
-        action: "block",
-      }),
-    });
-    const result = (await response.json()) as {
-      ok: boolean;
-      error?: string;
-      blockedPhotoIds?: string[];
-    };
-    setManualBlocking(false);
+    try {
+      const response = await fetch("/api/downloads", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryToken: token,
+          photoIds: selected,
+          manualPassword: manualPassword.trim(),
+          action: "block",
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        blockedPhotoIds?: string[];
+      };
 
-    if (!response.ok || !result.ok) {
-      setCheckoutError(result.error ?? "NÃ£o foi possÃ­vel bloquear as fotos.");
-      return;
+      if (!response.ok || !result.ok) {
+        setCheckoutError(result.error ?? "Não foi possível bloquear as fotos.");
+        return;
+      }
+
+      const blocked = new Set(result.blockedPhotoIds ?? selected);
+      setBlockedPhotoIds((current) => [...new Set([...current, ...blocked])]);
+      setUnlockedPhotoIds((current) =>
+        current.filter((photoId) => !blocked.has(photoId)),
+      );
+      setDownloadLinks((current) =>
+        current.filter((download) => !blocked.has(download.photoId)),
+      );
+      setUnlockedViews((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([photoId]) => !blocked.has(photoId)),
+        ),
+      );
+      setSelected([]);
+      setManualPassword("");
+      setTestPaymentApproved(false);
+      await refreshAccess();
+    } catch {
+      setCheckoutError("Não foi possível bloquear as fotos. Tente novamente.");
+    } finally {
+      setManualBlocking(false);
     }
-
-    const blocked = new Set(result.blockedPhotoIds ?? selected);
-    setUnlockedPhotoIds((current) =>
-      current.filter((photoId) => !blocked.has(photoId)),
-    );
-    setDownloadLinks((current) =>
-      current.filter((download) => !blocked.has(download.photoId)),
-    );
-    setUnlockedViews((current) =>
-      Object.fromEntries(
-        Object.entries(current).filter(([photoId]) => !blocked.has(photoId)),
-      ),
-    );
-    setSelected([]);
-    setManualPassword("");
-    setTestPaymentApproved(false);
-    void refreshAccess();
   }
 
   function handleUnlockedPhotoDragStart({

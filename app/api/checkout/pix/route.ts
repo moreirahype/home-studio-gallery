@@ -151,10 +151,18 @@ export async function POST(request: NextRequest) {
     initialCreditCents: project.paid_amount_cents,
     blockedPhotoIds: claimedAccess.blockedPhotoIds,
   });
-  const targetPhotoCount = new Set([
+  const selectedBlockedCount = selectedPhotoIds.filter((photoId) =>
+    claimedAccess.blockedPhotoIds.has(photoId),
+  ).length;
+  const normalTargetPhotoCount = new Set([
     ...unlockedPhotoIds,
     ...selectedPhotoIds,
   ]).size;
+  const blockedTargetFloor = project.included_photos + selectedBlockedCount;
+  const targetPhotoCount = Math.max(
+    normalTargetPhotoCount,
+    blockedTargetFloor,
+  );
   const targetPhotoTotalCents =
     project.paid_amount_cents +
     getAdditionalPhotoAmountCents({
