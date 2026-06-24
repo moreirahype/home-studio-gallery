@@ -1612,7 +1612,7 @@ export function Gallery({
                     </small>
                   </span>
                   <span className="addon-action">
-                    {videoAdded ? "ADICIONADO" : "ADICIONAR"}
+                    {videoAdded ? "REMOVER" : "ADICIONAR"}
                   </span>
                 </button>
                 {videoAdded && selected.length > 1 && (

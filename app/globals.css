@@ -776,16 +776,16 @@ p {
 
 .checkout-button,
 .checkout-modal .modal-primary {
-  background: linear-gradient(135deg, #b7ef93, #76d85e);
-  color: #132515;
+  background: linear-gradient(135deg, #2f8f4e, #1f6f3b);
+  color: white;
   box-shadow:
-    0 14px 30px rgb(118 216 94 / 22%),
-    inset 0 0 0 1px rgb(255 255 255 / 36%);
+    0 14px 30px rgb(47 143 78 / 24%),
+    inset 0 0 0 1px rgb(255 255 255 / 16%);
 }
 
 .checkout-button:hover:not(:disabled),
 .checkout-modal .modal-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #c2f6a4, #82df67);
+  background: linear-gradient(135deg, #36a45b, #247c43);
 }
 
 .addon-card {
@@ -818,10 +818,10 @@ p {
   padding: 0 12px;
   border-radius: 999px;
   box-shadow:
-    0 10px 22px rgb(118 216 94 / 18%),
-    inset 0 0 0 1px rgb(255 255 255 / 32%);
-  background: linear-gradient(135deg, #b7ef93, #76d85e);
-  color: #132515;
+    0 10px 22px rgb(47 143 78 / 20%),
+    inset 0 0 0 1px rgb(255 255 255 / 16%);
+  background: linear-gradient(135deg, #2f8f4e, #1f6f3b);
+  color: white;
   font-size: 0.68rem;
   font-weight: 900;
   text-align: center;
@@ -916,7 +916,7 @@ p {
 }
 
 .addon-card.selected .addon-action {
-  background: linear-gradient(135deg, #dcecdf, #b7ef93);
+  background: linear-gradient(135deg, #14100d, #2a211c);
 }
 
 .addon-check {
