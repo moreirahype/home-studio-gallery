@@ -195,3 +195,27 @@ export async function insertManualPhotoReleases({
     throw new Error(result.error.message);
   }
 }
+
+export async function deleteClaimedPhotoAccess({
+  supabase,
+  projectId,
+  photoIds,
+}: {
+  supabase: SupabaseAdmin;
+  projectId: string;
+  photoIds: string[];
+}) {
+  const uniquePhotoIds = [...new Set(photoIds)];
+  if (!uniquePhotoIds.length) return;
+
+  const { error } = await supabase
+    .from("project_included_photos")
+    .delete()
+    .eq("project_id", projectId)
+    .in("photo_id", uniquePhotoIds);
+
+  if (error) {
+    if (["42P01", "PGRST205"].includes(error.code ?? "")) return;
+    throw new Error(error.message);
+  }
+}

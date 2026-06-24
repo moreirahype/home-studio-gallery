@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type DragEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { trackBrowserPurchase } from "@/lib/meta-browser";
 import {
@@ -329,6 +335,7 @@ export function Gallery({
   const [manualReleaseOpen, setManualReleaseOpen] = useState(false);
   const [manualPassword, setManualPassword] = useState("");
   const [manualReleasing, setManualReleasing] = useState(false);
+  const [manualBlocking, setManualBlocking] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [pixPayment, setPixPayment] = useState<{
     orderId: string;
@@ -763,6 +770,77 @@ export function Gallery({
     setTestPaymentApproved(true);
     if (manual) setManualPassword("");
     void refreshAccess();
+  }
+
+  async function blockSelectedPhotos() {
+    if (token === "demo") return;
+
+    if (!manualPassword.trim()) {
+      setCheckoutError("Digite a senha para bloquear fotos.");
+      return;
+    }
+
+    setManualBlocking(true);
+    setCheckoutError("");
+
+    const response = await fetch("/api/downloads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryToken: token,
+        photoIds: selected,
+        manualPassword: manualPassword.trim(),
+        action: "block",
+      }),
+    });
+    const result = (await response.json()) as {
+      ok: boolean;
+      error?: string;
+      blockedPhotoIds?: string[];
+    };
+    setManualBlocking(false);
+
+    if (!response.ok || !result.ok) {
+      setCheckoutError(result.error ?? "NÃ£o foi possÃ­vel bloquear as fotos.");
+      return;
+    }
+
+    const blocked = new Set(result.blockedPhotoIds ?? selected);
+    setUnlockedPhotoIds((current) =>
+      current.filter((photoId) => !blocked.has(photoId)),
+    );
+    setDownloadLinks((current) =>
+      current.filter((download) => !blocked.has(download.photoId)),
+    );
+    setUnlockedViews((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([photoId]) => !blocked.has(photoId)),
+      ),
+    );
+    setSelected([]);
+    setManualPassword("");
+    setTestPaymentApproved(false);
+    void refreshAccess();
+  }
+
+  function handleUnlockedPhotoDragStart({
+    event,
+    isUnlocked,
+    url,
+  }: {
+    event: DragEvent<HTMLImageElement>;
+    isUnlocked: boolean;
+    url: string;
+  }) {
+    if (!isUnlocked) {
+      event.preventDefault();
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = "copy";
+    event.dataTransfer.setData("text/plain", url);
+    event.dataTransfer.setData("text/uri-list", url);
+    event.dataTransfer.setData("text/html", `<img src="${url}" alt="" />`);
   }
 
   async function continueCheckout() {
@@ -1201,6 +1279,13 @@ export function Gallery({
                     draggable={isUnlocked}
                     fetchPriority={photo.number <= 4 ? "high" : "auto"}
                     loading={photo.number <= 4 ? "eager" : "lazy"}
+                    onDragStart={(event) =>
+                      handleUnlockedPhotoDragStart({
+                        event,
+                        isUnlocked,
+                        url: displayUrl,
+                      })
+                    }
                     src={displayUrl}
                   />
                 )}
@@ -1632,7 +1717,9 @@ export function Gallery({
                 )}
                 <button
                   className="primary-button modal-primary"
-                  disabled={releasing || creatingPix || manualReleasing}
+                  disabled={
+                    releasing || creatingPix || manualReleasing || manualBlocking
+                  }
                   onClick={continueCheckout}
                   type="button"
                 >
@@ -1674,12 +1761,30 @@ export function Gallery({
               <button
                 className="secondary-button"
                 disabled={
-                  !selected.length || manualReleasing || releasing || creatingPix
+                  !selected.length ||
+                  manualReleasing ||
+                  manualBlocking ||
+                  releasing ||
+                  creatingPix
                 }
                 onClick={() => void releaseSelectedPhotos(true)}
                 type="button"
               >
                 {manualReleasing ? "Liberando..." : "Liberar com senha"}
+              </button>
+              <button
+                className="secondary-button"
+                disabled={
+                  !selected.length ||
+                  manualReleasing ||
+                  manualBlocking ||
+                  releasing ||
+                  creatingPix
+                }
+                onClick={() => void blockSelectedPhotos()}
+                type="button"
+              >
+                {manualBlocking ? "Bloqueando..." : "Bloquear com senha"}
               </button>
             </div>
             {checkoutError && <p className="form-error">{checkoutError}</p>}

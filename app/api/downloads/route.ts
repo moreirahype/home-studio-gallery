@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isGalleryExpired } from "@/lib/gallery-expiration";
 import {
+  deleteClaimedPhotoAccess,
   getClaimedPhotoAccess,
   insertIncludedPhotoClaims,
   insertManualPhotoReleases,
@@ -13,6 +14,7 @@ const requestSchema = z.object({
   galleryToken: z.string().min(8),
   photoIds: z.array(z.string().min(1)).min(1).max(20),
   manualPassword: z.string().optional(),
+  action: z.enum(["release", "block"]).default("release"),
 });
 
 async function authorizeIncludedPhotos({
@@ -103,13 +105,37 @@ export async function POST(request: NextRequest) {
   const manualReleaseAuthorized =
     manualReleaseRequested &&
     safeCompare(parsed.data.manualPassword ?? null, manualReleasePassword);
+  const blockRequested = parsed.data.action === "block";
   let authorized = false;
 
-  if (manualReleaseRequested && !manualReleaseAuthorized) {
+  if ((manualReleaseRequested || blockRequested) && !manualReleaseAuthorized) {
     return NextResponse.json(
       { ok: false, error: "Senha de liberação inválida." },
       { status: 403 },
     );
+  }
+
+  if (blockRequested) {
+    try {
+      await deleteClaimedPhotoAccess({
+        supabase,
+        projectId: project.id,
+        photoIds: uniquePhotoIds,
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "NÃ£o foi possÃ­vel bloquear as fotos.",
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ ok: true, blockedPhotoIds: uniquePhotoIds });
   }
 
   if (manualReleaseAuthorized) {
