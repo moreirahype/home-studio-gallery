@@ -36,6 +36,10 @@ function mergeContexts(initialContext?: string, finalContext?: string) {
   return `${initial}. ${final}`;
 }
 
+function galleryMessage(galleryUrl: string) {
+  return `Seu ensaio ficou pronto. Acesse sua galeria aqui:\n\n${galleryUrl}\n\nNão precisa enviar comprovante no WhatsApp. As liberações acontecem automaticamente pela própria galeria.`;
+}
+
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-webhook-secret");
 
@@ -185,14 +189,19 @@ export async function POST(request: NextRequest) {
         formatReaisFromCents(reusedFirstExtraAmountCents),
       );
 
+      const reusedGalleryUrl = new URL(
+        `/g/${existingProject.gallery_token}`,
+        appUrl,
+      ).toString();
+
       return NextResponse.json({
         ok: true,
         projectId: savedLead.project_id,
         status: "queued",
-        galleryUrl: new URL(
-          `/g/${existingProject.gallery_token}`,
-          appUrl,
-        ).toString(),
+        galleryUrl: reusedGalleryUrl,
+        gallery_url: reusedGalleryUrl,
+        galleryLink: reusedGalleryUrl,
+        galleryMessage: galleryMessage(reusedGalleryUrl),
         newShootUrl: reusedNewShootUrl.toString(),
         includedPhotos: existingProject.included_photos,
         generationStarted: false,
@@ -444,6 +453,9 @@ export async function POST(request: NextRequest) {
               : "Falha ao iniciar as imagens.",
           projectId,
           galleryUrl: galleryUrl.toString(),
+          gallery_url: galleryUrl.toString(),
+          galleryLink: galleryUrl.toString(),
+          galleryMessage: galleryMessage(galleryUrl.toString()),
         },
         { status: 502 },
       );
@@ -455,6 +467,9 @@ export async function POST(request: NextRequest) {
     projectId,
     status: "queued",
     galleryUrl: galleryUrl.toString(),
+    gallery_url: galleryUrl.toString(),
+    galleryLink: galleryUrl.toString(),
+    galleryMessage: galleryMessage(galleryUrl.toString()),
     newShootUrl: newShootUrl.toString(),
     testMode: isTestMode,
     includedPhotos,
