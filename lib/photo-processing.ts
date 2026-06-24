@@ -20,16 +20,16 @@ function createWatermarkText(
   fontSize: number,
   rotation: number,
 ) {
-  const strokeWidth = Math.max(0.8, fontSize * 0.045);
+  const strokeWidth = Math.max(0.9, fontSize * 0.05);
 
   return `<g transform="rotate(${rotation} ${x.toFixed(2)} ${y.toFixed(2)})">
     <text x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" dominant-baseline="middle"
-      fill="#ffffff" fill-opacity="0.43"
-      stroke="#2b211c" stroke-opacity="0.2" stroke-width="${strokeWidth.toFixed(2)}"
+      fill="#ffffff" fill-opacity="0.54"
+      stroke="#211815" stroke-opacity="0.28" stroke-width="${strokeWidth.toFixed(2)}"
       paint-order="stroke fill"
       font-family="Arial, Helvetica, sans-serif"
       font-size="${fontSize.toFixed(2)}" font-weight="800"
-      letter-spacing="1.35">${escapeXml(label)}</text>
+      letter-spacing="1.1">${escapeXml(label)}</text>
   </g>`;
 }
 
@@ -50,9 +50,9 @@ export async function createWatermarkedPreview(
   const metadata = await sharp(base).metadata();
   const width = metadata.width ?? 720;
   const height = metadata.height ?? 720;
-  const fontSize = Math.max(17, Math.min(28, width / 30));
-  const spacingX = Math.max(175, fontSize * 8.8);
-  const spacingY = Math.max(120, fontSize * 5.8);
+  const fontSize = Math.max(18, Math.min(30, width / 28));
+  const spacingX = Math.max(170, fontSize * 8.2);
+  const spacingY = Math.max(112, fontSize * 5.25);
   const marks: string[] = [];
 
   for (let y = -spacingY; y < height + spacingY; y += spacingY) {
@@ -73,7 +73,7 @@ export async function createWatermarkedPreview(
 
   const overlay = Buffer.from(
     `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#000000" fill-opacity="0.018" />
+      <rect width="100%" height="100%" fill="#000000" fill-opacity="0.012" />
       ${marks.join("")}
     </svg>`,
   );

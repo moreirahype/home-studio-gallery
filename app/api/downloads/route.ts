@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
         supabase,
         projectId: project.id,
         photoIds: uniquePhotoIds,
+        forceNewPath: true,
       });
       await deleteClaimedPhotoAccess({
         supabase,

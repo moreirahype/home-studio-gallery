@@ -15,10 +15,12 @@ export async function ensureWatermarkedPreviews({
   supabase,
   projectId,
   photoIds,
+  forceNewPath = false,
 }: {
   supabase: SupabaseAdmin;
   projectId: string;
   photoIds: string[];
+  forceNewPath?: boolean;
 }) {
   const uniquePhotoIds = [...new Set(photoIds)];
   if (!uniquePhotoIds.length) return [];
@@ -50,9 +52,11 @@ export async function ensureWatermarkedPreviews({
 
     const original = Buffer.from(await originalDownload.data.arrayBuffer());
     const preview = await createWatermarkedPreview(original);
+    const previousPreviewPath = photo.preview_path;
     const previewPath =
-      photo.preview_path ||
-      `${photo.project_id}/${String(photo.position).padStart(2, "0")}.webp`;
+      forceNewPath || !photo.preview_path
+        ? `${photo.project_id}/${String(photo.position).padStart(2, "0")}-wm-${Date.now()}.webp`
+        : photo.preview_path;
     const previewUpload = await supabase.storage
       .from("photo-previews")
       .upload(previewPath, preview, {
@@ -71,6 +75,16 @@ export async function ensureWatermarkedPreviews({
       .eq("id", photo.id);
 
     if (updateError) throw new Error(updateError.message);
+
+    if (
+      forceNewPath &&
+      previousPreviewPath &&
+      previousPreviewPath !== previewPath
+    ) {
+      await supabase.storage
+        .from("photo-previews")
+        .remove([previousPreviewPath]);
+    }
 
     updated.push({
       photoId: photo.id,

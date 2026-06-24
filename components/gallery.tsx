@@ -1297,11 +1297,13 @@ export function Gallery({
         {photos.map((photo) => {
           const selectionPosition = selected.indexOf(photo.id);
           const isSelected = selectionPosition >= 0;
-          const isUnlocked = unlockedPhotoIds.includes(photo.id);
-          const displayUrl =
-            unlockedViews[photo.id] ??
-            previewOverrides[photo.id] ??
-            photo.previewUrl;
+          const isBlocked = blockedPhotoIds.includes(photo.id);
+          const isUnlocked = unlockedPhotoIds.includes(photo.id) && !isBlocked;
+          const displayUrl = isBlocked
+            ? previewOverrides[photo.id] ?? photo.previewUrl
+            : unlockedViews[photo.id] ??
+              previewOverrides[photo.id] ??
+              photo.previewUrl;
           const tone =
             "tone" in photo && typeof photo.tone === "number" ? photo.tone : 0;
 
