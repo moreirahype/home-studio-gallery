@@ -45,6 +45,12 @@ function isBlockedReleaseKindUnsupported(
   );
 }
 
+function blockedAccessSchemaError() {
+  return new Error(
+    "O bloqueio manual precisa da migração de release_kind com o valor 'blocked'. Rode a migração 20260624_allow_blocked_photo_access.sql no Supabase antes de bloquear fotos.",
+  );
+}
+
 async function readPhotoClaims({
   supabase,
   projectId,
@@ -250,16 +256,16 @@ export async function deleteClaimedPhotoAccess({
     photo_id: photoId,
     release_kind: "blocked",
   }));
-  let result = await supabase
+  const result = await supabase
     .from("project_included_photos")
     .upsert(rows, { onConflict: "project_id,photo_id" });
 
   if (isMissingReleaseKind(result.error)) {
-    result = await supabase
-      .from("project_included_photos")
-      .delete()
-      .eq("project_id", projectId)
-      .in("photo_id", uniquePhotoIds);
+    throw blockedAccessSchemaError();
+  }
+
+  if (isBlockedReleaseKindUnsupported(result.error)) {
+    throw blockedAccessSchemaError();
   }
 
   if (result.error) {

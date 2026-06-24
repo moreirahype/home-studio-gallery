@@ -1371,7 +1371,9 @@ export function Gallery({
           </div>
         </div>
         <button
-          className="primary-button checkout-button"
+          className={`primary-button checkout-button ${
+            pricing.dueNow > 0 ? "checkout-payment-button" : ""
+          }`}
           disabled={!selected.length}
           onClick={handlePrimaryAction}
           type="button"
@@ -1703,16 +1705,6 @@ export function Gallery({
                       : "Sem valor adicional"}
                   </strong>
                 </div>
-                {checkoutAmount > 0 && (
-                  <div className="auto-release-note modal-note pre-payment-note">
-                    <strong>Liberação automática</strong>
-                    <span>
-                      Não precisa enviar comprovante no WhatsApp. ☺️ Após o Pix,
-                      volte para esta galeria e suas fotos serão liberadas
-                      automaticamente.
-                    </span>
-                  </div>
-                )}
                 <button
                   className="primary-button modal-primary"
                   disabled={

@@ -20,14 +20,16 @@ function createWatermarkText(
   fontSize: number,
   rotation: number,
 ) {
+  const strokeWidth = Math.max(0.8, fontSize * 0.045);
+
   return `<g transform="rotate(${rotation} ${x.toFixed(2)} ${y.toFixed(2)})">
     <text x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" dominant-baseline="middle"
-      fill="#ffffff" fill-opacity="0.34" stroke="#000000" stroke-opacity="0.14" stroke-width="${Math.max(
-        0.55,
-        fontSize * 0.035,
-      ).toFixed(2)}"
-      font-family="Arial, Helvetica, sans-serif" font-size="${fontSize.toFixed(2)}" font-weight="800"
-      letter-spacing="1.2">${escapeXml(label)}</text>
+      fill="#ffffff" fill-opacity="0.43"
+      stroke="#2b211c" stroke-opacity="0.2" stroke-width="${strokeWidth.toFixed(2)}"
+      paint-order="stroke fill"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="${fontSize.toFixed(2)}" font-weight="800"
+      letter-spacing="1.35">${escapeXml(label)}</text>
   </g>`;
 }
 
@@ -48,22 +50,31 @@ export async function createWatermarkedPreview(
   const metadata = await sharp(base).metadata();
   const width = metadata.width ?? 720;
   const height = metadata.height ?? 720;
-  const columns = Math.max(3, Math.ceil(width / 230));
-  const rows = Math.max(5, Math.ceil(height / 170));
-  const fontSize = Math.max(15, width / 34);
-  const marks = Array.from({ length: columns * rows }, (_, index) => {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    const x = ((column + 0.5) * width) / columns;
-    const y = ((row + 0.5) * height) / rows + (column % 2 ? 22 : -6);
-    const rotation = -31;
+  const fontSize = Math.max(17, Math.min(28, width / 30));
+  const spacingX = Math.max(175, fontSize * 8.8);
+  const spacingY = Math.max(120, fontSize * 5.8);
+  const marks: string[] = [];
 
-    return createWatermarkText(label, x, y, fontSize, rotation);
-  }).join("");
+  for (let y = -spacingY; y < height + spacingY; y += spacingY) {
+    const rowIndex = Math.round(y / spacingY);
+    for (let x = -spacingX; x < width + spacingX; x += spacingX) {
+      const offsetX = rowIndex % 2 === 0 ? 0 : spacingX / 2;
+      marks.push(
+        createWatermarkText(
+          label,
+          x + offsetX,
+          y,
+          fontSize,
+          -29,
+        ),
+      );
+    }
+  }
+
   const overlay = Buffer.from(
     `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#000000" fill-opacity="0.025" />
-      ${marks}
+      <rect width="100%" height="100%" fill="#000000" fill-opacity="0.018" />
+      ${marks.join("")}
     </svg>`,
   );
 

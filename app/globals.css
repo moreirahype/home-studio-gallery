@@ -4,6 +4,8 @@
   --cream: #fffdf8;
   --accent: #a3432e;
   --accent-dark: #7d2d1f;
+  --success: #2f8f4e;
+  --success-dark: #1f6f3b;
   --gold: #bd8b46;
   --muted: #756d65;
   --line: rgb(23 19 16 / 12%);
@@ -698,6 +700,24 @@ p {
   color: var(--ink);
 }
 
+.checkout-bar .primary-button:hover:not(:disabled) {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.checkout-bar .checkout-payment-button {
+  background: linear-gradient(135deg, var(--success), var(--success-dark));
+  color: white;
+  box-shadow:
+    0 14px 30px rgb(47 143 78 / 24%),
+    inset 0 0 0 1px rgb(255 255 255 / 16%);
+}
+
+.checkout-bar .checkout-payment-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #36a45b, #247c43);
+  color: white;
+}
+
 .modal-backdrop {
   position: fixed;
   z-index: 30;
@@ -775,7 +795,7 @@ p {
 }
 
 .checkout-modal .modal-primary {
-  background: linear-gradient(135deg, #2f8f4e, #1f6f3b);
+  background: linear-gradient(135deg, var(--success), var(--success-dark));
   color: white;
   box-shadow:
     0 14px 30px rgb(47 143 78 / 24%),
@@ -794,12 +814,12 @@ p {
   gap: 12px;
   margin: 4px 0 18px;
   padding: 15px;
-  border: 2px solid rgb(163 67 46 / 36%);
+  border: 2px solid rgb(47 143 78 / 24%);
   border-radius: 16px;
-  background: linear-gradient(135deg, #fff8ef, #f8e7df);
+  background: linear-gradient(135deg, #fffdf8, #f1f8ef);
   color: var(--ink);
   text-align: left;
-  box-shadow: 0 16px 36px rgb(74 44 34 / 10%);
+  box-shadow: 0 16px 36px rgb(47 143 78 / 9%);
   cursor: pointer;
   transition:
     border-color 160ms ease,
@@ -818,7 +838,7 @@ p {
   box-shadow:
     0 10px 22px rgb(47 143 78 / 20%),
     inset 0 0 0 1px rgb(255 255 255 / 16%);
-  background: linear-gradient(135deg, #2f8f4e, #1f6f3b);
+  background: linear-gradient(135deg, var(--success), var(--success-dark));
   color: white;
   font-size: 0.68rem;
   font-weight: 900;
@@ -908,13 +928,13 @@ p {
 }
 
 .addon-card.selected {
-  border-color: var(--accent);
-  background: #f7e8e2;
-  box-shadow: 0 0 0 2px rgb(163 67 46 / 9%);
+  border-color: var(--success);
+  background: linear-gradient(135deg, #f5fff7, #eaf7ed);
+  box-shadow: 0 0 0 2px rgb(47 143 78 / 12%);
 }
 
 .addon-card.selected .addon-action {
-  background: linear-gradient(135deg, #14100d, #2a211c);
+  background: linear-gradient(135deg, var(--success), var(--success-dark));
 }
 
 .addon-check {
@@ -930,8 +950,8 @@ p {
 }
 
 .addon-card.selected .addon-check {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--success);
+  background: var(--success);
   color: white;
 }
 
