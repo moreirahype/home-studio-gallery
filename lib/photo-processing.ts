@@ -35,14 +35,19 @@ export async function createWatermarkedPreview(
   original: Buffer,
   label = "HOMESTUDIO.IA",
 ) {
-  const image = sharp(original).rotate();
-  const metadata = await image.metadata();
-  const sourceWidth = metadata.width ?? 1024;
-  const sourceHeight = metadata.height ?? 1280;
-  const maxSide = 720;
-  const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const base = await sharp(original)
+    .rotate()
+    .resize({
+      width: 720,
+      height: 720,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .png()
+    .toBuffer();
+  const metadata = await sharp(base).metadata();
+  const width = metadata.width ?? 720;
+  const height = metadata.height ?? 720;
   const columns = Math.max(3, Math.ceil(width / 230));
   const rows = Math.max(5, Math.ceil(height / 170));
   const fontSize = Math.max(15, width / 34);
@@ -62,8 +67,7 @@ export async function createWatermarkedPreview(
     </svg>`,
   );
 
-  return image
-    .resize({ width, height, fit: "inside", withoutEnlargement: true })
+  return sharp(base)
     .composite([{ input: overlay, gravity: "center" }])
     .webp({ quality: 52, effort: 4 })
     .toBuffer();
