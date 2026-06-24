@@ -10,6 +10,8 @@ export const zapdataOfferSchema = z.object({
   contexto_inicial: z.string().optional(),
   initialContext: z.string().optional(),
   contexto_final: z.string().optional(),
+  productName: z.string().min(1).optional(),
+  produto: z.string().min(1).optional(),
   nicheId: z.string().min(1).optional().default("geral"),
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
@@ -106,6 +108,26 @@ export function normalizeZapdataPayload(
       readText(data.contexto_final) ??
       readText(variables.contexto_final) ??
       readText(flowVariables.contexto_final),
+    productName:
+      readText(data.productName) ??
+      readText(data.product_name) ??
+      readText(data.produto) ??
+      readText(variables.productName) ??
+      readText(variables.product_name) ??
+      readText(variables.produto) ??
+      readText(flowVariables.productName) ??
+      readText(flowVariables.product_name) ??
+      readText(flowVariables.produto),
+    produto:
+      readText(data.produto) ??
+      readText(data.productName) ??
+      readText(data.product_name) ??
+      readText(variables.produto) ??
+      readText(variables.productName) ??
+      readText(variables.product_name) ??
+      readText(flowVariables.produto) ??
+      readText(flowVariables.productName) ??
+      readText(flowVariables.product_name),
     nicho:
       readText(data.nicho) ??
       readText(variables.nicho) ??

@@ -124,6 +124,12 @@ export async function POST(request: NextRequest) {
   const galleryAttendant = defaultGalleryAttendant({
     amount: attendantAmountCents / 100,
   });
+  const productName =
+    parsed.data.produto?.trim() ||
+    parsed.data.productName?.trim() ||
+    parsed.data.nicho?.trim() ||
+    parsed.data.nicheId?.trim() ||
+    "Galeria";
   const leadPayload = {
     token,
     zapdata_contact_id: parsed.data.contactId ?? null,
@@ -137,6 +143,7 @@ export async function POST(request: NextRequest) {
     pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: parsed.data.generationCount,
     bi_attendant_name: galleryAttendant,
+    product_name: productName,
     status: "pending_payment",
   };
   let { data: lead, error } = await supabase
@@ -156,13 +163,34 @@ export async function POST(request: NextRequest) {
       .single();
     lead = fallback.data;
     error = fallback.error;
-  } else if (error?.message.includes("bi_attendant_name")) {
+  }
+
+  if (error?.message.includes("bi_attendant_name")) {
     const {
       bi_attendant_name: ignoredAttendant,
       pricing_base_amount_cents: ignoredPricingBase,
+      product_name: ignoredProduct,
       ...legacyLeadPayload
     } = leadPayload;
     void ignoredAttendant;
+    void ignoredPricingBase;
+    void ignoredProduct;
+    const fallback = await supabase
+      .from("zapdata_leads")
+      .insert(legacyLeadPayload)
+      .select("id, token")
+      .single();
+    lead = fallback.data;
+    error = fallback.error;
+  }
+
+  if (error?.message.includes("product_name")) {
+    const {
+      product_name: ignoredProduct,
+      pricing_base_amount_cents: ignoredPricingBase,
+      ...legacyLeadPayload
+    } = leadPayload;
+    void ignoredProduct;
     void ignoredPricingBase;
     const fallback = await supabase
       .from("zapdata_leads")
@@ -193,5 +221,6 @@ export async function POST(request: NextRequest) {
     firstExtraAmount: parsed.data.firstExtraAmount ?? null,
     generationCount: parsed.data.generationCount,
     galleryAttendant,
+    productName,
   });
 }

@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         pricing_base_amount_cents?: number | null;
         generation_count: number;
         bi_attendant_name?: string | null;
+        product_name?: string | null;
         consumed_at: string | null;
       }
     | null = null;
@@ -276,6 +277,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const productName =
+    savedLead?.product_name?.trim() ||
+    parsed.data.produto?.trim() ||
+    parsed.data.productName?.trim() ||
+    parsed.data.nicho?.trim() ||
+    parsed.data.nicheId?.trim() ||
+    "Galeria";
   const nicheId = savedLead?.niche_id ?? parsed.data.nicho ?? parsed.data.nicheId;
   const includedPhotos =
     savedLead?.included_photos ?? parsed.data.includedPhotos;
@@ -345,6 +353,7 @@ export async function POST(request: NextRequest) {
     pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: generationCount,
     bi_attendant_name: galleryAttendant,
+    product_name: productName,
     status: "queued",
   };
   let compatibleProjectPayload = projectPayload;
@@ -368,6 +377,17 @@ export async function POST(request: NextRequest) {
       compatibleProjectPayload;
     void ignored;
     compatibleProjectPayload = legacyAttributionPayload as typeof projectPayload;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(compatibleProjectPayload);
+    projectError = fallbackInsert.error;
+  }
+
+  if (projectError?.message.includes("product_name")) {
+    const { product_name: ignored, ...legacyProductPayload } =
+      compatibleProjectPayload;
+    void ignored;
+    compatibleProjectPayload = legacyProductPayload as typeof projectPayload;
     const fallbackInsert = await supabase
       .from("projects")
       .insert(compatibleProjectPayload);
@@ -479,6 +499,7 @@ export async function POST(request: NextRequest) {
         ? null
         : firstExtraAmountCents / 100,
     galleryAttendant,
+    productName,
     generationStarted: Boolean(generation?.started.length),
     generationTasks: generation?.started.length ?? 0,
     generationPlan: {

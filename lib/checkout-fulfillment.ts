@@ -247,19 +247,22 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
     let { data: attribution, error: attributionError } = await supabase
       .from("projects")
       .select(
-        "included_photos, pricing_base_amount_cents, bi_attendant_name",
+        "included_photos, pricing_base_amount_cents, bi_attendant_name, product_name",
       )
       .eq("id", order.project_id)
       .maybeSingle();
 
-    if (attributionError?.message.includes("bi_attendant_name")) {
+    if (
+      attributionError?.message.includes("bi_attendant_name") ||
+      attributionError?.message.includes("product_name")
+    ) {
       const fallback = await supabase
         .from("projects")
         .select("included_photos, pricing_base_amount_cents")
         .eq("id", order.project_id)
         .maybeSingle();
       attribution = fallback.data
-        ? { ...fallback.data, bi_attendant_name: null }
+        ? { ...fallback.data, bi_attendant_name: null, product_name: null }
         : null;
       attributionError = fallback.error;
     }
@@ -288,6 +291,7 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
           paidAt: payment.date_approved ?? new Date().toISOString(),
           upsellAmount: netUpsellAmount,
           attendantName,
+          productName: attribution?.product_name,
         });
         await supabase
           .from("orders")
