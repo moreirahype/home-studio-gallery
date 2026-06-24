@@ -464,6 +464,13 @@ p {
   cursor: not-allowed;
 }
 
+.ghost-button {
+  min-height: 42px;
+  border-style: dashed;
+  background: rgb(255 255 255 / 58%);
+  color: #633522;
+}
+
 .file-status {
   padding: 12px 15px;
   border-radius: 12px;
@@ -550,6 +557,10 @@ p {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.photo-card.unlocked .photo-image {
+  cursor: grab;
 }
 
 .photo-shade {
@@ -1087,6 +1098,10 @@ p {
 
 .download-list .primary-button {
   min-height: 48px;
+}
+
+.download-list .secondary-button {
+  min-height: 44px;
 }
 
 .download-list small {

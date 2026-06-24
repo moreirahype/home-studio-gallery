@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trackBrowserPurchase } from "@/lib/meta-browser";
 
@@ -41,6 +41,12 @@ const money = new Intl.NumberFormat("pt-BR", {
 type DownloadFile = {
   url: string;
   fileName: string;
+};
+
+type PhotoDownload = {
+  photoId: string;
+  number: number;
+  url: string;
 };
 
 export type GalleryOffer = {
@@ -263,6 +269,30 @@ function createZip(files: { name: string; data: Uint8Array }[]) {
   });
 }
 
+async function convertImageBlobToPng(blob: Blob) {
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas indisponível.");
+    context.drawImage(bitmap, 0, 0);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((pngBlob) => {
+        if (pngBlob) {
+          resolve(pngBlob);
+          return;
+        }
+        reject(new Error("Não foi possível converter a imagem."));
+      }, "image/png");
+    });
+  } finally {
+    bitmap.close();
+  }
+}
+
 function AddIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -303,9 +333,7 @@ export function Gallery({
   const [videoPhotoIds, setVideoPhotoIds] = useState<string[]>([]);
   const [videoPickerOpen, setVideoPickerOpen] = useState(false);
   const [pixReady, setPixReady] = useState(false);
-  const [downloadLinks, setDownloadLinks] = useState<
-    { photoId: string; number: number; url: string }[]
-  >([]);
+  const [downloadLinks, setDownloadLinks] = useState<PhotoDownload[]>([]);
   const [unlockedPhotoIds, setUnlockedPhotoIds] = useState<string[]>([]);
   const [unlockedViews, setUnlockedViews] = useState<Record<string, string>>({});
   const [photoCredit, setPhotoCredit] = useState(offer.paidAmount);
@@ -319,10 +347,12 @@ export function Gallery({
     { token: string; title: string; status?: string | null; url: string }[]
   >([]);
   const [checkoutError, setCheckoutError] = useState("");
+  const [copySuccess, setCopySuccess] = useState("");
   const [releasing, setReleasing] = useState(false);
   const [creatingPix, setCreatingPix] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
+  const [copyingPhotoId, setCopyingPhotoId] = useState<string | null>(null);
   const [savingAllFiles, setSavingAllFiles] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [manualReleaseOpen, setManualReleaseOpen] = useState(false);
@@ -556,11 +586,7 @@ export function Gallery({
     }
   }
 
-  async function savePhotoToDevice(download: {
-    photoId: string;
-    number: number;
-    url: string;
-  }) {
+  async function savePhotoToDevice(download: PhotoDownload) {
     const fileName = `home-studio-foto-${String(download.number).padStart(
       2,
       "0",
@@ -617,6 +643,42 @@ export function Gallery({
       );
     } finally {
       setSavingPhotoId(null);
+    }
+  }
+
+  async function copyPhotoToClipboard(download: PhotoDownload) {
+    if (
+      typeof window === "undefined" ||
+      !("ClipboardItem" in window) ||
+      !navigator.clipboard?.write
+    ) {
+      setCheckoutError(
+        "Seu navegador não permitiu copiar a imagem. Use o botão de baixar ou abra a foto e copie manualmente.",
+      );
+      return;
+    }
+
+    setCopyingPhotoId(download.photoId);
+    setCheckoutError("");
+    setCopySuccess("");
+
+    try {
+      const response = await fetch(download.url);
+      if (!response.ok) throw new Error("Falha ao buscar imagem.");
+      const pngBlob = await convertImageBlobToPng(await response.blob());
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": pngBlob }),
+      ]);
+      setCopySuccess(
+        `Foto ${String(download.number).padStart(2, "0")} copiada. Agora é só colar no WhatsApp.`,
+      );
+      window.setTimeout(() => setCopySuccess(""), 4500);
+    } catch {
+      setCheckoutError(
+        "Não consegui copiar essa foto automaticamente. Tente baixar ou abrir a foto e copiar manualmente.",
+      );
+    } finally {
+      setCopyingPhotoId(null);
     }
   }
 
@@ -991,19 +1053,32 @@ export function Gallery({
               </button>
             )}
             {downloadLinks.map((download) => (
-              <button
-                className="secondary-button"
-                key={download.photoId}
-                onClick={() => void savePhotoToDevice(download)}
-                type="button"
-              >
-                {savingPhotoId === download.photoId
-                  ? "Abrindo..."
-                  : isMobileDevice
-                    ? `Salvar foto ${String(download.number).padStart(2, "0")}`
-                    : `Baixar foto ${String(download.number).padStart(2, "0")}`}
-              </button>
+              <Fragment key={download.photoId}>
+                <button
+                  className="secondary-button"
+                  onClick={() => void savePhotoToDevice(download)}
+                  type="button"
+                >
+                  {savingPhotoId === download.photoId
+                    ? "Abrindo..."
+                    : isMobileDevice
+                      ? `Salvar foto ${String(download.number).padStart(2, "0")}`
+                      : `Baixar foto ${String(download.number).padStart(2, "0")}`}
+                </button>
+                {!isMobileDevice && (
+                  <button
+                    className="secondary-button ghost-button"
+                    onClick={() => void copyPhotoToClipboard(download)}
+                    type="button"
+                  >
+                    {copyingPhotoId === download.photoId
+                      ? "Copiando..."
+                      : `Copiar foto ${String(download.number).padStart(2, "0")}`}
+                  </button>
+                )}
+              </Fragment>
             ))}
+            {copySuccess && <span className="file-status">{copySuccess}</span>}
             {videoAccess?.status === "generating" && (
               <span className="file-status">Vídeo em produção...</span>
             )}
@@ -1192,7 +1267,7 @@ export function Gallery({
                     alt=""
                     className="photo-image"
                     decoding="async"
-                    draggable={false}
+                    draggable={isUnlocked}
                     fetchPriority={photo.number <= 4 ? "high" : "auto"}
                     loading={photo.number <= 4 ? "eager" : "lazy"}
                     src={displayUrl}
@@ -1344,19 +1419,32 @@ export function Gallery({
                 {downloadLinks.length > 0 && (
                   <div className="download-list">
                     {downloadLinks.map((download) => (
-                      <button
-                        className="primary-button"
-                        key={download.photoId}
-                        onClick={() => void savePhotoToDevice(download)}
-                        type="button"
-                      >
-                        {savingPhotoId === download.photoId
-                          ? "Abrindo..."
-                          : isMobileDevice
-                            ? `Salvar foto ${String(download.number).padStart(2, "0")} no celular`
-                            : `Baixar foto ${String(download.number).padStart(2, "0")}`}
-                      </button>
+                      <Fragment key={download.photoId}>
+                        <button
+                          className="primary-button"
+                          onClick={() => void savePhotoToDevice(download)}
+                          type="button"
+                        >
+                          {savingPhotoId === download.photoId
+                            ? "Abrindo..."
+                            : isMobileDevice
+                              ? `Salvar foto ${String(download.number).padStart(2, "0")} no celular`
+                              : `Baixar foto ${String(download.number).padStart(2, "0")}`}
+                        </button>
+                        {!isMobileDevice && (
+                          <button
+                            className="secondary-button ghost-button"
+                            onClick={() => void copyPhotoToClipboard(download)}
+                            type="button"
+                          >
+                            {copyingPhotoId === download.photoId
+                              ? "Copiando..."
+                              : `Copiar foto ${String(download.number).padStart(2, "0")}`}
+                          </button>
+                        )}
+                      </Fragment>
                     ))}
+                    {copySuccess && <span className="file-status">{copySuccess}</span>}
                     <small>
                       {isMobileDevice
                         ? "O botão abre as opções nativas para salvar a imagem no celular."
