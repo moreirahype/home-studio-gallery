@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
     parsed.data.productName?.trim() ||
     parsed.data.nicho?.trim() ||
     parsed.data.nicheId?.trim() ||
-    "Galeria";
+    "Sem produto";
   const nicheId = savedLead?.niche_id ?? parsed.data.nicho ?? parsed.data.nicheId;
   const includedPhotos =
     savedLead?.included_photos ?? parsed.data.includedPhotos;

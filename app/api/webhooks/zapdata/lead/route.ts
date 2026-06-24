@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     parsed.data.productName?.trim() ||
     parsed.data.nicho?.trim() ||
     parsed.data.nicheId?.trim() ||
-    "Galeria";
+    "Sem produto";
   const leadPayload = {
     token,
     zapdata_contact_id: parsed.data.contactId ?? null,

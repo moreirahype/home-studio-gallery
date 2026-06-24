@@ -30,7 +30,7 @@ export async function reportGallerySaleToBi(sale: GallerySale) {
       telefone: sale.phone,
       moeda: "BRL",
       atendente: sale.attendantName,
-      produto: sale.productName?.trim() || "Galeria",
+      produto: sale.productName?.trim() || "Sem produto",
       origem: "Home Studio Gallery",
       webhook_secret: process.env.HSBI_WEBHOOK_SECRET ?? "",
     }),
