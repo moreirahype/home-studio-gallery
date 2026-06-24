@@ -104,9 +104,7 @@ export async function POST(request: NextRequest) {
       includedPhotos,
     });
   const attendantMode = String(formData.get("attendantMode") ?? "default");
-  const attendantPrefix =
-    attendantMode === "sheila" ? "Galeria Sheila Turbo" : "Galeria Manual Turbo";
-  const attendantName = `${attendantPrefix} ${(firstExtraAmountCents / 100).toFixed(2)}`;
+  const attendantName = attendantMode === "sheila" ? "Galeria Sheila" : "Galeria";
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
   const referencePath = `auto/${projectId}/reference.jpg`;

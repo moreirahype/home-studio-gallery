@@ -976,7 +976,9 @@ p {
 }
 
 .addon-card.selected .addon-action {
-  background: linear-gradient(135deg, var(--success), var(--success-dark));
+  background: var(--ink);
+  color: white;
+  box-shadow: none;
 }
 
 .addon-check {

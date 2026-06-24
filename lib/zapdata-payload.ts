@@ -175,7 +175,8 @@ export function defaultGalleryAttendant({
 }: {
   amount: number;
 }) {
-  return `Galeria ${amount.toFixed(2)}`;
+  void amount;
+  return "Galeria";
 }
 
 export function previewValue(value?: string) {

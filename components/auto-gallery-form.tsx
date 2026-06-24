@@ -214,16 +214,10 @@ export function AutoGalleryForm() {
           <label>
             Atendente das vendas da galeria
             <select defaultValue="default" name="attendantMode">
-              <option value="default">
-                Galeria Manual Turbo {firstExtraAmount || "XX"}
-              </option>
-              <option value="sheila">
-                Galeria Sheila Turbo {firstExtraAmount || "XX"}
-              </option>
+              <option value="default">Galeria</option>
+              <option value="sheila">Galeria Sheila</option>
             </select>
-            <small>
-              O valor escolhido será acrescentado ao nome do atendente.
-            </small>
+            <small>Esse nome vai para o dashboard e para a planilha.</small>
           </label>
 
           <div className="manual-grid three">
