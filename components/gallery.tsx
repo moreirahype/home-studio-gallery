@@ -730,6 +730,11 @@ export function Gallery({
       return;
     }
 
+    if (!selected.length) {
+      setCheckoutError("Selecione pelo menos uma foto na galeria.");
+      return;
+    }
+
     if (manual && !manualPassword.trim()) {
       setCheckoutError("Digite a senha de liberação manual.");
       return;
@@ -798,6 +803,11 @@ export function Gallery({
   async function blockSelectedPhotos() {
     if (token === "demo") return;
 
+    if (!selected.length) {
+      setCheckoutError("Selecione pelo menos uma foto para bloquear.");
+      return;
+    }
+
     if (!manualPassword.trim()) {
       setCheckoutError("Digite a senha para bloquear fotos.");
       return;
@@ -835,7 +845,22 @@ export function Gallery({
           .filter((preview) => preview.previewUrl)
           .map((preview) => [preview.photoId, preview.previewUrl as string]),
       );
-      setPreviewOverrides((current) => ({ ...current, ...previews }));
+      const fallbackPreviews = Object.fromEntries(
+        selected
+          .map((photoId) => photos.find((photo) => photo.id === photoId))
+          .filter((photo): photo is (typeof photos)[number] => Boolean(photo))
+          .map((photo) => [
+            photo.id,
+            `${photo.previewUrl}${
+              photo.previewUrl.includes("?") ? "&" : "?"
+            }blocked=${Date.now()}`,
+          ]),
+      );
+      setPreviewOverrides((current) => ({
+        ...current,
+        ...fallbackPreviews,
+        ...previews,
+      }));
       setBlockedPhotoIds((current) => [...new Set([...current, ...blocked])]);
       setUnlockedPhotoIds((current) =>
         current.filter((photoId) => !blocked.has(photoId)),
@@ -1791,7 +1816,6 @@ export function Gallery({
               <button
                 className="secondary-button"
                 disabled={
-                  !selected.length ||
                   manualReleasing ||
                   manualBlocking ||
                   releasing ||
@@ -1805,7 +1829,6 @@ export function Gallery({
               <button
                 className="secondary-button"
                 disabled={
-                  !selected.length ||
                   manualReleasing ||
                   manualBlocking ||
                   releasing ||
