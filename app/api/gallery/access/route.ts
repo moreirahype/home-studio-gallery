@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isGalleryExpired } from "@/lib/gallery-expiration";
+import { getAdditionalPhotoAmountCents } from "@/lib/pricing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const querySchema = z.object({
@@ -22,17 +23,21 @@ export async function GET(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   let { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id, paid_amount_cents, created_at, expires_at")
+    .select(
+      "id, included_photos, paid_amount_cents, pricing_base_amount_cents, created_at, expires_at",
+    )
     .eq("gallery_token", parsed.data.token)
     .maybeSingle();
 
   if (projectError && projectError.code === "42703") {
     const fallback = await supabase
       .from("projects")
-      .select("id, paid_amount_cents, created_at")
+      .select("id, included_photos, paid_amount_cents, created_at")
       .eq("gallery_token", parsed.data.token)
       .maybeSingle();
-    project = fallback.data ? { ...fallback.data, expires_at: null } : null;
+    project = fallback.data
+      ? { ...fallback.data, pricing_base_amount_cents: null, expires_at: null }
+      : null;
     projectError = fallback.error;
   }
 
@@ -105,9 +110,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const photoCreditCents = (paidPhotoItems ?? []).reduce(
+  const paidPhotoCreditCents = (paidPhotoItems ?? []).reduce(
     (total, item) => total + Number(item.amount_cents || 0),
     project.paid_amount_cents,
+  );
+  const unlockedPhotoCreditCents =
+    project.paid_amount_cents +
+    getAdditionalPhotoAmountCents({
+      selectedCount: unlockedPhotoIds.size,
+      includedPhotos: project.included_photos,
+      paidAmountCents: project.paid_amount_cents,
+      pricingBaseAmountCents: project.pricing_base_amount_cents,
+    });
+  const photoCreditCents = Math.max(
+    paidPhotoCreditCents,
+    unlockedPhotoCreditCents,
   );
 
   const { data: photos, error: photosError } = unlockedPhotoIds.size

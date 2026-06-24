@@ -1,7 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ClipboardEvent, DragEvent, FormEvent, useRef, useState } from "react";
 
+import {
+  readClipboardImageFiles,
+  readDroppedImageFiles,
+  setInputFiles,
+} from "@/components/image-upload-helpers";
 import { formatBrazilianMobile } from "@/lib/phone";
 
 const MAX_MANUAL_UPLOAD_BYTES = 3.4 * 1024 * 1024;
@@ -44,10 +49,13 @@ async function optimizeManualPhoto(file: File, targetBytes: number) {
 }
 
 export function ManualGalleryForm() {
+  const photosInputRef = useRef<HTMLInputElement>(null);
   const [firstExtraAmount, setFirstExtraAmount] = useState("7.90");
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [selectedPhotosLabel, setSelectedPhotosLabel] = useState(
     "Nenhuma foto selecionada",
   );
+  const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("Criando galeria...");
   const [error, setError] = useState("");
@@ -63,9 +71,11 @@ export function ManualGalleryForm() {
     setGalleryUrl("");
 
     try {
-      const files = formData
-        .getAll("photos")
-        .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+      const files = selectedPhotos.length
+        ? selectedPhotos
+        : formData
+            .getAll("photos")
+            .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
       if (!files.length) {
         throw new Error("Selecione pelo menos uma foto para criar a galeria.");
@@ -110,6 +120,7 @@ export function ManualGalleryForm() {
 
       setGalleryUrl(result.galleryUrl);
       form.reset();
+      setSelectedPhotos([]);
       setSelectedPhotosLabel("Nenhuma foto selecionada");
     } catch (caught) {
       setError(
@@ -127,8 +138,10 @@ export function ManualGalleryForm() {
     await navigator.clipboard.writeText(galleryUrl);
   }
 
-  function updateSelectedPhotosLabel(files: FileList | null) {
-    const selectedFiles = Array.from(files ?? []);
+  function setPhotos(files: File[]) {
+    const selectedFiles = files.slice(0, 20);
+    setSelectedPhotos(selectedFiles);
+    setInputFiles(photosInputRef.current, selectedFiles);
     if (!selectedFiles.length) {
       setSelectedPhotosLabel("Nenhuma foto selecionada");
       return;
@@ -146,6 +159,28 @@ export function ManualGalleryForm() {
             selectedFiles.length > 1 ? "s" : ""
           } selecionada${selectedFiles.length > 1 ? "s" : ""}: ${previewNames}`,
     );
+  }
+
+  function updateSelectedPhotosLabel(files: FileList | null) {
+    setPhotos(Array.from(files ?? []));
+  }
+
+  async function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    const droppedFiles = await readDroppedImageFiles(event.dataTransfer, 20);
+    if (droppedFiles.length) setPhotos([...selectedPhotos, ...droppedFiles]);
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLLabelElement>) {
+    const pastedFiles = readClipboardImageFiles(
+      event.clipboardData,
+      20 - selectedPhotos.length,
+    );
+    if (!pastedFiles.length) return;
+
+    event.preventDefault();
+    setPhotos([...selectedPhotos, ...pastedFiles]);
   }
 
   return (
@@ -191,8 +226,12 @@ export function ManualGalleryForm() {
           <label>
             Atendente das vendas da galeria
             <select defaultValue="default" name="attendantMode">
-              <option value="default">Manual {firstExtraAmount || "XX"}</option>
-              <option value="sheila">Sheila {firstExtraAmount || "XX"}</option>
+              <option value="default">
+                Galeria Manual {firstExtraAmount || "XX"}
+              </option>
+              <option value="sheila">
+                Galeria Sheila {firstExtraAmount || "XX"}
+              </option>
             </select>
             <small>
               O valor escolhido ser&#225; acrescentado ao nome do atendente.
@@ -237,7 +276,19 @@ export function ManualGalleryForm() {
             </label>
           </div>
 
-          <label className="manual-upload-label">
+          <label
+            className={`manual-upload-label ${dragActive ? "drag-active" : ""} ${
+              selectedPhotos.length ? "has-files" : ""
+            }`}
+            onDragLeave={() => setDragActive(false)}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDrop={(event) => void handleDrop(event)}
+            onPaste={handlePaste}
+            tabIndex={0}
+          >
             <span>Fotos finais</span>
             <input
               accept="image/*"
@@ -247,14 +298,22 @@ export function ManualGalleryForm() {
               onChange={(event) =>
                 updateSelectedPhotosLabel(event.currentTarget.files)
               }
+              ref={photosInputRef}
               type="file"
             />
             <span className="manual-upload-box">
-              <span className="manual-upload-icon">+</span>
+              <span className="manual-upload-icon">
+                {selectedPhotos.length ? "✓" : "+"}
+              </span>
               <span className="manual-upload-copy">
-                <strong>Selecionar fotos da galeria</strong>
+                <strong>
+                  {selectedPhotos.length
+                    ? `${selectedPhotos.length} fotos anexadas`
+                    : "Selecionar, colar ou arrastar fotos"}
+                </strong>
                 <small>
-                  Clique aqui para escolher as imagens finais do cliente.
+                  Clique, cole com Ctrl+V ou arraste imagens direto para este
+                  bloco.
                 </small>
               </span>
               <span className="manual-upload-cta">Escolher arquivos</span>

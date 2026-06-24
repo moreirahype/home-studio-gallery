@@ -580,9 +580,10 @@ p {
 
 .watermark-pattern span {
   color: rgb(255 255 255 / 56%);
+  font-family: Arial, Helvetica, sans-serif;
   font-size: clamp(0.5rem, 0.78vw, 0.74rem);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   text-shadow:
     0 1px 1px rgb(0 0 0 / 38%),
     0 0 8px rgb(0 0 0 / 18%);
@@ -1281,6 +1282,23 @@ p {
   border-radius: 18px;
   background: #fbf3ed;
   cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.upload-field.drag-active,
+.upload-field.has-files {
+  border-color: var(--accent);
+  background: #fffaf5;
+  box-shadow: 0 14px 34px rgb(54 39 29 / 8%);
+  transform: translateY(-1px);
+}
+
+.upload-field.has-files {
+  border-style: solid;
 }
 
 .upload-field span,
@@ -1477,7 +1495,9 @@ p {
 }
 
 .manual-upload-label:hover .manual-upload-box,
-.manual-upload-label:focus-within .manual-upload-box {
+.manual-upload-label:focus-within .manual-upload-box,
+.manual-upload-label.drag-active .manual-upload-box,
+.manual-upload-label.has-files .manual-upload-box {
   border-color: var(--accent);
   background:
     radial-gradient(circle at 12% 0, rgb(189 139 70 / 24%), transparent 42%),
@@ -1486,6 +1506,17 @@ p {
     inset 0 0 0 1px rgb(255 255 255 / 80%),
     0 14px 34px rgb(54 39 29 / 8%);
   transform: translateY(-1px);
+}
+
+.manual-upload-label.has-files .manual-upload-box {
+  border-style: solid;
+  background:
+    radial-gradient(circle at 12% 0, rgb(46 106 61 / 14%), transparent 42%),
+    white;
+}
+
+.manual-upload-label.has-files .manual-upload-icon {
+  background: #2e6a3d;
 }
 
 .manual-upload-icon {

@@ -1,7 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ClipboardEvent, DragEvent, FormEvent, useRef, useState } from "react";
 
+import {
+  readClipboardImageFiles,
+  readDroppedImageFiles,
+  setInputFiles,
+} from "@/components/image-upload-helpers";
 import { formatBrazilianMobile } from "@/lib/phone";
 
 async function optimizeReference(file: File) {
@@ -25,8 +30,13 @@ async function optimizeReference(file: File) {
 }
 
 export function AutoGalleryForm() {
+  const referenceInputRef = useRef<HTMLInputElement>(null);
   const [firstExtraAmount, setFirstExtraAmount] = useState("7.90");
-  const [referenceLabel, setReferenceLabel] = useState("Nenhuma foto selecionada");
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
+  const [referenceLabel, setReferenceLabel] = useState(
+    "Nenhuma foto selecionada",
+  );
+  const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("Criando galeria...");
   const [error, setError] = useState("");
@@ -37,7 +47,7 @@ export function AutoGalleryForm() {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const reference = formData.get("reference");
+    const reference = referenceFile ?? formData.get("reference");
 
     setLoading(true);
     setLoadingLabel("Preparando referência...");
@@ -71,7 +81,7 @@ export function AutoGalleryForm() {
       setGalleryUrl(result.galleryUrl);
       setTasks(result.generationTasks ?? null);
       form.reset();
-      setReferenceLabel("Nenhuma foto selecionada");
+      setReference(null);
       setFirstExtraAmount("7.90");
     } catch (caught) {
       setError(
@@ -87,6 +97,27 @@ export function AutoGalleryForm() {
   async function copyGalleryUrl() {
     if (!galleryUrl) return;
     await navigator.clipboard.writeText(galleryUrl);
+  }
+
+  function setReference(file: File | null) {
+    setReferenceFile(file);
+    setReferenceLabel(file?.name ?? "Nenhuma foto selecionada");
+    setInputFiles(referenceInputRef.current, file ? [file] : []);
+  }
+
+  async function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    const [file] = await readDroppedImageFiles(event.dataTransfer, 1);
+    if (file) setReference(file);
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLLabelElement>) {
+    const [file] = readClipboardImageFiles(event.clipboardData, 1);
+    if (!file) return;
+
+    event.preventDefault();
+    setReference(file);
   }
 
   return (
@@ -129,22 +160,40 @@ export function AutoGalleryForm() {
             </label>
           </div>
 
-          <label className="manual-upload-label">
+          <label
+            className={`manual-upload-label ${dragActive ? "drag-active" : ""} ${
+              referenceFile ? "has-files" : ""
+            }`}
+            onDragLeave={() => setDragActive(false)}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDrop={(event) => void handleDrop(event)}
+            onPaste={handlePaste}
+            tabIndex={0}
+          >
             <span>Foto de referência</span>
             <input
               accept="image/jpeg,image/png,image/webp"
               className="manual-file-input"
               name="reference"
               onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                setReferenceLabel(file?.name ?? "Nenhuma foto selecionada");
+                setReference(event.currentTarget.files?.[0] ?? null);
               }}
+              ref={referenceInputRef}
               type="file"
             />
             <span className="manual-upload-box">
-              <span className="manual-upload-icon">+</span>
+              <span className="manual-upload-icon">
+                {referenceFile ? "✓" : "+"}
+              </span>
               <span className="manual-upload-copy">
-                <strong>Selecionar foto do cliente</strong>
+                <strong>
+                  {referenceFile
+                    ? "Foto de referência anexada"
+                    : "Selecionar, colar ou arrastar foto"}
+                </strong>
                 <small>Use uma imagem nítida e com o rosto bem visível.</small>
               </span>
               <span className="manual-upload-cta">Escolher foto</span>
@@ -166,10 +215,10 @@ export function AutoGalleryForm() {
             Atendente das vendas da galeria
             <select defaultValue="default" name="attendantMode">
               <option value="default">
-                Manual Turbo {firstExtraAmount || "XX"}
+                Galeria Manual Turbo {firstExtraAmount || "XX"}
               </option>
               <option value="sheila">
-                Sheila Turbo {firstExtraAmount || "XX"}
+                Galeria Sheila Turbo {firstExtraAmount || "XX"}
               </option>
             </select>
             <small>

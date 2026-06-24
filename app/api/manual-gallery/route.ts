@@ -176,7 +176,8 @@ export async function POST(request: NextRequest) {
   const contextFinal =
     String(formData.get("contextFinal") ?? "").trim() || "Galeria manual";
   const attendantMode = String(formData.get("attendantMode") ?? "default");
-  const attendantPrefix = attendantMode === "sheila" ? "Sheila" : "Manual";
+  const attendantPrefix =
+    attendantMode === "sheila" ? "Galeria Sheila" : "Galeria Manual";
   const attendantName = `${attendantPrefix} ${(
     firstExtraAmountCents / 100
   ).toFixed(2)}`;

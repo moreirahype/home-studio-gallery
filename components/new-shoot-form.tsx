@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ClipboardEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  readClipboardImageFiles,
+  readDroppedImageFiles,
+  setInputFiles,
+} from "@/components/image-upload-helpers";
 import { trackBrowserPurchase } from "@/lib/meta-browser";
 
 const money = new Intl.NumberFormat("pt-BR", {
@@ -58,11 +63,13 @@ export function NewShootForm({
   const photoCount = expressOffer ? 5 : generationCount;
   const includedPhotos = expressOffer ? 1 : configuredIncludedPhotos;
   const price = expressOffer ? 4.9 : paidAmount;
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [theme, setTheme] = useState("");
   const [occasion, setOccasion] = useState("");
   const [style, setStyle] = useState("");
   const [imageName, setImageName] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
@@ -258,6 +265,27 @@ export function NewShootForm({
     }
   }
 
+  function setReferenceImage(file: File | null) {
+    setImageName(file?.name ?? "");
+    setImageFile(file);
+    setInputFiles(imageInputRef.current, file ? [file] : []);
+  }
+
+  async function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    const [file] = await readDroppedImageFiles(event.dataTransfer, 1);
+    if (file) setReferenceImage(file);
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLLabelElement>) {
+    const [file] = readClipboardImageFiles(event.clipboardData, 1);
+    if (!file) return;
+
+    event.preventDefault();
+    setReferenceImage(file);
+  }
+
   if (submitted && pixPayment) {
     return (
       <main className="new-shoot-shell">
@@ -329,19 +357,32 @@ export function NewShootForm({
       </header>
 
       <section className="new-shoot-card">
-        <label className="upload-field">
+        <label
+          className={`upload-field ${dragActive ? "drag-active" : ""} ${
+            imageFile ? "has-files" : ""
+          }`}
+          onDragLeave={() => setDragActive(false)}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDrop={(event) => void handleDrop(event)}
+          onPaste={handlePaste}
+          tabIndex={0}
+        >
           <span>1. Escolha uma foto sua</span>
-          <strong>{imageName || "Enviar foto de referência"}</strong>
+          <strong>
+            {imageName || "Enviar, colar ou arrastar foto de referência"}
+          </strong>
           <small>Use uma foto nítida, de frente e com boa iluminação.</small>
           <input
             accept="image/jpeg,image/png,image/webp"
             onChange={(event) =>
               {
-                const file = event.target.files?.[0] ?? null;
-                setImageName(file?.name ?? "");
-                setImageFile(file);
+                setReferenceImage(event.target.files?.[0] ?? null);
               }
             }
+            ref={imageInputRef}
             type="file"
           />
         </label>

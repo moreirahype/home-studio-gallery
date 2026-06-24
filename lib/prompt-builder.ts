@@ -54,6 +54,19 @@ const SCENE_VARIATIONS = [
   "Final signature portrait with strong visual appeal, clean composition, premium finish and memorable theme execution.",
 ];
 
+export function refineGenerationContext(context: string) {
+  const normalizedContext = context.trim().replace(/\s+/g, " ");
+
+  return `Client request, written in the client's own words:
+${normalizedContext}
+
+If the request is short or incomplete, expand it into a complete photoshoot direction without changing the client's intent. Preserve the main subject, occasion, place, mood, color, profession, fantasy, relationship, object or theme that the client mentioned.
+
+Make the concept visually obvious to a non-technical client. Include clear props, wardrobe, environment, pose, lighting and set design that communicate the request immediately.
+
+Avoid generic luxury portraits unless luxury directly helps the requested theme. A few premium/editorial versions are welcome, but most images must be strongly connected to the client's request.`;
+}
+
 export function buildGenerationPrompts(context: string) {
   const normalizedContext = context.trim();
 

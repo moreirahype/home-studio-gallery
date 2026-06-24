@@ -4,7 +4,10 @@ import { z } from "zod";
 import { createPixPayment } from "@/lib/mercado-pago";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { verifyExpressOfferToken } from "@/lib/offers";
-import { buildGenerationPrompts } from "@/lib/prompt-builder";
+import {
+  buildGenerationPrompts,
+  refineGenerationContext,
+} from "@/lib/prompt-builder";
 import {
   DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
   getFirstExtraAmountCentsFromPricingBaseAmountCents,
@@ -179,7 +182,8 @@ export async function POST(request: NextRequest) {
   ]
     .filter(Boolean)
     .join(". ");
-  const prompts = buildGenerationPrompts(contextFinal).slice(0, photoCount);
+  const refinedContextFinal = refineGenerationContext(contextFinal);
+  const prompts = buildGenerationPrompts(refinedContextFinal).slice(0, photoCount);
   const projectPayload = {
     id: projectId,
     gallery_token: galleryToken,
@@ -187,7 +191,7 @@ export async function POST(request: NextRequest) {
     phone: customerPhone,
     source_image_url: signedReference.data.signedUrl,
     source_image_path: referencePath,
-    context_final: contextFinal,
+    context_final: refinedContextFinal,
     niche_id: "repeat_shoot",
     included_photos: includedPhotos,
     paid_amount_cents: paidAmountCents,

@@ -6,7 +6,10 @@ import {
   formatBrazilianMobile,
   normalizeBrazilianMobile,
 } from "@/lib/phone";
-import { buildGenerationPrompts } from "@/lib/prompt-builder";
+import {
+  buildGenerationPrompts,
+  refineGenerationContext,
+} from "@/lib/prompt-builder";
 import { getPricingBaseAmountCentsFromFirstExtraAmountCents } from "@/lib/pricing";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -32,11 +35,7 @@ function parseNonNegativeCount(value: FormDataEntryValue | null, fallback: numbe
 }
 
 function getAdminPassword() {
-  return (
-    process.env.GALLERY_ADMIN_PASSWORD ??
-    process.env.MANUAL_RELEASE_PASSWORD ??
-    process.env.GALLERY_MANUAL_RELEASE_PASSWORD
-  );
+  return process.env.GALLERY_ADMIN_PASSWORD;
 }
 
 export async function POST(request: NextRequest) {
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
     });
   const attendantMode = String(formData.get("attendantMode") ?? "default");
   const attendantPrefix =
-    attendantMode === "sheila" ? "Sheila Turbo" : "Manual Turbo";
+    attendantMode === "sheila" ? "Galeria Sheila Turbo" : "Galeria Manual Turbo";
   const attendantName = `${attendantPrefix} ${(firstExtraAmountCents / 100).toFixed(2)}`;
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
@@ -142,6 +141,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const refinedContextFinal = refineGenerationContext(contextFinal);
   const projectPayload = {
     id: projectId,
     gallery_token: galleryToken,
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     phone,
     source_image_url: signedReference.data.signedUrl,
     source_image_path: referencePath,
-    context_final: contextFinal,
+    context_final: refinedContextFinal,
     niche_id: "auto_manual",
     included_photos: includedPhotos,
     paid_amount_cents: paidAmountCents,
@@ -210,7 +210,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const prompts = buildGenerationPrompts(contextFinal).slice(0, generationCount);
+  const prompts = buildGenerationPrompts(refinedContextFinal).slice(
+    0,
+    generationCount,
+  );
   const { error: photosError } = await supabase.from("photos").insert(
     prompts.map(({ position, prompt }) => ({
       project_id: projectId,

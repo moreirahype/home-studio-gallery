@@ -974,8 +974,8 @@ export function Gallery({
             <div className="auto-release-note">
               <strong>Pagamento confirmado automaticamente.</strong>
               <span>
-                Não precisa enviar comprovante no WhatsApp. As fotos compradas
-                já foram liberadas aqui na galeria.
+                Não precisa enviar comprovante no WhatsApp. ☺️ As fotos
+                compradas já foram liberadas aqui na galeria.
               </span>
             </div>
           </div>
@@ -1335,7 +1335,7 @@ export function Gallery({
                   link por 7 dias caso queira voltar e liberar mais fotos.
                 </p>
                 <div className="auto-release-note modal-note">
-                  <strong>Não envie comprovante no WhatsApp.</strong>
+                  <strong>Não precisa enviar comprovante no WhatsApp. ☺️</strong>
                   <span>
                     O pagamento já foi reconhecido e suas fotos selecionadas
                     foram liberadas automaticamente aqui.
@@ -1415,7 +1415,7 @@ export function Gallery({
                   pagamento for aprovado, suas fotos serão liberadas aqui.
                 </p>
                 <div className="auto-release-note modal-note pre-payment-note">
-                  <strong>Não mande comprovante no WhatsApp.</strong>
+                  <strong>Não precisa enviar comprovante no WhatsApp. ☺️</strong>
                   <span>
                     Depois de pagar no app do banco, volte para esta tela e toque
                     no botão de liberar fotos. A liberação é automática.
@@ -1623,9 +1623,9 @@ export function Gallery({
                 </div>
                 {checkoutAmount > 0 && (
                   <div className="auto-release-note modal-note pre-payment-note">
-                    <strong>Atenção antes de pagar</strong>
+                    <strong>Liberação automática</strong>
                     <span>
-                      Não precisa enviar comprovante no WhatsApp. Após o Pix,
+                      Não precisa enviar comprovante no WhatsApp. ☺️ Após o Pix,
                       volte para esta galeria e suas fotos serão liberadas
                       automaticamente.
                     </span>

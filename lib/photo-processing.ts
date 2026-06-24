@@ -39,8 +39,8 @@ export async function createWatermarkedPreview(
     return `<g transform="rotate(${rotation} ${x} ${y})">
       <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"
         fill="#ffffff" fill-opacity="0.62" stroke="#000000" stroke-opacity="0.26" stroke-width="1.2"
-        font-family="sans-serif" font-size="${fontSize}" font-weight="800"
-        letter-spacing="4">${escapedLabel}</text>
+        font-family="Arial, Helvetica, Liberation Sans, DejaVu Sans, sans-serif" font-size="${fontSize}" font-weight="800"
+        letter-spacing="1">${escapedLabel}</text>
     </g>`;
   }).join("");
   const overlay = Buffer.from(
