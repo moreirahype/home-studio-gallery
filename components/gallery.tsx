@@ -327,6 +327,10 @@ export function Gallery({
   const [relatedGalleries, setRelatedGalleries] = useState<
     { token: string; title: string; status?: string | null; url: string }[]
   >([]);
+  const effectiveUnlockedPhotoIds = useMemo(
+    () => unlockedPhotoIds.filter((photoId) => !blockedPhotoIds.includes(photoId)),
+    [blockedPhotoIds, unlockedPhotoIds],
+  );
   const [checkoutError, setCheckoutError] = useState("");
   const [releasing, setReleasing] = useState(false);
   const [creatingPix, setCreatingPix] = useState(false);
@@ -384,10 +388,11 @@ export function Gallery({
 
   const selectedBlockedCount = selected.filter(
     (photoId) =>
-      blockedPhotoIds.includes(photoId) && !unlockedPhotoIds.includes(photoId),
+      blockedPhotoIds.includes(photoId) &&
+      !effectiveUnlockedPhotoIds.includes(photoId),
   ).length;
   const normalTargetPhotoCount = new Set([
-    ...unlockedPhotoIds,
+    ...effectiveUnlockedPhotoIds,
     ...selected,
   ]).size;
   const blockedTargetFloor = offer.includedPhotos + selectedBlockedCount;
@@ -424,9 +429,10 @@ export function Gallery({
     2,
   )}`;
   const hasUnlockedPurchases =
-    unlockedPhotoIds.length > 0 || photoCredit > offer.paidAmount + 0.005;
+    effectiveUnlockedPhotoIds.length > 0 ||
+    photoCredit > offer.paidAmount + 0.005;
   const selectedUnlockedCount = selected.filter((photoId) =>
-    unlockedPhotoIds.includes(photoId),
+    effectiveUnlockedPhotoIds.includes(photoId),
   ).length;
   const selectedLockedCount = selected.length - selectedUnlockedCount;
   const selectionOnlyUnlocked =
@@ -551,7 +557,7 @@ export function Gallery({
   function selectAll() {
     setSelected(
       photos
-        .filter((photo) => !unlockedPhotoIds.includes(photo.id))
+        .filter((photo) => !effectiveUnlockedPhotoIds.includes(photo.id))
         .map((photo) => photo.id),
     );
   }
@@ -1298,7 +1304,7 @@ export function Gallery({
           const selectionPosition = selected.indexOf(photo.id);
           const isSelected = selectionPosition >= 0;
           const isBlocked = blockedPhotoIds.includes(photo.id);
-          const isUnlocked = unlockedPhotoIds.includes(photo.id) && !isBlocked;
+          const isUnlocked = effectiveUnlockedPhotoIds.includes(photo.id);
           const displayUrl = isBlocked
             ? previewOverrides[photo.id] ?? photo.previewUrl
             : unlockedViews[photo.id] ??

@@ -569,21 +569,21 @@ p {
 .photo-watermark {
   position: absolute;
   z-index: 2;
-  inset: -22%;
+  inset: -18%;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 19px;
+  gap: 27px;
   overflow: hidden;
-  color: rgb(255 255 255 / 57%);
-  font-size: clamp(0.82rem, 2.4vw, 1.25rem);
+  color: rgb(255 255 255 / 46%);
+  font-size: clamp(0.78rem, 2vw, 1.08rem);
   font-weight: 900;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   line-height: 1;
   pointer-events: none;
   text-shadow:
-    0 1px 2px rgb(0 0 0 / 30%),
-    0 0 1px rgb(0 0 0 / 40%);
+    0 1px 2px rgb(0 0 0 / 26%),
+    0 0 1px rgb(0 0 0 / 34%);
   transform: rotate(-29deg);
   user-select: none;
 }
