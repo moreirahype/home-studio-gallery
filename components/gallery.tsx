@@ -1,8 +1,13 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trackBrowserPurchase } from "@/lib/meta-browser";
+import {
+  basePricesByQuantity,
+  getAdditionalPhotoAmountCents,
+  getFirstExtraAmountCentsFromPricingBaseAmountCents,
+} from "@/lib/pricing";
 
 const MAX_PHOTOS = 20;
 const DEFAULT_GALLERY_SIZE = 15;
@@ -17,11 +22,6 @@ const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
   previewUrl: "",
 }));
 
-// Canonical curve for the default R$ 7,90 / 1-photo offer.
-const basePricesByQuantity = [
-  0, 7.9, 17.8, 25.8, 31.8, 35.8, 39.8, 42.8, 45.8, 49.8, 52.8,
-  55.8, 58.8, 61.8, 64.8, 67.8, 71.8, 74.8, 77.8, 80.8, 82.8,
-];
 const videoPricesByQuantity = [0, 19.9, 29.9, 39.9, 49.9, 59.9];
 
 const standardMilestones = [
@@ -108,27 +108,25 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
   };
 }
 
-function createPriceCurve(offer: GalleryOffer) {
-  if (offer.includedPhotos === 0) {
-    const scale = offer.pricingBaseAmount / basePricesByQuantity[1];
-    return basePricesByQuantity.map((basePrice, quantity) => {
-      if (quantity === 0) return 0;
-      return Math.round(basePrice * scale * 100) / 100;
-    });
-  }
+function toCents(value: number) {
+  return Math.round(value * 100);
+}
 
-  const baseAtIncluded = basePricesByQuantity[offer.includedPhotos];
-  const scale = offer.pricingBaseAmount / baseAtIncluded;
+function getPricingBaseAmountCents(offer: GalleryOffer) {
+  return Math.max(1, toCents(offer.pricingBaseAmount));
+}
 
-  return basePricesByQuantity.map((basePrice, quantity) => {
-    if (quantity === 0) return 0;
-    if (quantity <= offer.includedPhotos) return offer.paidAmount;
-    const scaledAdditional =
-      Math.round(
-        (basePrice - basePricesByQuantity[offer.includedPhotos]) * scale * 100,
-      ) / 100;
-    return offer.paidAmount + Math.max(0, scaledAdditional);
-  });
+function getTotalPhotoAmountCents(offer: GalleryOffer, count: number) {
+  if (!count) return 0;
+  return (
+    toCents(offer.paidAmount) +
+    getAdditionalPhotoAmountCents({
+      selectedCount: count,
+      includedPhotos: offer.includedPhotos,
+      paidAmountCents: toCents(offer.paidAmount),
+      pricingBaseAmountCents: getPricingBaseAmountCents(offer),
+    })
+  );
 }
 
 function createMilestones(includedPhotos: number, gallerySize: number) {
@@ -269,30 +267,6 @@ function createZip(files: { name: string; data: Uint8Array }[]) {
   });
 }
 
-async function convertImageBlobToPng(blob: Blob) {
-  const bitmap = await createImageBitmap(blob);
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("Canvas indisponível.");
-    context.drawImage(bitmap, 0, 0);
-
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((pngBlob) => {
-        if (pngBlob) {
-          resolve(pngBlob);
-          return;
-        }
-        reject(new Error("Não foi possível converter a imagem."));
-      }, "image/png");
-    });
-  } finally {
-    bitmap.close();
-  }
-}
-
 function AddIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -314,7 +288,6 @@ export function Gallery({
 }) {
   const router = useRouter();
   const offer = useMemo(() => normalizeOffer(offerInput), [offerInput]);
-  const prices = useMemo(() => createPriceCurve(offer), [offer]);
   const milestones = useMemo(
     () => createMilestones(offer.includedPhotos, offer.gallerySize),
     [offer.gallerySize, offer.includedPhotos],
@@ -347,12 +320,10 @@ export function Gallery({
     { token: string; title: string; status?: string | null; url: string }[]
   >([]);
   const [checkoutError, setCheckoutError] = useState("");
-  const [copySuccess, setCopySuccess] = useState("");
   const [releasing, setReleasing] = useState(false);
   const [creatingPix, setCreatingPix] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
-  const [copyingPhotoId, setCopyingPhotoId] = useState<string | null>(null);
   const [savingAllFiles, setSavingAllFiles] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [manualReleaseOpen, setManualReleaseOpen] = useState(false);
@@ -374,7 +345,8 @@ export function Gallery({
   }, [photos, videoPhotoIds]);
 
   function getPricing(count: number) {
-    const total = count ? prices[count] : 0;
+    const totalCents = getTotalPhotoAmountCents(offer, count);
+    const total = totalCents / 100;
     const referenceUnit =
       (offer.pricingBaseAmount / Math.max(1, offer.includedPhotos)) * 1.25;
     const fullPrice =
@@ -385,7 +357,7 @@ export function Gallery({
     const unitPrice = count ? total / count : 0;
     const dueNow =
       count > offer.includedPhotos
-        ? Math.max(0, total - offer.paidAmount)
+        ? Math.max(0, (totalCents - toCents(offer.paidAmount)) / 100)
         : 0;
     const nextMilestone = milestones.find(
       (milestone) => milestone.quantity > count,
@@ -419,8 +391,10 @@ export function Gallery({
     ? Math.max(0, nextPrice.total - photoCredit) - pricing.dueNow
     : 0;
   const firstExtraAmount =
-    prices[Math.min(MAX_PHOTOS, offer.includedPhotos + 1)] -
-    prices[offer.includedPhotos];
+    getFirstExtraAmountCentsFromPricingBaseAmountCents({
+      pricingBaseAmountCents: getPricingBaseAmountCents(offer),
+      includedPhotos: offer.includedPhotos,
+    }) / 100;
   const newShootUrl = `/novo?source=${encodeURIComponent(
     token,
   )}&paidAmount=${offer.newShootPrice.toFixed(
@@ -643,42 +617,6 @@ export function Gallery({
       );
     } finally {
       setSavingPhotoId(null);
-    }
-  }
-
-  async function copyPhotoToClipboard(download: PhotoDownload) {
-    if (
-      typeof window === "undefined" ||
-      !("ClipboardItem" in window) ||
-      !navigator.clipboard?.write
-    ) {
-      setCheckoutError(
-        "Seu navegador não permitiu copiar a imagem. Use o botão de baixar ou abra a foto e copie manualmente.",
-      );
-      return;
-    }
-
-    setCopyingPhotoId(download.photoId);
-    setCheckoutError("");
-    setCopySuccess("");
-
-    try {
-      const response = await fetch(download.url);
-      if (!response.ok) throw new Error("Falha ao buscar imagem.");
-      const pngBlob = await convertImageBlobToPng(await response.blob());
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": pngBlob }),
-      ]);
-      setCopySuccess(
-        `Foto ${String(download.number).padStart(2, "0")} copiada. Agora é só colar no WhatsApp.`,
-      );
-      window.setTimeout(() => setCopySuccess(""), 4500);
-    } catch {
-      setCheckoutError(
-        "Não consegui copiar essa foto automaticamente. Tente baixar ou abrir a foto e copiar manualmente.",
-      );
-    } finally {
-      setCopyingPhotoId(null);
     }
   }
 
@@ -1053,32 +991,19 @@ export function Gallery({
               </button>
             )}
             {downloadLinks.map((download) => (
-              <Fragment key={download.photoId}>
-                <button
-                  className="secondary-button"
-                  onClick={() => void savePhotoToDevice(download)}
-                  type="button"
-                >
-                  {savingPhotoId === download.photoId
-                    ? "Abrindo..."
-                    : isMobileDevice
-                      ? `Salvar foto ${String(download.number).padStart(2, "0")}`
-                      : `Baixar foto ${String(download.number).padStart(2, "0")}`}
-                </button>
-                {!isMobileDevice && (
-                  <button
-                    className="secondary-button ghost-button"
-                    onClick={() => void copyPhotoToClipboard(download)}
-                    type="button"
-                  >
-                    {copyingPhotoId === download.photoId
-                      ? "Copiando..."
-                      : `Copiar foto ${String(download.number).padStart(2, "0")}`}
-                  </button>
-                )}
-              </Fragment>
+              <button
+                className="secondary-button"
+                key={download.photoId}
+                onClick={() => void savePhotoToDevice(download)}
+                type="button"
+              >
+                {savingPhotoId === download.photoId
+                  ? "Abrindo..."
+                  : isMobileDevice
+                    ? `Salvar foto ${String(download.number).padStart(2, "0")}`
+                    : `Baixar foto ${String(download.number).padStart(2, "0")}`}
+              </button>
             ))}
-            {copySuccess && <span className="file-status">{copySuccess}</span>}
             {videoAccess?.status === "generating" && (
               <span className="file-status">Vídeo em produção...</span>
             )}
@@ -1419,32 +1344,19 @@ export function Gallery({
                 {downloadLinks.length > 0 && (
                   <div className="download-list">
                     {downloadLinks.map((download) => (
-                      <Fragment key={download.photoId}>
-                        <button
-                          className="primary-button"
-                          onClick={() => void savePhotoToDevice(download)}
-                          type="button"
-                        >
-                          {savingPhotoId === download.photoId
-                            ? "Abrindo..."
-                            : isMobileDevice
-                              ? `Salvar foto ${String(download.number).padStart(2, "0")} no celular`
-                              : `Baixar foto ${String(download.number).padStart(2, "0")}`}
-                        </button>
-                        {!isMobileDevice && (
-                          <button
-                            className="secondary-button ghost-button"
-                            onClick={() => void copyPhotoToClipboard(download)}
-                            type="button"
-                          >
-                            {copyingPhotoId === download.photoId
-                              ? "Copiando..."
-                              : `Copiar foto ${String(download.number).padStart(2, "0")}`}
-                          </button>
-                        )}
-                      </Fragment>
+                      <button
+                        className="primary-button"
+                        key={download.photoId}
+                        onClick={() => void savePhotoToDevice(download)}
+                        type="button"
+                      >
+                        {savingPhotoId === download.photoId
+                          ? "Abrindo..."
+                          : isMobileDevice
+                            ? `Salvar foto ${String(download.number).padStart(2, "0")} no celular`
+                            : `Baixar foto ${String(download.number).padStart(2, "0")}`}
+                      </button>
                     ))}
-                    {copySuccess && <span className="file-status">{copySuccess}</span>}
                     <small>
                       {isMobileDevice
                         ? "O botão abre as opções nativas para salvar a imagem no celular."

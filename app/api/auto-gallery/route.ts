@@ -35,7 +35,7 @@ function parseNonNegativeCount(value: FormDataEntryValue | null, fallback: numbe
 }
 
 function getAdminPassword() {
-  return process.env.GALLERY_ADMIN_PASSWORD;
+  return process.env.GALLERY_ADMIN_PASSWORD ?? process.env.MANUAL_GALLERY_PASSWORD;
 }
 
 export async function POST(request: NextRequest) {

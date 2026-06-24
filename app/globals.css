@@ -464,13 +464,6 @@ p {
   cursor: not-allowed;
 }
 
-.ghost-button {
-  min-height: 42px;
-  border-style: dashed;
-  background: rgb(255 255 255 / 58%);
-  color: #633522;
-}
-
 .file-status {
   padding: 12px 15px;
   border-radius: 12px;
@@ -809,6 +802,20 @@ p {
   width: 100%;
 }
 
+.checkout-button,
+.checkout-modal .modal-primary,
+.addon-action {
+  background: linear-gradient(135deg, #2f8f4e, #236c3a);
+  box-shadow:
+    0 14px 30px rgb(47 143 78 / 22%),
+    inset 0 0 0 1px rgb(255 255 255 / 18%);
+}
+
+.checkout-button:hover:not(:disabled),
+.checkout-modal .modal-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #35a45a, #257340);
+}
+
 .addon-card {
   display: grid;
   width: 100%;
@@ -934,7 +941,7 @@ p {
 }
 
 .addon-card.selected .addon-action {
-  background: var(--accent);
+  background: linear-gradient(135deg, #2f8f4e, #236c3a);
 }
 
 .addon-check {
@@ -1313,7 +1320,9 @@ p {
 }
 
 .upload-field.has-files {
+  border-color: #2e6a3d;
   border-style: solid;
+  box-shadow: 0 14px 34px rgb(46 106 61 / 12%);
 }
 
 .upload-field span,
@@ -1524,10 +1533,14 @@ p {
 }
 
 .manual-upload-label.has-files .manual-upload-box {
+  border-color: #2e6a3d;
   border-style: solid;
   background:
     radial-gradient(circle at 12% 0, rgb(46 106 61 / 14%), transparent 42%),
     white;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 80%),
+    0 14px 34px rgb(46 106 61 / 12%);
 }
 
 .manual-upload-label.has-files .manual-upload-icon {

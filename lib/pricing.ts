@@ -1,7 +1,7 @@
-const MAX_PHOTOS = 20;
+export const MAX_PHOTOS = 20;
 export const DEFAULT_FIRST_EXTRA_AMOUNT_CENTS = 990;
 
-const basePricesByQuantity = [
+export const basePricesByQuantity = [
   0, 7.9, 17.8, 25.8, 31.8, 35.8, 39.8, 42.8, 45.8, 49.8, 52.8,
   55.8, 58.8, 61.8, 64.8, 67.8, 71.8, 74.8, 77.8, 80.8, 82.8,
 ];
@@ -102,7 +102,7 @@ export function getAdditionalPhotoAmountCents({
       pricingBaseAmountCents ?? getDefaultPricingBaseAmountCents(safeIncluded),
     ) / 100;
   const scale = pricingBaseAmount / basePricesByQuantity[safeIncluded];
-  const scaledAdditional = Math.round(
+  const scaledAdditional = Math.ceil(
     (basePricesByQuantity[safeSelected] - basePricesByQuantity[safeIncluded]) *
       scale *
       100,
