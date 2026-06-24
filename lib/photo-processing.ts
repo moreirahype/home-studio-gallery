@@ -1,62 +1,34 @@
 import sharp from "sharp";
 
-const glyphs: Record<string, string[]> = {
-  A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
-  D: ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
-  E: ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
-  H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
-  I: ["11111", "00100", "00100", "00100", "00100", "00100", "11111"],
-  M: ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
-  O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
-  S: ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
-  T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
-  U: ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
-  ".": ["00000", "00000", "00000", "00000", "00000", "01100", "01100"],
-};
+function escapeXml(value: string) {
+  return value.replace(/[<>&'"]/g, (character) => {
+    const entities: Record<string, string> = {
+      "<": "&lt;",
+      ">": "&gt;",
+      "&": "&amp;",
+      "'": "&apos;",
+      '"': "&quot;",
+    };
+    return entities[character];
+  });
+}
 
-function createBitmapText(
+function createWatermarkText(
   label: string,
   x: number,
   y: number,
-  scale: number,
+  fontSize: number,
   rotation: number,
 ) {
-  const normalized = label.toUpperCase().replace(/[^A-Z.]/g, "");
-  const characters = Array.from(normalized).filter((character) => glyphs[character]);
-  const characterGap = scale * 1.7;
-  const glyphHeight = 7 * scale;
-  const totalWidth =
-    characters.reduce(
-      (sum, character) => sum + glyphs[character][0].length * scale + characterGap,
-      0,
-    ) - characterGap;
-  let cursor = -totalWidth / 2;
-  const blocks: string[] = [];
-
-  for (const character of characters) {
-    const glyph = glyphs[character];
-
-    glyph.forEach((row, rowIndex) => {
-      Array.from(row).forEach((pixel, columnIndex) => {
-        if (pixel !== "1") return;
-        blocks.push(
-          `<rect x="${(cursor + columnIndex * scale).toFixed(2)}" y="${(
-            -glyphHeight / 2 +
-            rowIndex * scale
-          ).toFixed(2)}" width="${(scale * 0.92).toFixed(2)}" height="${(
-            scale * 0.92
-          ).toFixed(2)}" rx="${(scale * 0.16).toFixed(2)}" />`,
-        );
-      });
-    });
-
-    cursor += glyph[0].length * scale + characterGap;
-  }
-
-  return `<g transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rotation})" opacity="0.36" fill="#ffffff" stroke="#000000" stroke-opacity="0.16" stroke-width="${Math.max(
-    0.45,
-    scale * 0.1,
-  ).toFixed(2)}">${blocks.join("")}</g>`;
+  return `<g transform="rotate(${rotation} ${x.toFixed(2)} ${y.toFixed(2)})">
+    <text x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" dominant-baseline="middle"
+      fill="#ffffff" fill-opacity="0.34" stroke="#000000" stroke-opacity="0.14" stroke-width="${Math.max(
+        0.55,
+        fontSize * 0.035,
+      ).toFixed(2)}"
+      font-family="Arial, Helvetica, sans-serif" font-size="${fontSize.toFixed(2)}" font-weight="800"
+      letter-spacing="1.2">${escapeXml(label)}</text>
+  </g>`;
 }
 
 export async function createWatermarkedPreview(
@@ -73,7 +45,7 @@ export async function createWatermarkedPreview(
   const height = Math.max(1, Math.round(sourceHeight * scale));
   const columns = Math.max(3, Math.ceil(width / 230));
   const rows = Math.max(5, Math.ceil(height / 170));
-  const pixelSize = Math.max(1.75, width / 260);
+  const fontSize = Math.max(15, width / 34);
   const marks = Array.from({ length: columns * rows }, (_, index) => {
     const column = index % columns;
     const row = Math.floor(index / columns);
@@ -81,7 +53,7 @@ export async function createWatermarkedPreview(
     const y = ((row + 0.5) * height) / rows + (column % 2 ? 22 : -6);
     const rotation = -31;
 
-    return createBitmapText(label, x, y, pixelSize, rotation);
+    return createWatermarkText(label, x, y, fontSize, rotation);
   }).join("");
   const overlay = Buffer.from(
     `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">

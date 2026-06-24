@@ -1163,7 +1163,7 @@ export function Gallery({
             "tone" in photo && typeof photo.tone === "number" ? photo.tone : 0;
 
           return (
-            <button
+            <div
               aria-label={
                 isUnlocked
                   ? `Foto ${photo.number} liberada`
@@ -1175,7 +1175,13 @@ export function Gallery({
               }`}
               key={photo.id}
               onClick={() => togglePhoto(photo.id)}
-              type="button"
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                togglePhoto(photo.id);
+              }}
+              role="button"
+              tabIndex={0}
             >
               <span
                 className="photo-placeholder"
@@ -1215,7 +1221,7 @@ export function Gallery({
                   <AddIcon />
                 )}
               </span>
-            </button>
+            </div>
           );
         })}
       </section>
