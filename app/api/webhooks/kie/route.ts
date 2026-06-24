@@ -73,22 +73,6 @@ function extractUrls(value: unknown): string[] {
   return [];
 }
 
-function getPhotoProject(photo: {
-  projects?:
-    | {
-        source_image_url?: string | null;
-        source_image_path?: string | null;
-        context_final?: string | null;
-      }
-    | {
-        source_image_url?: string | null;
-        source_image_path?: string | null;
-        context_final?: string | null;
-      }[];
-}) {
-  return Array.isArray(photo.projects) ? photo.projects[0] : photo.projects;
-}
-
 async function startFallbackImageTask({
   photo,
   request,
@@ -98,17 +82,6 @@ async function startFallbackImageTask({
     project_id: string;
     generation_prompt: string;
     error_message: string | null;
-    projects?:
-      | {
-          source_image_url?: string | null;
-          source_image_path?: string | null;
-          context_final?: string | null;
-        }
-      | {
-          source_image_url?: string | null;
-          source_image_path?: string | null;
-          context_final?: string | null;
-        }[];
   };
   request: NextRequest;
 }) {
@@ -118,7 +91,18 @@ async function startFallbackImageTask({
   if (!callbackSecret) throw new Error("KIE_CALLBACK_SECRET nÃ£o configurada.");
 
   const supabase = getSupabaseAdmin();
-  const project = getPhotoProject(photo);
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("source_image_url, source_image_path, context_final")
+    .eq("id", photo.project_id)
+    .maybeSingle();
+
+  if (projectError || !project) {
+    throw new Error(
+      projectError?.message ?? "Projeto indisponÃ­vel para fallback.",
+    );
+  }
+
   let sourceImageUrl = project?.source_image_url ?? "";
 
   if (project?.source_image_path) {
@@ -284,9 +268,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: photo } = await supabase
     .from("photos")
-    .select(
-      "id, project_id, position, generation_prompt, error_message, projects!inner(source_image_url, source_image_path, context_final)",
-    )
+    .select("id, project_id, position, generation_prompt, error_message")
     .eq("kie_task_id", taskId)
     .maybeSingle();
 
