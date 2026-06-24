@@ -1200,13 +1200,6 @@ export function Gallery({
                 )}
               </span>
               <span className="photo-shade" />
-              {!isUnlocked && (
-                <span className="watermark-pattern" aria-hidden="true">
-                  {Array.from({ length: 18 }, (_, index) => (
-                    <span key={index}>HOMESTUDIO.IA</span>
-                  ))}
-                </span>
-              )}
               {isUnlocked && (
                 <span className="unlocked-badge">Liberada</span>
               )}
