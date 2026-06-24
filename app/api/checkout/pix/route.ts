@@ -151,6 +151,18 @@ export async function POST(request: NextRequest) {
     initialCreditCents: project.paid_amount_cents,
     blockedPhotoIds: claimedAccess.blockedPhotoIds,
   });
+  const unlockedPhotoCreditCents =
+    project.paid_amount_cents +
+    getAdditionalPhotoAmountCents({
+      selectedCount: unlockedPhotoIds.size,
+      includedPhotos: project.included_photos,
+      paidAmountCents: project.paid_amount_cents,
+      pricingBaseAmountCents: project.pricing_base_amount_cents,
+    });
+  const photoCreditCents = Math.max(
+    paidPhotoCreditCents,
+    unlockedPhotoCreditCents,
+  );
   const targetPhotoCount = new Set([
     ...unlockedPhotoIds,
     ...selectedPhotoIds,
@@ -165,7 +177,7 @@ export async function POST(request: NextRequest) {
     });
   const photoAmountCents = Math.max(
     0,
-    targetPhotoTotalCents - paidPhotoCreditCents,
+    targetPhotoTotalCents - photoCreditCents,
   );
   const videoAmountCents = parsed.data.videoAdded
     ? getVideoAmountCents(videoPhotoIds.length)

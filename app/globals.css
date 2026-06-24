@@ -882,6 +882,12 @@ p {
   white-space: nowrap;
 }
 
+.addon-card.selected .addon-action {
+  background: var(--ink);
+  color: white;
+  box-shadow: none;
+}
+
 .video-offer-preview {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
