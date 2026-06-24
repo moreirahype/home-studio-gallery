@@ -36,10 +36,6 @@ async function authorizeIncludedPhotos({
   });
   const claimedPhotoIds = claimedAccess.includedPhotoIds;
 
-  if (photoIds.some((photoId) => claimedAccess.blockedPhotoIds.has(photoId))) {
-    return false;
-  }
-
   const mergedPhotoIds = new Set([...claimedPhotoIds, ...photoIds]);
 
   if (mergedPhotoIds.size > includedPhotos) {

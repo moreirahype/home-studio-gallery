@@ -386,20 +386,10 @@ export function Gallery({
     };
   }
 
-  const selectedBlockedCount = selected.filter(
-    (photoId) =>
-      blockedPhotoIds.includes(photoId) &&
-      !effectiveUnlockedPhotoIds.includes(photoId),
-  ).length;
-  const normalTargetPhotoCount = new Set([
+  const targetPhotoCount = new Set([
     ...effectiveUnlockedPhotoIds,
     ...selected,
   ]).size;
-  const blockedTargetFloor = offer.includedPhotos + selectedBlockedCount;
-  const targetPhotoCount = Math.max(
-    normalTargetPhotoCount,
-    blockedTargetFloor,
-  );
   const basePricing = getPricing(targetPhotoCount);
   const pricing = {
     ...basePricing,
@@ -438,7 +428,7 @@ export function Gallery({
   const selectionOnlyUnlocked =
     selected.length > 0 && selectedLockedCount === 0;
   const selectionIsIncluded =
-    selected.length > 0 && selectedBlockedCount === 0 && pricing.dueNow === 0;
+    selected.length > 0 && pricing.dueNow === 0;
   const videoPrice = videoAdded ? getVideoPrice(videoPhotoIds.length || 1) : 0;
   const checkoutAmount =
     pricing.dueNow + videoPrice;
