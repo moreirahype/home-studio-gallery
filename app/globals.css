@@ -977,8 +977,9 @@ p {
 }
 
 .addon-card.selected .addon-action {
-  background: var(--ink);
-  color: white;
+  border: 2px solid var(--ink);
+  background: white;
+  color: var(--ink);
   box-shadow: none;
 }
 
