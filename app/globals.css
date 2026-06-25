@@ -844,18 +844,21 @@ p {
 
 .addon-card {
   display: grid;
+  --addon-accent: #a3432e;
+  --addon-accent-dark: #7f2f20;
+  --addon-accent-soft: rgb(163 67 46 / 14%);
   width: 100%;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   margin: 4px 0 18px;
   padding: 15px;
-  border: 2px solid rgb(47 143 78 / 24%);
+  border: 2px solid rgb(163 67 46 / 26%);
   border-radius: 16px;
-  background: linear-gradient(135deg, #fffdf8, #f1f8ef);
+  background: linear-gradient(135deg, #fffdf8, #fff2ed);
   color: var(--ink);
   text-align: left;
-  box-shadow: 0 16px 36px rgb(47 143 78 / 9%);
+  box-shadow: 0 16px 36px rgb(163 67 46 / 11%);
   cursor: pointer;
   transition:
     border-color 160ms ease,
@@ -872,9 +875,9 @@ p {
   padding: 0 12px;
   border-radius: 999px;
   box-shadow:
-    0 10px 22px rgb(47 143 78 / 20%),
+    0 10px 22px rgb(163 67 46 / 22%),
     inset 0 0 0 1px rgb(255 255 255 / 16%);
-  background: linear-gradient(135deg, var(--success), var(--success-dark));
+  background: linear-gradient(135deg, #b84f37, var(--addon-accent-dark));
   color: white;
   font-size: 0.68rem;
   font-weight: 900;
@@ -961,7 +964,7 @@ p {
   position: absolute;
   top: 0;
   left: 0;
-  color: var(--accent);
+  color: var(--addon-accent);
   content: "✓";
   font-weight: 900;
 }
@@ -971,9 +974,9 @@ p {
 }
 
 .addon-card.selected {
-  border-color: var(--success);
-  background: linear-gradient(135deg, #f5fff7, #eaf7ed);
-  box-shadow: 0 0 0 2px rgb(47 143 78 / 12%);
+  border-color: var(--addon-accent);
+  background: linear-gradient(135deg, #fff8f4, #f9e2d9);
+  box-shadow: 0 0 0 2px var(--addon-accent-soft);
 }
 
 .addon-card.selected .addon-action {
@@ -996,8 +999,8 @@ p {
 }
 
 .addon-card.selected .addon-check {
-  border-color: var(--success);
-  background: var(--success);
+  border-color: var(--addon-accent);
+  background: linear-gradient(135deg, #b84f37, var(--addon-accent-dark));
   color: white;
 }
 
