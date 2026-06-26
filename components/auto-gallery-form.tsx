@@ -357,8 +357,11 @@ export function AutoGalleryForm() {
           </label>
 
           <div className="manual-grid two">
-            <label>
-              Vídeo por foto
+            <label className="manual-price-field">
+              <span>Vídeo por foto</span>
+              <small aria-hidden="true" className="manual-field-help empty">
+                &nbsp;
+              </small>
               <input
                 defaultValue={galleryType === "professional" ? "9.90" : "19.90"}
                 key={`video-${galleryType}`}
@@ -368,8 +371,13 @@ export function AutoGalleryForm() {
                 type="number"
               />
             </label>
-            <label>
-              Pack Primeira Impressão por foto
+            <label className="manual-price-field">
+              <span>Pack Primeira Impressão por foto</span>
+              <small className="manual-field-help">
+                {galleryType === "professional"
+                  ? "Gera +3 versões extras para cada foto escolhida."
+                  : "O Pack só aparece nas galerias profissionais."}
+              </small>
               <input
                 defaultValue="14.90"
                 disabled={galleryType !== "professional"}
@@ -383,11 +391,6 @@ export function AutoGalleryForm() {
                 step="0.01"
                 type="number"
               />
-              <small>
-                {galleryType === "professional"
-                  ? "Gera +3 versões extras para cada foto escolhida."
-                  : "O Pack só aparece nas galerias profissionais."}
-              </small>
             </label>
           </div>
 

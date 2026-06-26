@@ -1818,6 +1818,20 @@ p {
   font-weight: 500;
 }
 
+.manual-price-field {
+  grid-template-rows: auto minmax(1.1rem, auto) 48px;
+  gap: 5px !important;
+}
+
+.manual-price-field .manual-field-help {
+  align-self: start;
+  line-height: 1.35;
+}
+
+.manual-price-field .manual-field-help.empty {
+  visibility: hidden;
+}
+
 .manual-upload-label {
   cursor: pointer;
 }
