@@ -6,6 +6,7 @@ import {
   getClaimedPhotoAccess,
 } from "@/lib/photo-access";
 import { getAdditionalPhotoAmountCents } from "@/lib/pricing";
+import { parseExtraPhotoPricingCents } from "@/lib/gallery-offer-config";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const querySchema = z.object({
@@ -28,19 +29,28 @@ export async function GET(request: NextRequest) {
   let { data: project, error: projectError } = await supabase
     .from("projects")
     .select(
-      "id, included_photos, paid_amount_cents, pricing_base_amount_cents, created_at, expires_at",
+      "id, included_photos, paid_amount_cents, pricing_base_amount_cents, extra_photo_pricing, created_at, expires_at",
     )
     .eq("gallery_token", parsed.data.token)
     .maybeSingle();
 
-  if (projectError && projectError.code === "42703") {
+  if (
+    projectError &&
+    (projectError.code === "42703" ||
+      projectError.message.includes("extra_photo_pricing"))
+  ) {
     const fallback = await supabase
       .from("projects")
       .select("id, included_photos, paid_amount_cents, created_at")
       .eq("gallery_token", parsed.data.token)
       .maybeSingle();
     project = fallback.data
-      ? { ...fallback.data, pricing_base_amount_cents: null, expires_at: null }
+      ? {
+          ...fallback.data,
+          pricing_base_amount_cents: null,
+          extra_photo_pricing: null,
+          expires_at: null,
+        }
       : null;
     projectError = fallback.error;
   }
@@ -134,6 +144,9 @@ export async function GET(request: NextRequest) {
       includedPhotos: project.included_photos,
       paidAmountCents: project.paid_amount_cents,
       pricingBaseAmountCents: project.pricing_base_amount_cents,
+      extraPhotoPricingCents: parseExtraPhotoPricingCents(
+        project.extra_photo_pricing,
+      ),
     });
   const photoCreditCents = Math.max(
     paidPhotoCreditCents,

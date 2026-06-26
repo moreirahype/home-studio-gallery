@@ -14,6 +14,11 @@ import {
   getPricingBaseAmountCentsFromFirstExtraAmountCents,
 } from "@/lib/pricing";
 import {
+  normalizeGalleryType,
+  parseExtraPhotoPricingCents,
+  resolveOfferDefaults,
+} from "@/lib/gallery-offer-config";
+import {
   defaultGalleryAttendant,
   normalizeZapdataPayload,
   previewValue,
@@ -81,6 +86,10 @@ export async function POST(request: NextRequest) {
         generation_count: number;
         bi_attendant_name?: string | null;
         product_name?: string | null;
+        gallery_type?: string | null;
+        extra_photo_pricing?: unknown;
+        video_price_cents?: number | null;
+        first_impression_pack_price_cents?: number | null;
         consumed_at: string | null;
       }
     | null = null;
@@ -284,11 +293,41 @@ export async function POST(request: NextRequest) {
     parsed.data.nicho?.trim() ||
     parsed.data.nicheId?.trim() ||
     "Sem produto";
+  const galleryType = normalizeGalleryType(
+    savedLead?.gallery_type ?? parsed.data.galleryType ?? parsed.data.gallery_type,
+  );
+  const explicitExtraPricing =
+    parseExtraPhotoPricingCents(
+      savedLead?.extra_photo_pricing ??
+        parsed.data.extraPhotoPricing ??
+        parsed.data.extra_photo_pricing,
+    );
   const nicheId = savedLead?.niche_id ?? parsed.data.nicho ?? parsed.data.nicheId;
-  const includedPhotos =
-    savedLead?.included_photos ?? parsed.data.includedPhotos;
-  const paidAmountCents =
-    savedLead?.paid_amount_cents ?? Math.round(parsed.data.paidAmount * 100);
+  const offerDefaults = resolveOfferDefaults({
+    galleryType,
+    paidAmountCents:
+      savedLead?.paid_amount_cents ?? Math.round(parsed.data.paidAmount * 100),
+    includedPhotos: savedLead?.included_photos ?? parsed.data.includedPhotos,
+    generationCount: savedLead?.generation_count ?? parsed.data.generationCount,
+    extraPhotoPricingCents: explicitExtraPricing,
+    videoPriceCents:
+      savedLead?.video_price_cents ??
+      (parsed.data.videoPrice ?? parsed.data.video_price
+        ? Math.round((parsed.data.videoPrice ?? parsed.data.video_price ?? 0) * 100)
+        : null),
+    firstImpressionPackPriceCents:
+      savedLead?.first_impression_pack_price_cents ??
+      (parsed.data.firstImpressionPackPrice ??
+      parsed.data.first_impression_pack_price
+        ? Math.round(
+            (parsed.data.firstImpressionPackPrice ??
+              parsed.data.first_impression_pack_price ??
+              0) * 100,
+          )
+        : null),
+  });
+  const includedPhotos = offerDefaults.includedPhotos;
+  const paidAmountCents = offerDefaults.paidAmountCents;
   const parsedFirstExtraAmountCents = parsed.data.firstExtraAmount
     ? Math.round(parsed.data.firstExtraAmount * 100)
     : null;
@@ -308,8 +347,7 @@ export async function POST(request: NextRequest) {
           includedPhotos,
         })
       : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS);
-  const generationCount =
-    savedLead?.generation_count ?? parsed.data.generationCount;
+  const generationCount = offerDefaults.generationCount;
   const galleryAttendant =
     savedLead?.bi_attendant_name?.trim() ||
     defaultGalleryAttendant({
@@ -354,6 +392,11 @@ export async function POST(request: NextRequest) {
     generation_count: generationCount,
     bi_attendant_name: galleryAttendant,
     product_name: productName,
+    gallery_type: galleryType,
+    extra_photo_pricing: offerDefaults.extraPhotoPricingCents,
+    video_price_cents: offerDefaults.videoPriceCents,
+    first_impression_pack_price_cents:
+      offerDefaults.firstImpressionPackPriceCents,
     status: "queued",
   };
   let compatibleProjectPayload = projectPayload;
@@ -388,6 +431,30 @@ export async function POST(request: NextRequest) {
       compatibleProjectPayload;
     void ignored;
     compatibleProjectPayload = legacyProductPayload as typeof projectPayload;
+    const fallbackInsert = await supabase
+      .from("projects")
+      .insert(compatibleProjectPayload);
+    projectError = fallbackInsert.error;
+  }
+
+  if (
+    projectError?.message.includes("gallery_type") ||
+    projectError?.message.includes("extra_photo_pricing") ||
+    projectError?.message.includes("video_price_cents") ||
+    projectError?.message.includes("first_impression_pack_price_cents")
+  ) {
+    const {
+      gallery_type: ignoredGalleryType,
+      extra_photo_pricing: ignoredExtraPricing,
+      video_price_cents: ignoredVideoPrice,
+      first_impression_pack_price_cents: ignoredPackPrice,
+      ...legacyOfferPayload
+    } = compatibleProjectPayload;
+    void ignoredGalleryType;
+    void ignoredExtraPricing;
+    void ignoredVideoPrice;
+    void ignoredPackPrice;
+    compatibleProjectPayload = legacyOfferPayload as typeof projectPayload;
     const fallbackInsert = await supabase
       .from("projects")
       .insert(compatibleProjectPayload);

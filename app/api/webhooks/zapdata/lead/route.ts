@@ -5,6 +5,11 @@ import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
+  normalizeGalleryType,
+  parseExtraPhotoPricingCents,
+  resolveOfferDefaults,
+} from "@/lib/gallery-offer-config";
+import {
   defaultGalleryAttendant,
   normalizeZapdataPayload,
   previewValue,
@@ -104,13 +109,44 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const token = randomUUID().replaceAll("-", "");
+  const galleryType = normalizeGalleryType(
+    parsed.data.galleryType ?? parsed.data.gallery_type,
+  );
+  const explicitExtraPricing = parseExtraPhotoPricingCents(
+    parsed.data.extraPhotoPricing ?? parsed.data.extra_photo_pricing,
+  );
+  const offerDefaults = resolveOfferDefaults({
+    galleryType,
+    paidAmountCents:
+      parsed.data.paidAmount === undefined
+        ? null
+        : Math.round(parsed.data.paidAmount * 100),
+    includedPhotos:
+      parsed.data.includedPhotos === undefined ? null : parsed.data.includedPhotos,
+    generationCount:
+      parsed.data.generationCount === undefined ? null : parsed.data.generationCount,
+    extraPhotoPricingCents: explicitExtraPricing,
+    videoPriceCents:
+      parsed.data.videoPrice ?? parsed.data.video_price
+        ? Math.round((parsed.data.videoPrice ?? parsed.data.video_price ?? 0) * 100)
+        : null,
+    firstImpressionPackPriceCents:
+      parsed.data.firstImpressionPackPrice ??
+      parsed.data.first_impression_pack_price
+        ? Math.round(
+            (parsed.data.firstImpressionPackPrice ??
+              parsed.data.first_impression_pack_price ??
+              0) * 100,
+          )
+        : null,
+  });
   const firstExtraAmountCents = parsed.data.firstExtraAmount
     ? Math.round(parsed.data.firstExtraAmount * 100)
     : null;
   const pricingBaseAmountCents = firstExtraAmountCents
     ? getPricingBaseAmountCentsFromFirstExtraAmountCents({
         firstExtraAmountCents,
-        includedPhotos: parsed.data.includedPhotos,
+        includedPhotos: offerDefaults.includedPhotos,
       })
     : null;
   const attendantAmountCents =
@@ -118,7 +154,7 @@ export async function POST(request: NextRequest) {
     (pricingBaseAmountCents
       ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
           pricingBaseAmountCents,
-          includedPhotos: parsed.data.includedPhotos,
+          includedPhotos: offerDefaults.includedPhotos,
         })
       : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS);
   const galleryAttendant = defaultGalleryAttendant({
@@ -138,12 +174,17 @@ export async function POST(request: NextRequest) {
     source_image_url: sourceImageUrl,
     context_final: contextFinal,
     niche_id: parsed.data.nicho ?? parsed.data.nicheId,
-    included_photos: parsed.data.includedPhotos,
-    paid_amount_cents: Math.round(parsed.data.paidAmount * 100),
+    included_photos: offerDefaults.includedPhotos,
+    paid_amount_cents: offerDefaults.paidAmountCents,
     pricing_base_amount_cents: pricingBaseAmountCents,
-    generation_count: parsed.data.generationCount,
+    generation_count: offerDefaults.generationCount,
     bi_attendant_name: galleryAttendant,
     product_name: productName,
+    gallery_type: galleryType,
+    extra_photo_pricing: offerDefaults.extraPhotoPricingCents,
+    video_price_cents: offerDefaults.videoPriceCents,
+    first_impression_pack_price_cents:
+      offerDefaults.firstImpressionPackPriceCents,
     status: "pending_payment",
   };
   let { data: lead, error } = await supabase
@@ -201,6 +242,38 @@ export async function POST(request: NextRequest) {
     error = fallback.error;
   }
 
+  if (
+    error?.message.includes("gallery_type") ||
+    error?.message.includes("extra_photo_pricing") ||
+    error?.message.includes("video_price_cents") ||
+    error?.message.includes("first_impression_pack_price_cents")
+  ) {
+    const {
+      gallery_type: ignoredGalleryType,
+      extra_photo_pricing: ignoredExtraPricing,
+      video_price_cents: ignoredVideoPrice,
+      first_impression_pack_price_cents: ignoredPackPrice,
+      pricing_base_amount_cents: ignoredPricingBase,
+      product_name: ignoredProduct,
+      bi_attendant_name: ignoredAttendant,
+      ...legacyLeadPayload
+    } = leadPayload;
+    void ignoredGalleryType;
+    void ignoredExtraPricing;
+    void ignoredVideoPrice;
+    void ignoredPackPrice;
+    void ignoredPricingBase;
+    void ignoredProduct;
+    void ignoredAttendant;
+    const fallback = await supabase
+      .from("zapdata_leads")
+      .insert(legacyLeadPayload)
+      .select("id, token")
+      .single();
+    lead = fallback.data;
+    error = fallback.error;
+  }
+
   if (error || !lead) {
     return NextResponse.json(
       {
@@ -216,10 +289,14 @@ export async function POST(request: NextRequest) {
     leadId: lead.id,
     leadToken: lead.token,
     status: "pending_payment",
-    includedPhotos: parsed.data.includedPhotos,
-    paidAmount: parsed.data.paidAmount,
+    includedPhotos: offerDefaults.includedPhotos,
+    paidAmount: offerDefaults.paidAmountCents / 100,
     firstExtraAmount: parsed.data.firstExtraAmount ?? null,
-    generationCount: parsed.data.generationCount,
+    generationCount: offerDefaults.generationCount,
+    galleryType,
+    videoPrice: offerDefaults.videoPriceCents / 100,
+    firstImpressionPackPrice:
+      offerDefaults.firstImpressionPackPriceCents / 100,
     galleryAttendant,
     productName,
   });

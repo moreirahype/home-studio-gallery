@@ -1,6 +1,13 @@
 "use client";
 
-import { ClipboardEvent, DragEvent, FormEvent, useRef, useState } from "react";
+import {
+  ClipboardEvent,
+  DragEvent,
+  FormEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
   readClipboardImageFiles,
@@ -32,6 +39,7 @@ async function optimizeReference(file: File) {
 export function AutoGalleryForm() {
   const referenceInputRef = useRef<HTMLInputElement>(null);
   const [firstExtraAmount, setFirstExtraAmount] = useState("7.90");
+  const [galleryType, setGalleryType] = useState("universal");
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [referenceLabel, setReferenceLabel] = useState(
     "Nenhuma foto selecionada",
@@ -42,6 +50,20 @@ export function AutoGalleryForm() {
   const [error, setError] = useState("");
   const [galleryUrl, setGalleryUrl] = useState("");
   const [tasks, setTasks] = useState<number | null>(null);
+  const [products, setProducts] = useState<
+    { name: string; galleryType?: string }[]
+  >([]);
+  const [attendants, setAttendants] = useState<{ name: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/gallery-settings", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result: { products?: typeof products; attendants?: typeof attendants }) => {
+        setProducts(result.products ?? []);
+        setAttendants(result.attendants ?? []);
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function createGallery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,6 +105,7 @@ export function AutoGalleryForm() {
       form.reset();
       setReference(null);
       setFirstExtraAmount("7.90");
+      setGalleryType("universal");
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -211,11 +234,66 @@ export function AutoGalleryForm() {
             />
           </label>
 
+          <div className="manual-grid">
+            <label>
+              Tipo de galeria
+              <select
+                name="galleryType"
+                onChange={(event) => setGalleryType(event.target.value)}
+                value={galleryType}
+              >
+                <option value="universal">Universal</option>
+                <option value="professional">Profissional</option>
+              </select>
+            </label>
+            <label>
+              Produto
+              <select
+                defaultValue={
+                  galleryType === "professional"
+                    ? "Galeria IA - Profissional"
+                    : "Sem produto"
+                }
+                key={`product-${galleryType}`}
+                name="produto"
+              >
+                {(products.length
+                  ? products
+                  : [
+                      { name: "Sem produto", galleryType: "universal" },
+                      {
+                        name: "Galeria IA - Profissional",
+                        galleryType: "professional",
+                      },
+                    ]
+                )
+                  .filter(
+                    (product) =>
+                      !product.galleryType || product.galleryType === galleryType,
+                  )
+                  .map((product) => (
+                    <option key={product.name} value={product.name}>
+                      {product.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+
           <label>
             Atendente das vendas da galeria
             <select defaultValue="default" name="attendantMode">
-              <option value="default">Galeria</option>
-              <option value="sheila">Galeria Sheila</option>
+              {(attendants.length
+                ? attendants
+                : [{ name: "Galeria" }, { name: "Galeria Sheila" }]
+              ).map((attendant) => (
+                <option
+                  key={attendant.name}
+                  value={attendant.name === "Galeria Sheila" ? "sheila" : "default"}
+                >
+                  {attendant.name}
+                </option>
+              ))}
             </select>
             <small>Esse nome vai para o dashboard e para a planilha.</small>
           </label>
@@ -224,7 +302,8 @@ export function AutoGalleryForm() {
             <label>
               Entrada já paga
               <input
-                defaultValue="7.90"
+                defaultValue={galleryType === "professional" ? "29.90" : "7.90"}
+                key={`paid-${galleryType}`}
                 min="0"
                 name="paidAmount"
                 required
@@ -235,7 +314,8 @@ export function AutoGalleryForm() {
             <label>
               Fotos incluídas
               <input
-                defaultValue="1"
+                defaultValue={galleryType === "professional" ? "3" : "1"}
+                key={`included-${galleryType}`}
                 max="20"
                 min="0"
                 name="includedPhotos"
@@ -247,7 +327,8 @@ export function AutoGalleryForm() {
             <label>
               Fotos a gerar
               <input
-                defaultValue="15"
+                defaultValue={galleryType === "professional" ? "10" : "15"}
+                key={`count-${galleryType}`}
                 max="20"
                 min="1"
                 name="generationCount"
@@ -270,6 +351,30 @@ export function AutoGalleryForm() {
               value={firstExtraAmount}
             />
           </label>
+
+          <div className="manual-grid two">
+            <label>
+              VÃ­deo por foto
+              <input
+                defaultValue={galleryType === "professional" ? "9.90" : "19.90"}
+                key={`video-${galleryType}`}
+                min="0"
+                name="videoPrice"
+                step="0.01"
+                type="number"
+              />
+            </label>
+            <label>
+              Pack Primeira ImpressÃ£o por foto
+              <input
+                defaultValue="14.90"
+                min="0"
+                name="firstImpressionPackPrice"
+                step="0.01"
+                type="number"
+              />
+            </label>
+          </div>
 
           <label>
             Senha

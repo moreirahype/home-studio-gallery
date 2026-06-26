@@ -1,4 +1,5 @@
 import { reportGallerySaleToBi } from "@/lib/home-studio-bi";
+import { startFirstImpressionPack } from "@/lib/first-impression-pack";
 import { startProjectGeneration } from "@/lib/generation";
 import { getPayment, type MercadoPagoPayment } from "@/lib/mercado-pago";
 import { reportMetaPurchase } from "@/lib/meta-conversions";
@@ -12,11 +13,12 @@ import { startVideoJob } from "@/lib/video";
 import { defaultGalleryAttendant } from "@/lib/zapdata-payload";
 
 type OrderItem = {
-  kind: "photos" | "video" | "new_shoot";
+  kind: "photos" | "video" | "new_shoot" | "first_impression_pack";
   amount_cents: number;
   metadata: {
     photoIds?: string[];
     videoPhotoIds?: string[];
+    firstImpressionPackPhotoIds?: string[];
     repeatShootId?: string;
     fbp?: string;
     fbc?: string;
@@ -159,6 +161,27 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
         projectId: order.project_id,
         orderId: order.id,
         photoIds: videoPhotoIds,
+        appUrl: process.env.APP_URL ?? "https://home-studio-gallery.vercel.app",
+      });
+    }
+  }
+
+  const packItem = orderItems.find((item) => item.kind === "first_impression_pack");
+  const firstImpressionPackPhotoIds =
+    packItem?.metadata.firstImpressionPackPhotoIds ?? [];
+  if (firstImpressionPackPhotoIds.length) {
+    const { data: existingPackPhotos } = await supabase
+      .from("photos")
+      .select("id")
+      .eq("project_id", order.project_id)
+      .ilike("error_message", `%Pack Primeira Impressao do pedido ${order.id}%`)
+      .limit(1);
+
+    if (!existingPackPhotos?.length) {
+      await startFirstImpressionPack({
+        projectId: order.project_id,
+        orderId: order.id,
+        photoIds: firstImpressionPackPhotoIds,
         appUrl: process.env.APP_URL ?? "https://home-studio-gallery.vercel.app",
       });
     }

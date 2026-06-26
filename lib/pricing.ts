@@ -1,5 +1,19 @@
 export const MAX_PHOTOS = 20;
 export const DEFAULT_FIRST_EXTRA_AMOUNT_CENTS = 990;
+export const DEFAULT_PROFESSIONAL_PAID_AMOUNT_CENTS = 2990;
+export const DEFAULT_PROFESSIONAL_INCLUDED_PHOTOS = 3;
+export const DEFAULT_PROFESSIONAL_GENERATION_COUNT = 10;
+export const DEFAULT_VIDEO_PRICE_CENTS = 990;
+export const DEFAULT_FIRST_IMPRESSION_PACK_PRICE_CENTS = 1490;
+export const PROFESSIONAL_EXTRA_PHOTO_PRICING_CENTS: Record<number, number> = {
+  4: 990,
+  5: 1490,
+  6: 1990,
+  7: 2490,
+  8: 2990,
+  9: 2990,
+  10: 2990,
+};
 
 export const basePricesByQuantity = [
   0, 7.9, 17.8, 25.8, 31.8, 35.8, 39.8, 42.8, 45.8, 49.8, 52.8,
@@ -65,13 +79,26 @@ export function getAdditionalPhotoAmountCents({
   includedPhotos,
   paidAmountCents,
   pricingBaseAmountCents,
+  extraPhotoPricingCents,
 }: {
   selectedCount: number;
   includedPhotos: number;
   paidAmountCents: number;
   pricingBaseAmountCents?: number | null;
+  extraPhotoPricingCents?: Record<number, number> | null;
 }) {
   if (selectedCount <= includedPhotos) return 0;
+
+  if (extraPhotoPricingCents) {
+    const safeSelected = Math.min(
+      MAX_PHOTOS,
+      Math.max(1, Math.round(selectedCount)),
+    );
+    const exactAmount = extraPhotoPricingCents[safeSelected];
+    if (typeof exactAmount === "number" && Number.isFinite(exactAmount)) {
+      return Math.max(0, Math.round(exactAmount));
+    }
+  }
 
   if (includedPhotos <= 0) {
     const safeSelected = Math.min(
@@ -125,4 +152,26 @@ export function getVideoAmountCents(videoCount: number) {
     videoPricesByQuantity[5] + (safeCount - 5) * 8.9;
 
   return Math.round(amount * 100);
+}
+
+export function getLinearAddonAmountCents({
+  count,
+  unitAmountCents,
+}: {
+  count: number;
+  unitAmountCents: number;
+}) {
+  const safeCount = Math.min(MAX_PHOTOS, Math.max(0, Math.round(count)));
+  return safeCount * Math.max(0, Math.round(unitAmountCents));
+}
+
+export function professionalPricingDefaults() {
+  return {
+    paidAmountCents: DEFAULT_PROFESSIONAL_PAID_AMOUNT_CENTS,
+    includedPhotos: DEFAULT_PROFESSIONAL_INCLUDED_PHOTOS,
+    generationCount: DEFAULT_PROFESSIONAL_GENERATION_COUNT,
+    extraPhotoPricingCents: PROFESSIONAL_EXTRA_PHOTO_PRICING_CENTS,
+    videoPriceCents: DEFAULT_VIDEO_PRICE_CENTS,
+    firstImpressionPackPriceCents: DEFAULT_FIRST_IMPRESSION_PACK_PRICE_CENTS,
+  };
 }

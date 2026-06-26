@@ -20,6 +20,15 @@ const DEFAULT_GALLERY_SIZE = 15;
 const DEFAULT_PAID_AMOUNT = 7.9;
 const DEFAULT_INCLUDED_PHOTOS = 1;
 const DEFAULT_FIRST_EXTRA_AMOUNT = 9.9;
+const PROFESSIONAL_EXTRA_PRICING: Record<number, number> = {
+  4: 9.9,
+  5: 14.9,
+  6: 19.9,
+  7: 24.9,
+  8: 29.9,
+  9: 29.9,
+  10: 29.9,
+};
 
 const samplePhotos = Array.from({ length: MAX_PHOTOS }, (_, index) => ({
   id: `photo-${index + 1}`,
@@ -56,11 +65,14 @@ type PhotoDownload = {
 };
 
 export type GalleryOffer = {
+  galleryType: "universal" | "professional";
   paidAmount: number;
   pricingBaseAmount: number;
+  extraPhotoPricing: Record<number, number> | null;
   includedPhotos: number;
   gallerySize: number;
   videoPrice: number;
+  firstImpressionPackPrice: number;
   newShootPrice: number;
   expressShootPrice: number;
 };
@@ -77,6 +89,7 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     Math.max(0, Math.round(offer?.includedPhotos ?? DEFAULT_INCLUDED_PHOTOS)),
   );
   const paidAmount = Math.max(0, offer?.paidAmount ?? DEFAULT_PAID_AMOUNT);
+  const galleryType = offer?.galleryType ?? "universal";
   const pricingReferenceQuantity = Math.min(
     MAX_PHOTOS - 1,
     Math.max(1, includedPhotos),
@@ -100,15 +113,25 @@ function normalizeOffer(offer?: Partial<GalleryOffer>): GalleryOffer {
     ),
   );
   const videoPrice = Math.max(0, offer?.videoPrice ?? 19.9);
+  const firstImpressionPackPrice = Math.max(
+    0,
+    offer?.firstImpressionPackPrice ?? 14.9,
+  );
   const newShootPrice = Math.max(0, offer?.newShootPrice ?? 7.9);
   const expressShootPrice = Math.max(0, offer?.expressShootPrice ?? 4.9);
+  const extraPhotoPricing =
+    offer?.extraPhotoPricing ??
+    (galleryType === "professional" ? PROFESSIONAL_EXTRA_PRICING : null);
 
   return {
+    galleryType,
     includedPhotos,
     paidAmount,
     pricingBaseAmount,
+    extraPhotoPricing,
     gallerySize,
     videoPrice,
+    firstImpressionPackPrice,
     newShootPrice,
     expressShootPrice,
   };
@@ -131,6 +154,14 @@ function getTotalPhotoAmountCents(offer: GalleryOffer, count: number) {
       includedPhotos: offer.includedPhotos,
       paidAmountCents: toCents(offer.paidAmount),
       pricingBaseAmountCents: getPricingBaseAmountCents(offer),
+      extraPhotoPricingCents: offer.extraPhotoPricing
+        ? Object.fromEntries(
+            Object.entries(offer.extraPhotoPricing).map(([count, amount]) => [
+              Number(count),
+              toCents(amount),
+            ]),
+          )
+        : null,
     })
   );
 }
@@ -165,9 +196,11 @@ function createMilestones(includedPhotos: number, gallerySize: number) {
   return milestones;
 }
 
-function getVideoPrice(videoCount: number) {
+function getVideoPrice(videoCount: number, unitPrice: number) {
   const safeCount = Math.min(MAX_PHOTOS, Math.max(0, Math.round(videoCount)));
   if (!safeCount) return 0;
+
+  if (unitPrice !== 19.9) return safeCount * unitPrice;
 
   return (
     videoPricesByQuantity[safeCount] ??
@@ -309,6 +342,8 @@ export function Gallery({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [testPaymentApproved, setTestPaymentApproved] = useState(false);
   const [videoAdded, setVideoAdded] = useState(false);
+  const [firstImpressionPackAdded, setFirstImpressionPackAdded] =
+    useState(false);
   const [videoPhotoIds, setVideoPhotoIds] = useState<string[]>([]);
   const [videoPickerOpen, setVideoPickerOpen] = useState(false);
   const [pixReady, setPixReady] = useState(false);
@@ -429,9 +464,14 @@ export function Gallery({
     selected.length > 0 && selectedLockedCount === 0;
   const selectionIsIncluded =
     selected.length > 0 && pricing.dueNow === 0;
-  const videoPrice = videoAdded ? getVideoPrice(videoPhotoIds.length || 1) : 0;
+  const firstImpressionPackPrice = firstImpressionPackAdded
+    ? selected.length * offer.firstImpressionPackPrice
+    : 0;
+  const videoPrice = videoAdded
+    ? getVideoPrice(videoPhotoIds.length || 1, offer.videoPrice)
+    : 0;
   const checkoutAmount =
-    pricing.dueNow + videoPrice;
+    pricing.dueNow + firstImpressionPackPrice + videoPrice;
   const unlockedVideoCount =
     (videoAccess?.url ? 1 : 0) + (videoAccess?.clips?.length ?? 0);
   const unlockedFileCount = downloadLinks.length + unlockedVideoCount;
@@ -556,7 +596,8 @@ export function Gallery({
     if (!selected.length) return;
     setTestPaymentApproved(false);
     setPixReady(false);
-    setVideoAdded(selectionOnlyUnlocked);
+    setVideoAdded(false);
+    setFirstImpressionPackAdded(false);
     setVideoPhotoIds(selected.slice(0, 1));
     setVideoPickerOpen(false);
     setCheckoutError("");
@@ -916,6 +957,8 @@ export function Gallery({
         body: JSON.stringify({
           galleryToken: token,
           photoIds: selected,
+          firstImpressionPackAdded,
+          firstImpressionPackPhotoIds: firstImpressionPackAdded ? selected : [],
           videoAdded,
           videoPhotoIds,
         }),
@@ -1041,6 +1084,21 @@ export function Gallery({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pixPayment, pixReady, testPaymentApproved, token]);
 
+  const isProfessionalGallery = offer.galleryType === "professional";
+  const includedLabel =
+    offer.includedPhotos === 1
+      ? "1 foto incluída"
+      : `${offer.includedPhotos} fotos incluídas`;
+  const readyTitle = isProfessionalGallery
+    ? "Escolha suas fotos profissionais."
+    : "Agora escolha as fotos que você mais amou.";
+  const includedIntroText = isProfessionalGallery
+    ? `Você tem até ${includedLabel}. Se gostar de mais alguma, pode liberar fotos extras com desconto.`
+    : null;
+  const galleryStatusText = isProfessionalGallery
+    ? `Escolha até ${offer.includedPhotos} fotos incluídas. As demais ficam disponíveis com desconto progressivo.`
+    : null;
+
   return (
     <main className="gallery-shell">
       <nav className="gallery-nav" aria-label="Galeria">
@@ -1067,17 +1125,19 @@ export function Gallery({
           <h1>
             {photos.length < offer.gallerySize
               ? "As primeiras fotos já estão aparecendo."
-              : "Agora escolha as fotos que você mais amou."}
+              : readyTitle}
           </h1>
           <p>
-            {offer.includedPhotos > 0
-              ? `Você já tem ${offer.includedPhotos} ${
-                  offer.includedPhotos === 1
-                    ? "foto incluída"
-                    : "fotos incluídas"
-                }.`
-              : "Escolha as fotos que quiser levar."}{" "}
-            O melhor desconto será aplicado automaticamente.
+            {includedIntroText ??
+              (offer.includedPhotos > 0
+                ? `Você já tem ${offer.includedPhotos} ${
+                    offer.includedPhotos === 1
+                      ? "foto incluída"
+                      : "fotos incluídas"
+                  }.`
+                : "Escolha as fotos que quiser levar.")}{" "}
+            {!isProfessionalGallery &&
+              "O melhor desconto será aplicado automaticamente."}
           </p>
         </div>
         <div className="gallery-status">
@@ -1089,11 +1149,12 @@ export function Gallery({
             fotos disponíveis
           </strong>
           <small>
-            {offer.paidAmount > 0
-              ? `Crédito de ${money.format(offer.paidAmount)} reconhecido.`
-              : "Nenhum pagamento registrado ainda."}{" "}
-            Galeria disponível por 7 dias; depois disso, os arquivos são
-            excluídos.
+            {galleryStatusText ??
+              (offer.paidAmount > 0
+                ? `Crédito de ${money.format(offer.paidAmount)} reconhecido.`
+                : "Nenhum pagamento registrado ainda.")}{" "}
+            {!isProfessionalGallery &&
+              "Galeria disponível por 7 dias; depois disso, os arquivos são excluídos."}
           </small>
         </div>
       </header>
@@ -1266,7 +1327,20 @@ export function Gallery({
       <div className="selection-heading">
         <div>
           <span className="section-kicker">SUAS FOTOS</span>
-          <h2>Toque para selecionar</h2>
+          <h2>
+            {isProfessionalGallery
+              ? "Toque nas fotos que deseja liberar"
+              : "Toque para selecionar"}
+          </h2>
+          {isProfessionalGallery && selected.length > 0 && (
+            <p>
+              {Math.min(targetPhotoCount, offer.includedPhotos)} de{" "}
+              {offer.includedPhotos} fotos incluídas selecionadas
+              {targetPhotoCount > offer.includedPhotos
+                ? ` · ${targetPhotoCount - offer.includedPhotos} fotos extras selecionadas`
+                : ""}
+            </p>
+          )}
         </div>
         {selected.length > 0 && (
           <button
@@ -1640,6 +1714,49 @@ export function Gallery({
                   movimento. Cada foto escolhida vira um vídeo separado para
                   você baixar e postar.
                 </p>
+                <div className="video-offer-preview pack-offer-preview">
+                  <div className="video-benefits">
+                    <strong>Pack Primeira Impressão</strong>
+                    <span>3 versões extras por foto escolhida</span>
+                    <span>Autoridade, simpatia e visual premium</span>
+                    <span>Ideal para perfil, currículo, WhatsApp e redes sociais</span>
+                  </div>
+                </div>
+                <button
+                  aria-pressed={firstImpressionPackAdded}
+                  className={`addon-card pack-addon ${
+                    firstImpressionPackAdded ? "selected" : ""
+                  }`}
+                  onClick={() =>
+                    setFirstImpressionPackAdded((current) => !current)
+                  }
+                  type="button"
+                >
+                  <span className="addon-check">
+                    {firstImpressionPackAdded ? "✓" : "+"}
+                  </span>
+                  <span className="addon-copy">
+                    <strong>
+                      {firstImpressionPackAdded
+                        ? "Pack Primeira Impressão adicionado"
+                        : "Quero o Pack Primeira Impressão"}
+                    </strong>
+                    <small>
+                      {firstImpressionPackAdded
+                        ? `${selected.length} ${
+                            selected.length === 1
+                              ? "foto escolhida"
+                              : "fotos escolhidas"
+                          } para o pack`
+                        : `Receba 3 versões extras de cada foto escolhida por ${money.format(
+                            offer.firstImpressionPackPrice,
+                          )} por foto.`}
+                    </small>
+                  </span>
+                  <span className="addon-action">
+                    {firstImpressionPackAdded ? "REMOVER" : "ADICIONAR"}
+                  </span>
+                </button>
                 <div className="video-offer-preview">
                   <div
                     aria-label="Prévia das fotos usadas no vídeo"
@@ -1768,6 +1885,11 @@ export function Gallery({
                         : selectionOnlyUnlocked
                           ? "Fotos já liberadas"
                           : "Fotos escolhidas já incluídas",
+                      firstImpressionPackAdded && firstImpressionPackPrice > 0
+                        ? `Pack Primeira Impressão: ${money.format(
+                            firstImpressionPackPrice,
+                          )}`
+                        : null,
                       videoAdded && videoPrice > 0
                         ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "vídeo" : "vídeos"}: ${money.format(videoPrice)}`
                         : null,

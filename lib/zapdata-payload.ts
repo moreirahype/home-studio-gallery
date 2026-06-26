@@ -12,6 +12,16 @@ export const zapdataOfferSchema = z.object({
   contexto_final: z.string().optional(),
   productName: z.string().min(1).optional(),
   produto: z.string().min(1).optional(),
+  galleryType: z.enum(["universal", "professional"]).optional().default("universal"),
+  gallery_type: z.enum(["universal", "professional"]).optional(),
+  tipoGaleria: z.enum(["universal", "professional"]).optional(),
+  tipo_galeria: z.enum(["universal", "professional"]).optional(),
+  extraPhotoPricing: z.record(z.string(), z.coerce.number().nonnegative()).optional(),
+  extra_photo_pricing: z.record(z.string(), z.coerce.number().nonnegative()).optional(),
+  videoPrice: z.coerce.number().nonnegative().optional(),
+  video_price: z.coerce.number().nonnegative().optional(),
+  firstImpressionPackPrice: z.coerce.number().nonnegative().optional(),
+  first_impression_pack_price: z.coerce.number().nonnegative().optional(),
   nicheId: z.string().min(1).optional().default("geral"),
   nicho: z.string().min(1).optional(),
   includedPhotos: z.coerce.number().int().min(1).max(20).optional().default(1),
@@ -37,6 +47,32 @@ function readNumberValue(value: unknown): number | undefined {
     return Number.isFinite(normalized) ? normalized : undefined;
   }
   return undefined;
+}
+
+function readGalleryType(value: unknown) {
+  const text = readText(value)?.toLowerCase();
+  return text === "professional" || text === "profissional"
+    ? "professional"
+    : text === "universal" || text === "geral"
+      ? "universal"
+      : undefined;
+}
+
+function readPricingMap(value: unknown) {
+  if (!value) return undefined;
+  if (typeof value === "string") {
+    try {
+      return readPricingMap(JSON.parse(value));
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .map(([key, amount]) => [key, readNumberValue(amount)] as const)
+    .filter((entry): entry is readonly [string, number] => entry[1] !== undefined);
+
+  return entries.length ? Object.fromEntries(entries) : undefined;
 }
 
 export function normalizeZapdataPayload(
@@ -128,6 +164,68 @@ export function normalizeZapdataPayload(
       readText(flowVariables.produto) ??
       readText(flowVariables.productName) ??
       readText(flowVariables.product_name),
+    galleryType:
+      readGalleryType(data.galleryType) ??
+      readGalleryType(data.gallery_type) ??
+      readGalleryType(data.tipoGaleria) ??
+      readGalleryType(data.tipo_galeria) ??
+      readGalleryType(variables.galleryType) ??
+      readGalleryType(variables.gallery_type) ??
+      readGalleryType(variables.tipoGaleria) ??
+      readGalleryType(variables.tipo_galeria) ??
+      readGalleryType(flowVariables.galleryType) ??
+      readGalleryType(flowVariables.gallery_type) ??
+      readGalleryType(flowVariables.tipoGaleria) ??
+      readGalleryType(flowVariables.tipo_galeria),
+    gallery_type:
+      readGalleryType(data.gallery_type) ??
+      readGalleryType(data.galleryType) ??
+      readGalleryType(variables.gallery_type) ??
+      readGalleryType(variables.galleryType) ??
+      readGalleryType(flowVariables.gallery_type) ??
+      readGalleryType(flowVariables.galleryType),
+    extraPhotoPricing:
+      readPricingMap(data.extraPhotoPricing) ??
+      readPricingMap(data.extra_photo_pricing) ??
+      readPricingMap(variables.extraPhotoPricing) ??
+      readPricingMap(variables.extra_photo_pricing) ??
+      readPricingMap(flowVariables.extraPhotoPricing) ??
+      readPricingMap(flowVariables.extra_photo_pricing),
+    extra_photo_pricing:
+      readPricingMap(data.extra_photo_pricing) ??
+      readPricingMap(data.extraPhotoPricing) ??
+      readPricingMap(variables.extra_photo_pricing) ??
+      readPricingMap(variables.extraPhotoPricing) ??
+      readPricingMap(flowVariables.extra_photo_pricing) ??
+      readPricingMap(flowVariables.extraPhotoPricing),
+    videoPrice:
+      readNumberValue(data.videoPrice) ??
+      readNumberValue(data.video_price) ??
+      readNumberValue(variables.videoPrice) ??
+      readNumberValue(variables.video_price) ??
+      readNumberValue(flowVariables.videoPrice) ??
+      readNumberValue(flowVariables.video_price),
+    video_price:
+      readNumberValue(data.video_price) ??
+      readNumberValue(data.videoPrice) ??
+      readNumberValue(variables.video_price) ??
+      readNumberValue(variables.videoPrice) ??
+      readNumberValue(flowVariables.video_price) ??
+      readNumberValue(flowVariables.videoPrice),
+    firstImpressionPackPrice:
+      readNumberValue(data.firstImpressionPackPrice) ??
+      readNumberValue(data.first_impression_pack_price) ??
+      readNumberValue(variables.firstImpressionPackPrice) ??
+      readNumberValue(variables.first_impression_pack_price) ??
+      readNumberValue(flowVariables.firstImpressionPackPrice) ??
+      readNumberValue(flowVariables.first_impression_pack_price),
+    first_impression_pack_price:
+      readNumberValue(data.first_impression_pack_price) ??
+      readNumberValue(data.firstImpressionPackPrice) ??
+      readNumberValue(variables.first_impression_pack_price) ??
+      readNumberValue(variables.firstImpressionPackPrice) ??
+      readNumberValue(flowVariables.first_impression_pack_price) ??
+      readNumberValue(flowVariables.firstImpressionPackPrice),
     nicho:
       readText(data.nicho) ??
       readText(variables.nicho) ??

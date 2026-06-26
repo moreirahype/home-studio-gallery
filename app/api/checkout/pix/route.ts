@@ -6,12 +6,20 @@ import {
   getAvailablePaidPhotoCreditCents,
   getClaimedPhotoAccess,
 } from "@/lib/photo-access";
-import { getAdditionalPhotoAmountCents, getVideoAmountCents } from "@/lib/pricing";
+import {
+  DEFAULT_FIRST_IMPRESSION_PACK_PRICE_CENTS,
+  DEFAULT_VIDEO_PRICE_CENTS,
+  getAdditionalPhotoAmountCents,
+  getLinearAddonAmountCents,
+} from "@/lib/pricing";
+import { parseExtraPhotoPricingCents } from "@/lib/gallery-offer-config";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const requestSchema = z.object({
   galleryToken: z.string().min(8),
   photoIds: z.array(z.string().min(1)).min(1).max(20),
+  firstImpressionPackAdded: z.boolean().default(false),
+  firstImpressionPackPhotoIds: z.array(z.string().min(1)).min(0).max(20).default([]),
   videoAdded: z.boolean().default(false),
   videoPhotoIds: z.array(z.string().min(1)).min(0).max(20).default([]),
 });
@@ -38,7 +46,7 @@ export async function POST(request: NextRequest) {
   let { data: project, error: projectError } = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, customer_name, included_photos, paid_amount_cents, pricing_base_amount_cents, created_at, expires_at",
+      "id, gallery_token, customer_name, included_photos, paid_amount_cents, pricing_base_amount_cents, extra_photo_pricing, video_price_cents, first_impression_pack_price_cents, created_at, expires_at",
     )
     .eq("gallery_token", parsed.data.galleryToken)
     .maybeSingle();
@@ -52,7 +60,14 @@ export async function POST(request: NextRequest) {
       .eq("gallery_token", parsed.data.galleryToken)
       .maybeSingle();
     project = fallback.data
-      ? { ...fallback.data, pricing_base_amount_cents: null, expires_at: null }
+      ? {
+          ...fallback.data,
+          pricing_base_amount_cents: null,
+          extra_photo_pricing: null,
+          video_price_cents: null,
+          first_impression_pack_price_cents: null,
+          expires_at: null,
+        }
       : null;
     projectError = fallback.error;
   }
@@ -88,7 +103,22 @@ export async function POST(request: NextRequest) {
         ),
       ]
     : [];
-  const allReferencedPhotos = [...new Set([...selectedPhotoIds, ...videoPhotoIds])];
+  const firstImpressionPackPhotoIds = parsed.data.firstImpressionPackAdded
+    ? [
+        ...new Set(
+          parsed.data.firstImpressionPackPhotoIds.length
+            ? parsed.data.firstImpressionPackPhotoIds
+            : selectedPhotoIds,
+        ),
+      ]
+    : [];
+  const allReferencedPhotos = [
+    ...new Set([
+      ...selectedPhotoIds,
+      ...videoPhotoIds,
+      ...firstImpressionPackPhotoIds,
+    ]),
+  ];
 
   const { data: photos } = await supabase
     .from("photos")
@@ -158,6 +188,9 @@ export async function POST(request: NextRequest) {
       includedPhotos: project.included_photos,
       paidAmountCents: project.paid_amount_cents,
       pricingBaseAmountCents: project.pricing_base_amount_cents,
+      extraPhotoPricingCents: parseExtraPhotoPricingCents(
+        project.extra_photo_pricing,
+      ),
     });
   const photoCreditCents = Math.max(
     paidPhotoCreditCents,
@@ -174,15 +207,29 @@ export async function POST(request: NextRequest) {
       includedPhotos: project.included_photos,
       paidAmountCents: project.paid_amount_cents,
       pricingBaseAmountCents: project.pricing_base_amount_cents,
+      extraPhotoPricingCents: parseExtraPhotoPricingCents(
+        project.extra_photo_pricing,
+      ),
     });
   const photoAmountCents = Math.max(
     0,
     targetPhotoTotalCents - photoCreditCents,
   );
-  const videoAmountCents = parsed.data.videoAdded
-    ? getVideoAmountCents(videoPhotoIds.length)
+  const packAmountCents = parsed.data.firstImpressionPackAdded
+    ? getLinearAddonAmountCents({
+        count: firstImpressionPackPhotoIds.length,
+        unitAmountCents:
+          project.first_impression_pack_price_cents ??
+          DEFAULT_FIRST_IMPRESSION_PACK_PRICE_CENTS,
+      })
     : 0;
-  const amountCents = photoAmountCents + videoAmountCents;
+  const videoAmountCents = parsed.data.videoAdded
+    ? getLinearAddonAmountCents({
+        count: videoPhotoIds.length,
+        unitAmountCents: project.video_price_cents ?? DEFAULT_VIDEO_PRICE_CENTS,
+      })
+    : 0;
+  const amountCents = photoAmountCents + packAmountCents + videoAmountCents;
 
   if (amountCents <= 0) {
     return NextResponse.json(
@@ -228,6 +275,16 @@ export async function POST(request: NextRequest) {
       quantity: videoPhotoIds.length,
       amount_cents: videoAmountCents,
       metadata: { videoPhotoIds, ...metaTracking },
+    });
+  }
+  if (packAmountCents > 0) {
+    items.push({
+      order_id: order.id,
+      kind: "first_impression_pack",
+      description: "Pack Primeira Impressao",
+      quantity: firstImpressionPackPhotoIds.length,
+      amount_cents: packAmountCents,
+      metadata: { firstImpressionPackPhotoIds, ...metaTracking },
     });
   }
 

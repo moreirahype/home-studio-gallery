@@ -1,4 +1,9 @@
 import { Gallery, type GalleryOffer } from "@/components/gallery";
+import {
+  normalizeGalleryType,
+  parseExtraPhotoPricingCents,
+  professionalExtraPricingJson,
+} from "@/lib/gallery-offer-config";
 import { getProjectByToken } from "@/lib/projects";
 import { getPricingBaseAmountCentsFromFirstExtraAmountCents } from "@/lib/pricing";
 import { notFound } from "next/navigation";
@@ -36,7 +41,20 @@ export default async function GalleryPage({
             : project.pricing_base_amount_cents / 100,
         includedPhotos: project.included_photos,
         gallerySize: project.generation_count,
-        videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
+        galleryType: normalizeGalleryType(project.gallery_type),
+        extraPhotoPricing:
+          parseExtraPhotoPricingCents(project.extra_photo_pricing) ??
+          (normalizeGalleryType(project.gallery_type) === "professional"
+            ? professionalExtraPricingJson()
+            : null),
+        videoPrice:
+          (project.video_price_cents ?? null) === null
+            ? Number(process.env.VIDEO_UPSELL_PRICE) || 19.9
+            : Number(project.video_price_cents) / 100,
+        firstImpressionPackPrice:
+          (project.first_impression_pack_price_cents ?? null) === null
+            ? 14.9
+            : Number(project.first_impression_pack_price_cents) / 100,
         newShootPrice: project.paid_amount_cents / 100,
         expressShootPrice:
           Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,
@@ -53,7 +71,10 @@ export default async function GalleryPage({
           : undefined,
         includedPhotos: Number(query.includedPhotos) || 1,
         gallerySize: 15,
+        galleryType: "universal",
+        extraPhotoPricing: null,
         videoPrice: Number(process.env.VIDEO_UPSELL_PRICE) || 19.9,
+        firstImpressionPackPrice: 14.9,
         newShootPrice: Number(query.paidAmount) || 7.9,
         expressShootPrice:
           Number(process.env.EXPRESS_SHOOT_DOWNSELL_PRICE) || 4.9,

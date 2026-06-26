@@ -886,10 +886,11 @@ p {
 }
 
 .addon-card.selected .addon-action {
-  border: 2px solid var(--ink);
+  border: 1px solid #b8b1aa;
   background: white;
-  color: var(--ink);
+  color: #746d66;
   box-shadow: none;
+  font-weight: 650;
 }
 
 .video-offer-preview {
@@ -980,10 +981,11 @@ p {
 }
 
 .addon-card.selected .addon-action {
-  border: 2px solid var(--ink);
+  border: 1px solid #b8b1aa;
   background: white;
-  color: var(--ink);
+  color: #746d66;
   box-shadow: none;
+  font-weight: 650;
 }
 
 .addon-check {

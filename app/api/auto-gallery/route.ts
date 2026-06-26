@@ -11,6 +11,11 @@ import {
   refineGenerationContext,
 } from "@/lib/prompt-builder";
 import { getPricingBaseAmountCentsFromFirstExtraAmountCents } from "@/lib/pricing";
+import {
+  normalizeGalleryType,
+  professionalExtraPricingJson,
+  resolveOfferDefaults,
+} from "@/lib/gallery-offer-config";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -89,12 +94,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const generationCount = Math.min(20, parseCount(formData.get("generationCount"), 15));
+  const galleryType = normalizeGalleryType(String(formData.get("galleryType") ?? ""));
+  const offerDefaults = resolveOfferDefaults({
+    galleryType,
+    paidAmountCents: Math.round(parseMoney(formData.get("paidAmount"), 7.9) * 100),
+    includedPhotos: parseNonNegativeCount(formData.get("includedPhotos"), 1),
+    generationCount: parseCount(formData.get("generationCount"), 15),
+    extraPhotoPricingCents:
+      galleryType === "professional" ? professionalExtraPricingJson() : null,
+    videoPriceCents: Math.round(parseMoney(formData.get("videoPrice"), 19.9) * 100),
+    firstImpressionPackPriceCents: Math.round(
+      parseMoney(formData.get("firstImpressionPackPrice"), 14.9) * 100,
+    ),
+  });
+  const generationCount = Math.min(20, offerDefaults.generationCount);
   const includedPhotos = Math.min(
     generationCount,
-    Math.max(0, parseNonNegativeCount(formData.get("includedPhotos"), 1)),
+    Math.max(0, offerDefaults.includedPhotos),
   );
-  const paidAmountCents = Math.round(parseMoney(formData.get("paidAmount"), 7.9) * 100);
+  const paidAmountCents = offerDefaults.paidAmountCents;
   const firstExtraAmountCents = Math.round(
     parsePositiveMoney(formData.get("firstExtraAmount"), 7.9) * 100,
   );
@@ -105,6 +123,9 @@ export async function POST(request: NextRequest) {
     });
   const attendantMode = String(formData.get("attendantMode") ?? "default");
   const attendantName = attendantMode === "sheila" ? "Galeria Sheila" : "Galeria";
+  const productName =
+    String(formData.get("produto") ?? "").trim() ||
+    (galleryType === "professional" ? "Galeria IA - Profissional" : "Sem produto");
   const projectId = randomUUID();
   const galleryToken = randomUUID().replaceAll("-", "");
   const referencePath = `auto/${projectId}/reference.jpg`;
@@ -154,6 +175,12 @@ export async function POST(request: NextRequest) {
     pricing_base_amount_cents: pricingBaseAmountCents,
     generation_count: generationCount,
     bi_attendant_name: attendantName,
+    product_name: productName,
+    gallery_type: galleryType,
+    extra_photo_pricing: offerDefaults.extraPhotoPricingCents,
+    video_price_cents: offerDefaults.videoPriceCents,
+    first_impression_pack_price_cents:
+      offerDefaults.firstImpressionPackPriceCents,
     expires_at: expiresAt.toISOString(),
     status: "queued",
   };
@@ -176,6 +203,31 @@ export async function POST(request: NextRequest) {
     const { bi_attendant_name: ignored, ...legacyPayload } =
       compatibleProjectPayload;
     void ignored;
+    compatibleProjectPayload = legacyPayload as typeof projectPayload;
+    const fallback = await supabase.from("projects").insert(compatibleProjectPayload);
+    projectError = fallback.error;
+  }
+
+  if (
+    projectError?.message.includes("product_name") ||
+    projectError?.message.includes("gallery_type") ||
+    projectError?.message.includes("extra_photo_pricing") ||
+    projectError?.message.includes("video_price_cents") ||
+    projectError?.message.includes("first_impression_pack_price_cents")
+  ) {
+    const {
+      product_name: ignoredProduct,
+      gallery_type: ignoredGalleryType,
+      extra_photo_pricing: ignoredExtraPricing,
+      video_price_cents: ignoredVideoPrice,
+      first_impression_pack_price_cents: ignoredPackPrice,
+      ...legacyPayload
+    } = compatibleProjectPayload;
+    void ignoredProduct;
+    void ignoredGalleryType;
+    void ignoredExtraPricing;
+    void ignoredVideoPrice;
+    void ignoredPackPrice;
     compatibleProjectPayload = legacyPayload as typeof projectPayload;
     const fallback = await supabase.from("projects").insert(compatibleProjectPayload);
     projectError = fallback.error;
