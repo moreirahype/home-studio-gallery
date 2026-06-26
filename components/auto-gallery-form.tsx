@@ -302,97 +302,110 @@ export function AutoGalleryForm() {
             <small>Esse nome vai para o dashboard e para a planilha.</small>
           </label>
 
-          <div className="manual-grid three">
-            <label>
-              Entrada já paga
-              <input
-                defaultValue="29.90"
-                key={`paid-${galleryType}`}
-                min="0"
-                name="paidAmount"
-                required
-                step="0.01"
-                type="number"
-              />
-            </label>
-            <label>
-              Fotos incluídas
-              <input
-                defaultValue="3"
-                key={`included-${galleryType}`}
-                max="20"
-                min="0"
-                name="includedPhotos"
-                required
-                step="1"
-                type="number"
-              />
-            </label>
-            <label>
-              Fotos a gerar
-              <input
-                defaultValue="10"
-                key={`count-${galleryType}`}
-                max="20"
-                min="1"
-                name="generationCount"
-                required
-                step="1"
-                type="number"
-              />
-            </label>
-          </div>
+          <section className="manual-config-section">
+            <header className="manual-config-heading">
+              <strong>Configuração da oferta</strong>
+              <small>Defina o que o cliente recebe e o valor das fotos extras.</small>
+            </header>
+            <div className="manual-grid four">
+              <label>
+                Entrada já paga
+                <input
+                  defaultValue="29.90"
+                  key={`paid-${galleryType}`}
+                  min="0"
+                  name="paidAmount"
+                  required
+                  step="0.01"
+                  type="number"
+                />
+              </label>
+              <label>
+                Fotos incluídas
+                <input
+                  defaultValue="3"
+                  key={`included-${galleryType}`}
+                  max="20"
+                  min="0"
+                  name="includedPhotos"
+                  required
+                  step="1"
+                  type="number"
+                />
+              </label>
+              <label>
+                Fotos na galeria
+                <input
+                  defaultValue="10"
+                  key={`count-${galleryType}`}
+                  max="20"
+                  min="1"
+                  name="generationCount"
+                  required
+                  step="1"
+                  type="number"
+                />
+              </label>
+              <label>
+                1ª foto extra
+                <input
+                  min="0.01"
+                  name="firstExtraAmount"
+                  onChange={(event) => setFirstExtraAmount(event.target.value)}
+                  required
+                  step="0.01"
+                  type="number"
+                  value={firstExtraAmount}
+                />
+              </label>
+            </div>
+          </section>
 
-          <label>
-            1ª foto extra
-            <input
-              min="0.01"
-              name="firstExtraAmount"
-              onChange={(event) => setFirstExtraAmount(event.target.value)}
-              required
-              step="0.01"
-              type="number"
-              value={firstExtraAmount}
-            />
-          </label>
-
-          <div className="manual-grid two">
-            <label className="manual-price-field">
-              <span>Vídeo por foto</span>
-              <small aria-hidden="true" className="manual-field-help empty">
-                &nbsp;
-              </small>
-              <input
-                defaultValue={galleryType === "professional" ? "9.90" : "19.90"}
-                key={`video-${galleryType}`}
-                min="0"
-                name="videoPrice"
-                step="0.01"
-                type="number"
-              />
-            </label>
-            <label className="manual-price-field">
-              <span>Pack Primeira Impressão por foto</span>
-              <small className="manual-field-help">
-                {galleryType === "professional"
-                  ? "Gera +3 versões extras para cada foto escolhida."
-                  : "O Pack só aparece nas galerias profissionais."}
-              </small>
-              <input
-                defaultValue="14.90"
-                disabled={galleryType !== "professional"}
-                min="0"
-                name="firstImpressionPackPrice"
-                placeholder={
-                  galleryType === "professional"
-                    ? "14.90"
-                    : "Disponível apenas no profissional"
-                }
-                step="0.01"
-                type="number"
-              />
-            </label>
-          </div>
+          <section className="manual-config-section">
+            <header className="manual-config-heading">
+              <strong>Valores dos extras</strong>
+              <small>Configure os adicionais oferecidos antes do pagamento.</small>
+            </header>
+            <div className="manual-grid two manual-addon-price-grid">
+              <label className="manual-price-field">
+                <span className="manual-field-heading">
+                  <strong>Vídeo por foto</strong>
+                  <small>Cobrado por cada foto transformada em vídeo.</small>
+                </span>
+                <input
+                  defaultValue={galleryType === "professional" ? "9.90" : "19.90"}
+                  key={`video-${galleryType}`}
+                  min="0"
+                  name="videoPrice"
+                  step="0.01"
+                  type="number"
+                />
+              </label>
+              <label className="manual-price-field">
+                <span className="manual-field-heading">
+                  <strong>Pack Primeira Impressão por foto</strong>
+                  <small>
+                    {galleryType === "professional"
+                      ? "Gera +3 versões extras para cada foto escolhida."
+                      : "O Pack só aparece nas galerias profissionais."}
+                  </small>
+                </span>
+                <input
+                  defaultValue="14.90"
+                  disabled={galleryType !== "professional"}
+                  min="0"
+                  name="firstImpressionPackPrice"
+                  placeholder={
+                    galleryType === "professional"
+                      ? "14.90"
+                      : "Disponível apenas no profissional"
+                  }
+                  step="0.01"
+                  type="number"
+                />
+              </label>
+            </div>
+          </section>
 
           <label>
             Senha
