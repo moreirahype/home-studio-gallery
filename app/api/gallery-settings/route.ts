@@ -98,3 +98,37 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: NextRequest) {
+  const body = (await request.json()) as {
+    password?: string;
+    id?: string;
+    name?: string;
+  };
+
+  if (!safeCompare(body.password ?? null, getAdminPassword())) {
+    return NextResponse.json(
+      { ok: false, error: "Senha inválida." },
+      { status: 403 },
+    );
+  }
+
+  const id = body.id?.trim();
+  const name = body.name?.trim();
+  if (!id && !name) {
+    return NextResponse.json(
+      { ok: false, error: "Produto não informado." },
+      { status: 400 },
+    );
+  }
+
+  const supabase = getSupabaseAdmin();
+  const query = supabase.from("gallery_products").update({ active: false });
+  const { error } = id ? await query.eq("id", id) : await query.eq("name", name);
+
+  if (error) {
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

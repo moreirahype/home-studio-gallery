@@ -365,7 +365,7 @@ export function AutoGalleryForm() {
               />
             </label>
             <label>
-              Pack Primeira ImpressÃ£o por foto
+              Pack Primeira Impressão por foto
               <input
                 defaultValue="14.90"
                 min="0"
