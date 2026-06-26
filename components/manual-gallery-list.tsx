@@ -13,6 +13,7 @@ type ManualGallery = {
   includedPhotos: number;
   generationCount: number;
   attendantName: string | null;
+  productName: string | null;
   createdAt: string;
   expiresAt: string;
   expired: boolean;
@@ -40,20 +41,26 @@ export function ManualGalleryList() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  async function loadGalleries(query = search) {
+  async function loadGalleries(query = search, pageNumber = page) {
     setLoading(true);
     setError("");
 
     try {
       const response = await fetch(
-        `/api/manual-gallery?q=${encodeURIComponent(query)}`,
+        `/api/manual-gallery?q=${encodeURIComponent(query)}&page=${pageNumber}`,
         { cache: "no-store" },
       );
       const result = (await response.json()) as {
         ok?: boolean;
         error?: string;
         galleries?: ManualGallery[];
+        page?: number;
+        total?: number;
+        totalPages?: number;
       };
 
       if (!response.ok || !result.ok || !result.galleries) {
@@ -61,6 +68,9 @@ export function ManualGalleryList() {
       }
 
       setGalleries(result.galleries);
+      setPage(result.page ?? pageNumber);
+      setTotal(result.total ?? result.galleries.length);
+      setTotalPages(result.totalPages ?? 1);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -74,7 +84,8 @@ export function ManualGalleryList() {
 
   function searchGalleries(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void loadGalleries(search);
+    setPage(1);
+    void loadGalleries(search, 1);
   }
 
   async function copyLink(gallery: ManualGallery) {
@@ -113,6 +124,7 @@ export function ManualGalleryList() {
       setGalleries((current) =>
         current.filter((item) => item.id !== gallery.id),
       );
+      setTotal((current) => Math.max(0, current - 1));
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -180,9 +192,15 @@ export function ManualGalleryList() {
   }
 
   useEffect(() => {
-    void loadGalleries("");
+    void loadGalleries("", 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function goToPage(nextPage: number) {
+    const safePage = Math.min(totalPages, Math.max(1, nextPage));
+    setPage(safePage);
+    void loadGalleries(search, safePage);
+  }
 
   return (
     <main className="manual-page">
@@ -217,6 +235,15 @@ export function ManualGalleryList() {
         {loading && <p className="manual-empty">Carregando galerias...</p>}
         {!loading && !galleries.length && (
           <p className="manual-empty">Nenhuma galeria encontrada.</p>
+        )}
+
+        {!loading && galleries.length > 0 && (
+          <div className="manual-pagination-summary">
+            <span>
+              Mostrando página {page} de {totalPages}
+            </span>
+            <small>{total} galerias encontradas</small>
+          </div>
         )}
 
         <div className="manual-gallery-list">
@@ -293,6 +320,10 @@ export function ManualGalleryList() {
                   </dd>
                 </div>
                 <div>
+                  <dt>Produto</dt>
+                  <dd>{gallery.productName ?? "Sem produto"}</dd>
+                </div>
+                <div>
                   <dt>Entrada</dt>
                   <dd>{money.format(gallery.paidAmount)}</dd>
                 </div>
@@ -340,6 +371,54 @@ export function ManualGalleryList() {
             </article>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="manual-pagination">
+            <button
+              className="secondary-button"
+              disabled={loading || page <= 1}
+              onClick={() => goToPage(page - 1)}
+              type="button"
+            >
+              Página anterior
+            </button>
+            <div>
+              {Array.from({ length: totalPages }, (_, index) => index + 1)
+                .filter(
+                  (pageNumber) =>
+                    pageNumber === 1 ||
+                    pageNumber === totalPages ||
+                    Math.abs(pageNumber - page) <= 1,
+                )
+                .map((pageNumber, index, visiblePages) => {
+                  const previous = visiblePages[index - 1];
+                  return (
+                    <span key={pageNumber}>
+                      {previous && pageNumber - previous > 1 && (
+                        <small>...</small>
+                      )}
+                      <button
+                        className={pageNumber === page ? "active" : ""}
+                        disabled={loading}
+                        onClick={() => goToPage(pageNumber)}
+                        type="button"
+                      >
+                        {pageNumber}
+                      </button>
+                    </span>
+                  );
+                })}
+            </div>
+            <button
+              className="secondary-button"
+              disabled={loading || page >= totalPages}
+              onClick={() => goToPage(page + 1)}
+              type="button"
+            >
+              Próxima página
+            </button>
+          </div>
+        )}
       </section>
     </main>
   );

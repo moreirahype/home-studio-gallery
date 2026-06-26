@@ -83,6 +83,10 @@ export function ManualGalleryForm() {
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    setFirstExtraAmount(galleryType === "professional" ? "9.90" : "7.90");
+  }, [galleryType]);
+
   async function createGallery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -313,7 +317,7 @@ export function ManualGalleryForm() {
             <label>
               Entrada já paga
               <input
-                defaultValue={galleryType === "professional" ? "29.90" : "7.90"}
+                defaultValue="29.90"
                 key={`paid-${galleryType}`}
                 min="0"
                 name="paidAmount"
@@ -325,7 +329,7 @@ export function ManualGalleryForm() {
             <label>
               Fotos incluídas
               <input
-                defaultValue={galleryType === "professional" ? "3" : "1"}
+                defaultValue="3"
                 key={`included-${galleryType}`}
                 max="20"
                 min="0"
@@ -335,6 +339,22 @@ export function ManualGalleryForm() {
                 type="number"
               />
             </label>
+            <label>
+              Fotos na galeria
+              <input
+                defaultValue="10"
+                key={`count-${galleryType}`}
+                max="20"
+                min="1"
+                name="generationCount"
+                required
+                step="1"
+                type="number"
+              />
+            </label>
+          </div>
+
+          <div className="manual-grid three">
             <label>
               1ª foto extra
               <input
@@ -351,7 +371,7 @@ export function ManualGalleryForm() {
 
           <div className="manual-grid two">
             <label>
-              VÃ­deo por foto
+              Vídeo por foto
               <input
                 defaultValue={galleryType === "professional" ? "9.90" : "19.90"}
                 key={`video-${galleryType}`}
@@ -365,11 +385,22 @@ export function ManualGalleryForm() {
               Pack Primeira Impressão por foto
               <input
                 defaultValue="14.90"
+                disabled={galleryType !== "professional"}
                 min="0"
                 name="firstImpressionPackPrice"
+                placeholder={
+                  galleryType === "professional"
+                    ? "14.90"
+                    : "Disponível apenas no profissional"
+                }
                 step="0.01"
                 type="number"
               />
+              <small>
+                {galleryType === "professional"
+                  ? "Gera +3 versões extras para cada foto escolhida."
+                  : "O Pack só aparece nas galerias profissionais."}
+              </small>
             </label>
           </div>
 

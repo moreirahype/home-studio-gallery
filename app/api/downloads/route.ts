@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
           error:
             error instanceof Error
               ? error.message
-              : "NÃ£o foi possÃ­vel bloquear as fotos.",
+              : "Não foi possível bloquear as fotos.",
         },
         { status: 500 },
       );

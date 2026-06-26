@@ -993,11 +993,12 @@ p {
   width: 34px;
   height: 34px;
   place-items: center;
-  border: 2px solid var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 50%;
   background: white;
   color: var(--ink);
-  font-weight: 900;
+  font-weight: 650;
+  line-height: 1;
 }
 
 .addon-card.selected .addon-check {
@@ -1602,6 +1603,40 @@ p {
     box-shadow 0.16s ease;
 }
 
+.settings-form .primary-button {
+  width: 100%;
+}
+
+.manual-form select,
+.settings-form select {
+  appearance: none;
+  padding-right: 44px;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--accent) 50%) right 18px top
+      23px / 7px 7px no-repeat,
+    linear-gradient(135deg, var(--accent) 50%, transparent 50%) right 12px top
+      23px / 7px 7px no-repeat,
+    white;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.manual-form select:hover,
+.settings-form select:hover {
+  border-color: rgb(163 67 46 / 36%);
+}
+
+.manual-form select:focus,
+.settings-form select:focus {
+  border-color: rgb(163 67 46 / 55%);
+  box-shadow: 0 0 0 4px rgb(163 67 46 / 10%);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .settings-form input:focus,
 .settings-form select:focus,
 .settings-password-card input:focus {
@@ -1691,22 +1726,8 @@ p {
 }
 
 .settings-attendant-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 10px;
-}
-
-.settings-attendant-list span {
-  display: inline-flex;
-  min-height: 38px;
-  align-items: center;
-  padding: 0 14px;
-  border: 1px solid rgb(163 67 46 / 14%);
-  border-radius: 999px;
-  background: rgb(163 67 46 / 8%);
-  color: var(--accent);
-  font-size: 0.8rem;
-  font-weight: 900;
 }
 
 @media (max-width: 760px) {
@@ -2033,8 +2054,65 @@ p {
 
 .manual-gallery-card dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+
+.manual-pagination-summary,
+.manual-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.manual-pagination-summary {
+  padding: 12px 14px;
+  border: 1px solid rgb(52 36 25 / 9%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 62%);
+}
+
+.manual-pagination-summary span {
+  font-weight: 850;
+}
+
+.manual-pagination-summary small {
+  color: var(--muted);
+}
+
+.manual-pagination > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.manual-pagination > div span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manual-pagination > div button {
+  min-width: 38px;
+  min-height: 38px;
+  border: 1px solid rgb(52 36 25 / 12%);
+  border-radius: 999px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.manual-pagination > div button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
 }
 
 .manual-gallery-card dt {

@@ -19,8 +19,8 @@ export function GallerySettings() {
     products: [],
     attendants: [],
   });
-  const [password, setPassword] = useState("");
   const [deletingProduct, setDeletingProduct] = useState("");
+  const [deletingAttendant, setDeletingAttendant] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -62,7 +62,7 @@ export function GallerySettings() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        password,
+        password: String(formData.get("password") ?? ""),
         kind,
         name: String(formData.get("name") ?? ""),
         galleryType: String(formData.get("galleryType") ?? "universal"),
@@ -79,39 +79,51 @@ export function GallerySettings() {
     await loadSettings();
   }
 
-  async function deleteProduct(product: Product) {
-    const identifier = product.id ?? product.name;
+  async function deleteItem(
+    item: Product | Attendant,
+    kind: "product" | "attendant",
+  ) {
+    const identifier = item.id ?? item.name;
     if (!identifier) return;
 
+    const label = kind === "product" ? "produto" : "atendente";
     const confirmation = window.prompt(
-      `Para excluir o produto "${product.name}", digite excluir.`,
+      `Para excluir o ${label} "${item.name}", digite excluir.`,
     );
-    if (confirmation?.trim().toLowerCase() !== "excluir") {
-      return;
-    }
+    if (confirmation?.trim().toLowerCase() !== "excluir") return;
+
+    const password = window.prompt("Digite a senha administrativa:");
+    if (!password) return;
 
     setError("");
     setMessage("");
-    setDeletingProduct(identifier);
+    if (kind === "product") {
+      setDeletingProduct(identifier);
+    } else {
+      setDeletingAttendant(identifier);
+    }
 
     const response = await fetch("/api/gallery-settings", {
       method: "DELETE",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         password,
-        id: product.id,
-        name: product.name,
+        kind,
+        id: item.id,
+        name: item.name,
       }),
     });
     const result = (await response.json()) as { ok?: boolean; error?: string };
+
     setDeletingProduct("");
+    setDeletingAttendant("");
 
     if (!response.ok || !result.ok) {
-      setError(result.error ?? "Não foi possível excluir o produto.");
+      setError(result.error ?? `Não foi possível excluir o ${label}.`);
       return;
     }
 
-    setMessage("Produto excluído.");
+    setMessage(kind === "product" ? "Produto excluído." : "Atendente excluído.");
     await loadSettings();
   }
 
@@ -122,8 +134,8 @@ export function GallerySettings() {
           <span className="section-kicker">CONFIGURAÇÕES</span>
           <h1>Produtos e atendentes da galeria</h1>
           <p>
-            Organize os nomes que aparecem nos formulários manuais, automáticos,
-            no BI e na planilha. Produtos podem ser separados por tipo de galeria.
+            Organize os nomes usados nas galerias manuais, automáticas, no BI e
+            na planilha. Produtos podem ser separados por tipo de galeria.
           </p>
         </div>
         <div className="settings-summary-card">
@@ -131,22 +143,6 @@ export function GallerySettings() {
           <span>produtos ativos</span>
           <small>{settings.attendants.length} atendentes cadastrados</small>
         </div>
-      </section>
-
-      <section className="settings-card settings-password-card">
-        <label>
-          Senha administrativa
-          <input
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Digite para salvar ou excluir"
-            type="password"
-            value={password}
-          />
-        </label>
-        <p>
-          A senha é usada só para proteger alterações nesta página. As galerias
-          já criadas continuam com os dados que foram salvos nelas.
-        </p>
       </section>
 
       <section className="settings-grid">
@@ -168,10 +164,19 @@ export function GallerySettings() {
           </label>
           <label>
             Tipo de galeria
-            <select name="galleryType" defaultValue="universal">
+            <select className="pretty-select" name="galleryType" defaultValue="universal">
               <option value="universal">Universal</option>
               <option value="professional">Profissional</option>
             </select>
+          </label>
+          <label>
+            Senha
+            <input
+              name="password"
+              placeholder="Senha administrativa"
+              required
+              type="password"
+            />
           </label>
           <button className="primary-button" type="submit">
             Salvar produto
@@ -189,6 +194,15 @@ export function GallerySettings() {
           <label>
             Nome do atendente
             <input name="name" placeholder="Ex: Galeria Sheila" required />
+          </label>
+          <label>
+            Senha
+            <input
+              name="password"
+              placeholder="Senha administrativa"
+              required
+              type="password"
+            />
           </label>
           <button className="primary-button" type="submit">
             Salvar atendente
@@ -228,7 +242,7 @@ export function GallerySettings() {
                         disabled={
                           deletingProduct === (product.id ?? product.name)
                         }
-                        onClick={() => void deleteProduct(product)}
+                        onClick={() => void deleteItem(product, "product")}
                         type="button"
                       >
                         {deletingProduct === (product.id ?? product.name)
@@ -254,7 +268,27 @@ export function GallerySettings() {
           </div>
           <div className="settings-attendant-list">
             {settings.attendants.map((attendant) => (
-              <span key={attendant.id ?? attendant.name}>{attendant.name}</span>
+              <div
+                className="settings-list-item"
+                key={attendant.id ?? attendant.name}
+              >
+                <div>
+                  <strong>{attendant.name}</strong>
+                  <small>Atendente ativo</small>
+                </div>
+                <button
+                  className="settings-delete-button"
+                  disabled={
+                    deletingAttendant === (attendant.id ?? attendant.name)
+                  }
+                  onClick={() => void deleteItem(attendant, "attendant")}
+                  type="button"
+                >
+                  {deletingAttendant === (attendant.id ?? attendant.name)
+                    ? "Excluindo..."
+                    : "Excluir"}
+                </button>
+              </div>
             ))}
           </div>
         </div>

@@ -88,7 +88,7 @@ async function startFallbackImageTask({
   if (photo.error_message?.startsWith("Fallback ")) return null;
 
   const callbackSecret = process.env.KIE_CALLBACK_SECRET;
-  if (!callbackSecret) throw new Error("KIE_CALLBACK_SECRET nÃ£o configurada.");
+  if (!callbackSecret) throw new Error("KIE_CALLBACK_SECRET não configurada.");
 
   const supabase = getSupabaseAdmin();
   const { data: project, error: projectError } = await supabase
@@ -99,7 +99,7 @@ async function startFallbackImageTask({
 
   if (projectError || !project) {
     throw new Error(
-      projectError?.message ?? "Projeto indisponÃ­vel para fallback.",
+      projectError?.message ?? "Projeto indisponível para fallback.",
     );
   }
 
@@ -111,14 +111,14 @@ async function startFallbackImageTask({
       .createSignedUrl(project.source_image_path, 60 * 60 * 6);
 
     if (signedSource.error || !signedSource.data?.signedUrl) {
-      throw new Error("NÃ£o foi possÃ­vel abrir a foto de referÃªncia.");
+      throw new Error("Não foi possível abrir a foto de referência.");
     }
 
     sourceImageUrl = signedSource.data.signedUrl;
   }
 
   if (!sourceImageUrl) {
-    throw new Error("Foto de referÃªncia indisponÃ­vel para fallback.");
+    throw new Error("Foto de referência indisponível para fallback.");
   }
 
   const callbackUrl = new URL("/api/webhooks/kie", request.nextUrl.origin);
@@ -137,7 +137,7 @@ async function startFallbackImageTask({
     .update({
       kie_task_id: fallbackTaskId,
       status: "generating",
-      error_message: `Fallback ${fallbackModel} iniciado apÃ³s falha da task original.`,
+      error_message: `Fallback ${fallbackModel} iniciado após falha da task original.`,
     })
     .eq("id", photo.id);
 

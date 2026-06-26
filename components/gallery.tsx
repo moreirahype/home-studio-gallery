@@ -464,7 +464,8 @@ export function Gallery({
     selected.length > 0 && selectedLockedCount === 0;
   const selectionIsIncluded =
     selected.length > 0 && pricing.dueNow === 0;
-  const firstImpressionPackPrice = firstImpressionPackAdded
+  const firstImpressionPackPrice =
+    offer.galleryType === "professional" && firstImpressionPackAdded
     ? selected.length * offer.firstImpressionPackPrice
     : 0;
   const videoPrice = videoAdded
@@ -1710,53 +1711,57 @@ export function Gallery({
                     : `${selected.length} fotos selecionadas`}
                 </h2>
                 <p>
-                  Transforme suas fotos favoritas em vídeos curtos com
-                  movimento. Cada foto escolhida vira um vídeo separado para
-                  você baixar e postar.
+                  Complete seu pedido com extras que deixam suas fotos mais
+                  úteis para perfil, WhatsApp, currículo, status e redes sociais.
                 </p>
-                <div className="video-offer-preview pack-offer-preview">
-                  <div className="video-benefits">
-                    <strong>Pack Primeira Impressão</strong>
-                    <span>3 versões extras por foto escolhida</span>
-                    <span>Autoridade, simpatia e visual premium</span>
-                    <span>Ideal para perfil, currículo, WhatsApp e redes sociais</span>
-                  </div>
-                </div>
-                <button
-                  aria-pressed={firstImpressionPackAdded}
-                  className={`addon-card pack-addon ${
-                    firstImpressionPackAdded ? "selected" : ""
-                  }`}
-                  onClick={() =>
-                    setFirstImpressionPackAdded((current) => !current)
-                  }
-                  type="button"
-                >
-                  <span className="addon-check">
-                    {firstImpressionPackAdded ? "✓" : "+"}
-                  </span>
-                  <span className="addon-copy">
-                    <strong>
-                      {firstImpressionPackAdded
-                        ? "Pack Primeira Impressão adicionado"
-                        : "Quero o Pack Primeira Impressão"}
-                    </strong>
-                    <small>
-                      {firstImpressionPackAdded
-                        ? `${selected.length} ${
-                            selected.length === 1
-                              ? "foto escolhida"
-                              : "fotos escolhidas"
-                          } para o pack`
-                        : `Receba 3 versões extras de cada foto escolhida por ${money.format(
-                            offer.firstImpressionPackPrice,
-                          )} por foto.`}
-                    </small>
-                  </span>
-                  <span className="addon-action">
-                    {firstImpressionPackAdded ? "REMOVER" : "ADICIONAR"}
-                  </span>
-                </button>
+                {isProfessionalGallery && (
+                  <>
+                    <div className="video-offer-preview pack-offer-preview">
+                      <div className="video-benefits">
+                        <strong>Pack Primeira Impressão</strong>
+                        <span>+3 versões extras por foto escolhida</span>
+                        <span>Autoridade para passar confiança</span>
+                        <span>Simpatia para parecer mais acessível</span>
+                        <span>Premium para elevar sua imagem profissional</span>
+                      </div>
+                    </div>
+                    <button
+                      aria-pressed={firstImpressionPackAdded}
+                      className={`addon-card pack-addon ${
+                        firstImpressionPackAdded ? "selected" : ""
+                      }`}
+                      onClick={() =>
+                        setFirstImpressionPackAdded((current) => !current)
+                      }
+                      type="button"
+                    >
+                      <span className="addon-check">
+                        {firstImpressionPackAdded ? "✓" : "+"}
+                      </span>
+                      <span className="addon-copy">
+                        <strong>
+                          {firstImpressionPackAdded
+                            ? "Pack Primeira Impressão adicionado"
+                            : "Quero parecer mais profissional"}
+                        </strong>
+                        <small>
+                          {firstImpressionPackAdded
+                            ? `${selected.length} ${
+                                selected.length === 1
+                                  ? "foto escolhida"
+                                  : "fotos escolhidas"
+                              } recebendo +3 variações cada`
+                            : `Multiplique cada foto escolhida em 3 versões de impacto por ${money.format(
+                                offer.firstImpressionPackPrice,
+                              )} por foto.`}
+                        </small>
+                      </span>
+                      <span className="addon-action">
+                        {firstImpressionPackAdded ? "REMOVER" : "ADICIONAR"}
+                      </span>
+                    </button>
+                  </>
+                )}
                 <div className="video-offer-preview">
                   <div
                     aria-label="Prévia das fotos usadas no vídeo"
@@ -1787,8 +1792,8 @@ export function Gallery({
                         ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "vídeo curto" : "vídeos curtos"}`
                         : "1 vídeo curto por padrão"}
                     </span>
-                    <span>Vídeos separados: você usa só os favoritos</span>
-                    <span>Perfeito para adicionar música no Instagram ou TikTok</span>
+                    <span>Transforme foto parada em conteúdo com movimento</span>
+                    <span>Ideal para chamar atenção no status, story e Reels</span>
                   </div>
                 </div>
                 <button
@@ -1799,11 +1804,11 @@ export function Gallery({
                 >
                   <span className="addon-check">{videoAdded ? "✓" : "+"}</span>
                   <span className="addon-copy">
-                    <strong>Quero transformar foto em vídeo</strong>
+                    <strong>Quero minha foto em vídeo</strong>
                     <small>
                       {videoAdded
                         ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "foto escolhida" : "fotos escolhidas"} para vídeo`
-                        : "Começa com 1 vídeo da sua foto favorita"}
+                        : "Dê movimento à foto e deixe o resultado mais chamativo"}
                     </small>
                   </span>
                   <span className="addon-action">

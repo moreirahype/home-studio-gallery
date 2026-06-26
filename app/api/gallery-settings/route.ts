@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const body = (await request.json()) as {
     password?: string;
+    kind?: string;
     id?: string;
     name?: string;
   };
@@ -117,13 +118,15 @@ export async function DELETE(request: NextRequest) {
   const name = body.name?.trim();
   if (!id && !name) {
     return NextResponse.json(
-      { ok: false, error: "Produto não informado." },
+      { ok: false, error: "Item não informado." },
       { status: 400 },
     );
   }
 
   const supabase = getSupabaseAdmin();
-  const query = supabase.from("gallery_products").update({ active: false });
+  const table =
+    body.kind === "attendant" ? "gallery_attendants" : "gallery_products";
+  const query = supabase.from(table).update({ active: false });
   const { error } = id ? await query.eq("id", id) : await query.eq("name", name);
 
   if (error) {

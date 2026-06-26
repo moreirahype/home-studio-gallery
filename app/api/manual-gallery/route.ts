@@ -50,15 +50,23 @@ export async function GET(request: NextRequest) {
   const appUrl = process.env.APP_URL ?? request.nextUrl.origin;
   const search = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   const searchDigits = search.replace(/\D/g, "");
+  const page = Math.max(
+    1,
+    parseInteger(request.nextUrl.searchParams.get("page"), 1),
+  );
+  const pageSize = 12;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let query = supabase
     .from("projects")
     .select(
-      "id, gallery_token, customer_name, phone, paid_amount_cents, included_photos, generation_count, bi_attendant_name, niche_id, created_at, expires_at",
+      "id, gallery_token, customer_name, phone, paid_amount_cents, included_photos, generation_count, bi_attendant_name, product_name, niche_id, created_at, expires_at",
+      { count: "exact" },
     )
     .in("niche_id", ["manual", "auto_manual"])
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(from, to);
 
   if (search) {
     query = searchDigits
@@ -66,20 +74,22 @@ export async function GET(request: NextRequest) {
       : query.ilike("customer_name", `%${search}%`);
   }
 
-  let { data, error } = await query;
+  let { data, error, count } = await query;
 
   if (
     error?.message.includes("expires_at") ||
-    error?.message.includes("bi_attendant_name")
+    error?.message.includes("bi_attendant_name") ||
+    error?.message.includes("product_name")
   ) {
     let fallbackQuery = supabase
       .from("projects")
       .select(
         "id, gallery_token, customer_name, phone, paid_amount_cents, included_photos, generation_count, niche_id, created_at",
+        { count: "exact" },
       )
       .in("niche_id", ["manual", "auto_manual"])
       .order("created_at", { ascending: false })
-      .limit(100);
+      .range(from, to);
 
     if (search) {
       fallbackQuery = searchDigits
@@ -94,10 +104,12 @@ export async function GET(request: NextRequest) {
       fallback.data?.map((project) => ({
         ...project,
         bi_attendant_name: null,
+        product_name: null,
         expires_at: null,
       })) ??
       null;
     error = fallback.error;
+    count = fallback.count;
   }
 
   if (error) {
@@ -119,6 +131,7 @@ export async function GET(request: NextRequest) {
         includedPhotos: project.included_photos,
         generationCount: project.generation_count,
         attendantName: project.bi_attendant_name,
+        productName: project.product_name,
         kind: project.niche_id === "auto_manual" ? "automatic" : "manual",
         createdAt: project.created_at,
         expiresAt: expiresAt.toISOString(),
@@ -126,6 +139,10 @@ export async function GET(request: NextRequest) {
         galleryUrl: buildGalleryUrl(project.gallery_token, appUrl),
       };
     }),
+    page,
+    pageSize,
+    total: count ?? 0,
+    totalPages: Math.max(1, Math.ceil((count ?? 0) / pageSize)),
   });
 }
 
@@ -170,7 +187,10 @@ export async function POST(request: NextRequest) {
       parseNonNegativeMoney(formData.get("paidAmount"), 7.9) * 100,
     ),
     includedPhotos: parseInteger(formData.get("includedPhotos"), 1),
-    generationCount: files.length,
+    generationCount: Math.min(
+      MAX_MANUAL_PHOTOS,
+      Math.max(files.length, parseInteger(formData.get("generationCount"), files.length)),
+    ),
     extraPhotoPricingCents:
       galleryType === "professional" ? professionalExtraPricingJson() : null,
     videoPriceCents: Math.round(parseNonNegativeMoney(formData.get("videoPrice"), 19.9) * 100),
