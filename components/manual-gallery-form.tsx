@@ -57,7 +57,7 @@ async function optimizeManualPhoto(file: File, targetBytes: number) {
 
 export function ManualGalleryForm() {
   const photosInputRef = useRef<HTMLInputElement>(null);
-  const [firstExtraAmount, setFirstExtraAmount] = useState("7.90");
+  const [firstExtraAmount, setFirstExtraAmount] = useState("9.90");
   const [galleryType, setGalleryType] = useState("universal");
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [selectedPhotosLabel, setSelectedPhotosLabel] = useState(
@@ -84,7 +84,7 @@ export function ManualGalleryForm() {
   }, []);
 
   useEffect(() => {
-    setFirstExtraAmount(galleryType === "professional" ? "9.90" : "7.90");
+    setFirstExtraAmount("9.90");
   }, [galleryType]);
 
   async function createGallery(event: FormEvent<HTMLFormElement>) {
@@ -250,17 +250,32 @@ export function ManualGalleryForm() {
           </div>
 
           <div className="manual-grid">
-            <label>
-              Tipo de galeria
-              <select
-                name="galleryType"
-                onChange={(event) => setGalleryType(event.target.value)}
-                value={galleryType}
-              >
-                <option value="universal">Universal</option>
-                <option value="professional">Profissional</option>
-              </select>
-            </label>
+            <fieldset className="gallery-type-field">
+              <legend>Tipo de galeria</legend>
+              <input name="galleryType" type="hidden" value={galleryType} />
+              <div aria-label="Tipo de galeria" className="gallery-type-switch" role="radiogroup">
+                <button
+                  aria-checked={galleryType === "universal"}
+                  className={galleryType === "universal" ? "active" : ""}
+                  onClick={() => setGalleryType("universal")}
+                  role="radio"
+                  type="button"
+                >
+                  <span>Universal</span>
+                  <small>Ensaios em geral</small>
+                </button>
+                <button
+                  aria-checked={galleryType === "professional"}
+                  className={galleryType === "professional" ? "active" : ""}
+                  onClick={() => setGalleryType("professional")}
+                  role="radio"
+                  type="button"
+                >
+                  <span>Profissional</span>
+                  <small>Fotos para carreira</small>
+                </button>
+              </div>
+            </fieldset>
             <label>
               Produto
               <select
@@ -384,7 +399,7 @@ export function ManualGalleryForm() {
                   <small>Cobrado por cada foto transformada em vídeo.</small>
                 </span>
                 <input
-                  defaultValue={galleryType === "professional" ? "9.90" : "19.90"}
+                  defaultValue="9.90"
                   key={`video-${galleryType}`}
                   min="0"
                   name="videoPrice"
