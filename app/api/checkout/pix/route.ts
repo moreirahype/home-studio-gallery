@@ -12,7 +12,7 @@ import {
   getAdditionalPhotoAmountCents,
   getLinearAddonAmountCents,
 } from "@/lib/pricing";
-import { parseExtraPhotoPricingCents } from "@/lib/gallery-offer-config";
+import { parseStoredExtraPhotoPricingCents } from "@/lib/gallery-offer-config";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const requestSchema = z.object({
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   let { data: project, error: projectError } = await supabase
     .from("projects")
     .select(
-      "id, gallery_token, customer_name, included_photos, paid_amount_cents, pricing_base_amount_cents, extra_photo_pricing, video_price_cents, first_impression_pack_price_cents, created_at, expires_at",
+      "id, gallery_token, customer_name, included_photos, paid_amount_cents, pricing_base_amount_cents, gallery_type, extra_photo_pricing, video_price_cents, first_impression_pack_price_cents, created_at, expires_at",
     )
     .eq("gallery_token", parsed.data.galleryToken)
     .maybeSingle();
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       ? {
           ...fallback.data,
           pricing_base_amount_cents: null,
+          gallery_type: "universal",
           extra_photo_pricing: null,
           video_price_cents: null,
           first_impression_pack_price_cents: null,
@@ -90,6 +91,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { ok: false, error: "Esta galeria expirou." },
       { status: 410 },
+    );
+  }
+
+  if (
+    parsed.data.firstImpressionPackAdded &&
+    project.gallery_type !== "professional"
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "O Pack Primeira Impressão está disponível apenas em galerias profissionais.",
+      },
+      { status: 400 },
     );
   }
 
@@ -188,7 +202,7 @@ export async function POST(request: NextRequest) {
       includedPhotos: project.included_photos,
       paidAmountCents: project.paid_amount_cents,
       pricingBaseAmountCents: project.pricing_base_amount_cents,
-      extraPhotoPricingCents: parseExtraPhotoPricingCents(
+      extraPhotoPricingCents: parseStoredExtraPhotoPricingCents(
         project.extra_photo_pricing,
       ),
     });
@@ -207,7 +221,7 @@ export async function POST(request: NextRequest) {
       includedPhotos: project.included_photos,
       paidAmountCents: project.paid_amount_cents,
       pricingBaseAmountCents: project.pricing_base_amount_cents,
-      extraPhotoPricingCents: parseExtraPhotoPricingCents(
+      extraPhotoPricingCents: parseStoredExtraPhotoPricingCents(
         project.extra_photo_pricing,
       ),
     });

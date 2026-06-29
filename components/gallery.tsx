@@ -450,7 +450,7 @@ export function Gallery({
     token,
   )}&paidAmount=${offer.newShootPrice.toFixed(
     2,
-  )}&includedPhotos=1&generationCount=15&firstExtraAmount=${firstExtraAmount.toFixed(
+  )}&includedPhotos=${offer.includedPhotos}&generationCount=${offer.gallerySize}&firstExtraAmount=${firstExtraAmount.toFixed(
     2,
   )}`;
   const hasUnlockedPurchases =
@@ -1612,8 +1612,8 @@ export function Gallery({
                 <div className="post-purchase-offer">
                   <span>CRIAR OUTRO ENSAIO</span>
                   <strong>
-                    Quer testar outro tema ou outra foto? 15 novas opções e 1
-                    foto incluída por {money.format(offer.newShootPrice)}
+                    Quer testar outro tema ou outra foto? {offer.gallerySize} novas opções e {offer.includedPhotos}{" "}
+                    {offer.includedPhotos === 1 ? "foto incluída" : "fotos incluídas"} por {money.format(offer.newShootPrice)}
                   </strong>
                   <small>
                     É o mesmo modelo da entrada: você escolhe a foto de

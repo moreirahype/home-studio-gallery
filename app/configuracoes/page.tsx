@@ -1,7 +1,12 @@
+import { AdminGate } from "@/components/admin-gate";
 import { GallerySettings } from "@/components/gallery-settings";
 
 export const dynamic = "force-dynamic";
 
 export default function ConfiguracoesPage() {
-  return <GallerySettings />;
+  return (
+    <AdminGate>
+      <GallerySettings />
+    </AdminGate>
+  );
 }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isGalleryAdminRequest } from "@/lib/admin-session";
+import { unauthorized } from "@/lib/http";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -12,7 +14,9 @@ function getAdminPassword() {
   return process.env.GALLERY_ADMIN_PASSWORD ?? process.env.MANUAL_GALLERY_PASSWORD;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (!isGalleryAdminRequest(request)) return unauthorized();
+
   const supabase = getSupabaseAdmin();
   const [products, attendants] = await Promise.all([
     supabase
@@ -52,7 +56,10 @@ export async function POST(request: NextRequest) {
     galleryType?: string;
   };
 
-  if (!safeCompare(body.password ?? null, getAdminPassword())) {
+  if (
+    !isGalleryAdminRequest(request) &&
+    !safeCompare(body.password ?? null, getAdminPassword())
+  ) {
     return NextResponse.json(
       { ok: false, error: "Senha inválida." },
       { status: 403 },
@@ -107,7 +114,10 @@ export async function DELETE(request: NextRequest) {
     name?: string;
   };
 
-  if (!safeCompare(body.password ?? null, getAdminPassword())) {
+  if (
+    !isGalleryAdminRequest(request) &&
+    !safeCompare(body.password ?? null, getAdminPassword())
+  ) {
     return NextResponse.json(
       { ok: false, error: "Senha inválida." },
       { status: 403 },

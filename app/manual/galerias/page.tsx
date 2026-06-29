@@ -1,7 +1,12 @@
+import { AdminGate } from "@/components/admin-gate";
 import { ManualGalleryList } from "@/components/manual-gallery-list";
 
 export const dynamic = "force-dynamic";
 
 export default function ManualGalleryListPage() {
-  return <ManualGalleryList />;
+  return (
+    <AdminGate>
+      <ManualGalleryList />
+    </AdminGate>
+  );
 }

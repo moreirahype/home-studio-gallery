@@ -8,20 +8,20 @@ alter table public.zapdata_leads
 
 alter table public.projects
   add column if not exists extra_photo_pricing jsonb,
-  add column if not exists video_price_cents integer not null default 1990 check (video_price_cents >= 0),
+  add column if not exists video_price_cents integer not null default 990 check (video_price_cents >= 0),
   add column if not exists first_impression_pack_price_cents integer not null default 1490 check (first_impression_pack_price_cents >= 0);
 
 alter table public.zapdata_leads
   add column if not exists extra_photo_pricing jsonb,
-  add column if not exists video_price_cents integer not null default 1990 check (video_price_cents >= 0),
+  add column if not exists video_price_cents integer not null default 990 check (video_price_cents >= 0),
   add column if not exists first_impression_pack_price_cents integer not null default 1490 check (first_impression_pack_price_cents >= 0);
 
 alter table public.projects
-  alter column video_price_cents set default 1990,
+  alter column video_price_cents set default 990,
   alter column first_impression_pack_price_cents set default 1490;
 
 alter table public.zapdata_leads
-  alter column video_price_cents set default 1990,
+  alter column video_price_cents set default 990,
   alter column first_impression_pack_price_cents set default 1490;
 
 alter table public.photos
@@ -53,6 +53,9 @@ create table if not exists public.gallery_attendants (
   created_at timestamptz not null default now()
 );
 
+alter table public.gallery_products enable row level security;
+alter table public.gallery_attendants enable row level security;
+
 insert into public.gallery_products (name, gallery_type)
 values
   ('Sem produto', 'universal'),
@@ -64,3 +67,5 @@ values
   ('Galeria'),
   ('Galeria Sheila')
 on conflict (name) do nothing;
+
+notify pgrst, 'reload schema';

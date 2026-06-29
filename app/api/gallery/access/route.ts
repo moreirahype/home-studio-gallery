@@ -6,7 +6,7 @@ import {
   getClaimedPhotoAccess,
 } from "@/lib/photo-access";
 import { getAdditionalPhotoAmountCents } from "@/lib/pricing";
-import { parseExtraPhotoPricingCents } from "@/lib/gallery-offer-config";
+import { parseStoredExtraPhotoPricingCents } from "@/lib/gallery-offer-config";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const querySchema = z.object({
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
       includedPhotos: project.included_photos,
       paidAmountCents: project.paid_amount_cents,
       pricingBaseAmountCents: project.pricing_base_amount_cents,
-      extraPhotoPricingCents: parseExtraPhotoPricingCents(
+      extraPhotoPricingCents: parseStoredExtraPhotoPricingCents(
         project.extra_photo_pricing,
       ),
     });
@@ -202,37 +202,56 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { data: videoJob } = await supabase
+  const { data: videoJobs } = await supabase
     .from("video_jobs")
-    .select("id, status, output_path, error_message")
+    .select("id, status, output_path, error_message, created_at")
     .eq("project_id", project.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
+  const latestVideoJob = videoJobs?.at(-1) ?? null;
+  const videoJobIds = (videoJobs ?? []).map((job) => job.id as string);
   let videoUrl: string | null = null;
   let videoClips: { number: number; url: string }[] = [];
-  let videoStatus = videoJob?.status ?? null;
-  let videoError = videoJob?.error_message ?? null;
+  let videoStatus = latestVideoJob?.status ?? null;
+  let videoError = latestVideoJob?.error_message ?? null;
 
-  if (videoJob?.status === "ready" && videoJob.output_path) {
+  if (latestVideoJob?.status === "ready" && latestVideoJob.output_path) {
     const signedVideo = await supabase.storage
       .from("videos")
-      .createSignedUrl(videoJob.output_path, 60 * 30, { download: true });
+      .createSignedUrl(latestVideoJob.output_path, 60 * 30, { download: true });
     videoUrl = signedVideo.data?.signedUrl ?? null;
   }
 
-  if (!videoUrl && videoJob?.id) {
+  if (!videoUrl && videoJobIds.length) {
     const { data: readyClips } = await supabase
       .from("video_clips")
-      .select("path")
-      .eq("video_job_id", videoJob.id)
+      .select("path, source_photo_id, created_at")
+      .in("video_job_id", videoJobIds)
       .eq("status", "ready")
       .not("path", "is", null)
-      .order("created_at");
+      .order("created_at", { ascending: true });
 
     const clipPaths = (readyClips ?? [])
       .map((clip) => clip.path as string | null)
       .filter((path): path is string => Boolean(path));
+    const sourcePhotoIds = [
+      ...new Set(
+        (readyClips ?? [])
+          .map((clip) => clip.source_photo_id as string | null)
+          .filter((photoId): photoId is string => Boolean(photoId)),
+      ),
+    ];
+    const { data: clipSourcePhotos } = sourcePhotoIds.length
+      ? await supabase
+          .from("photos")
+          .select("id, position")
+          .in("id", sourcePhotoIds)
+      : { data: [] };
+    const clipPositionByPhotoId = new Map(
+      (clipSourcePhotos ?? []).map((photo) => [
+        photo.id as string,
+        Number(photo.position),
+      ]),
+    );
 
     if (clipPaths.length) {
       const signedClips = await supabase.storage
@@ -243,14 +262,17 @@ export async function GET(request: NextRequest) {
         clip.signedUrl
           ? [
               {
-                number: index + 1,
+                number:
+                  clipPositionByPhotoId.get(
+                    readyClips?.[index]?.source_photo_id as string,
+                  ) ?? index + 1,
                 url: clip.signedUrl,
               },
             ]
           : [],
       );
 
-      if (videoClips.length) {
+      if (videoClips.length && !(videoJobs ?? []).some((job) => job.status === "generating")) {
         videoStatus = "ready";
         videoError = null;
       }
@@ -308,7 +330,7 @@ export async function GET(request: NextRequest) {
       viewUrl: viewLinks.data[index]?.signedUrl,
       downloadUrl: downloadLinks.data[index]?.signedUrl,
     })),
-    video: videoJob
+    video: videoJobs?.length
       ? {
           status: videoStatus,
           url: videoUrl,

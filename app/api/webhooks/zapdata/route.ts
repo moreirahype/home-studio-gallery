@@ -16,6 +16,7 @@ import {
 import {
   normalizeGalleryType,
   parseExtraPhotoPricingCents,
+  parseStoredExtraPhotoPricingCents,
   resolveOfferDefaults,
 } from "@/lib/gallery-offer-config";
 import {
@@ -296,12 +297,11 @@ export async function POST(request: NextRequest) {
   const galleryType = normalizeGalleryType(
     savedLead?.gallery_type ?? parsed.data.galleryType ?? parsed.data.gallery_type,
   );
-  const explicitExtraPricing =
-    parseExtraPhotoPricingCents(
-      savedLead?.extra_photo_pricing ??
-        parsed.data.extraPhotoPricing ??
-        parsed.data.extra_photo_pricing,
-    );
+  const explicitExtraPricing = savedLead?.extra_photo_pricing
+    ? parseStoredExtraPhotoPricingCents(savedLead.extra_photo_pricing)
+    : parseExtraPhotoPricingCents(
+        parsed.data.extraPhotoPricing ?? parsed.data.extra_photo_pricing,
+      );
   const nicheId = savedLead?.niche_id ?? parsed.data.nicho ?? parsed.data.nicheId;
   const offerDefaults = resolveOfferDefaults({
     galleryType,
@@ -364,8 +364,8 @@ export async function POST(request: NextRequest) {
   const newShootUrl = new URL("/novo", appUrl);
   newShootUrl.searchParams.set("source", galleryToken);
   newShootUrl.searchParams.set("paidAmount", formatReaisFromCents(paidAmountCents));
-  newShootUrl.searchParams.set("includedPhotos", "1");
-  newShootUrl.searchParams.set("generationCount", "15");
+  newShootUrl.searchParams.set("includedPhotos", String(includedPhotos));
+  newShootUrl.searchParams.set("generationCount", String(generationCount));
   newShootUrl.searchParams.set(
     "firstExtraAmount",
     formatReaisFromCents(firstExtraAmountCents ?? DEFAULT_FIRST_EXTRA_AMOUNT_CENTS),

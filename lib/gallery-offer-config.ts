@@ -6,6 +6,11 @@ import {
   DEFAULT_VIDEO_PRICE_CENTS,
   PROFESSIONAL_EXTRA_PHOTO_PRICING_CENTS,
 } from "@/lib/pricing";
+export {
+  extraPhotoPricingCentsToReais,
+  parseExtraPhotoPricingCents,
+  parseStoredExtraPhotoPricingCents,
+} from "@/lib/extra-photo-pricing";
 
 export type GalleryType = "universal" | "professional";
 
@@ -18,41 +23,6 @@ export function normalizeGalleryType(value?: string | null): GalleryType {
 
 export function professionalExtraPricingJson() {
   return PROFESSIONAL_EXTRA_PHOTO_PRICING_CENTS as Record<number, number>;
-}
-
-export function parseExtraPhotoPricingCents(value: unknown) {
-  if (!value) return null;
-  const source =
-    typeof value === "string"
-      ? (() => {
-          try {
-            return JSON.parse(value) as unknown;
-          } catch {
-            return null;
-          }
-        })()
-      : value;
-
-  if (!source || typeof source !== "object" || Array.isArray(source)) {
-    return null;
-  }
-
-  const entries = Object.entries(source as Record<string, unknown>)
-    .map(([key, amount]) => {
-      const quantity = Number(key);
-      const valueNumber =
-        typeof amount === "number"
-          ? amount
-          : typeof amount === "string"
-            ? Number(amount.replace(",", "."))
-            : NaN;
-
-      if (!Number.isFinite(quantity) || !Number.isFinite(valueNumber)) return null;
-      return [Math.round(quantity), Math.round(valueNumber * 100)] as const;
-    })
-    .filter((entry): entry is readonly [number, number] => Boolean(entry));
-
-  return entries.length ? Object.fromEntries(entries) : null;
 }
 
 export function resolveOfferDefaults({
@@ -91,7 +61,7 @@ export function resolveOfferDefaults({
     includedPhotos: includedPhotos ?? 1,
     generationCount: generationCount ?? 15,
     extraPhotoPricingCents: extraPhotoPricingCents ?? null,
-    videoPriceCents: videoPriceCents ?? 1990,
+    videoPriceCents: videoPriceCents ?? DEFAULT_VIDEO_PRICE_CENTS,
     firstImpressionPackPriceCents:
       firstImpressionPackPriceCents ?? DEFAULT_FIRST_IMPRESSION_PACK_PRICE_CENTS,
   };

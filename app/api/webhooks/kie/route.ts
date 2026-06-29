@@ -85,7 +85,7 @@ async function startFallbackImageTask({
   };
   request: NextRequest;
 }) {
-  if (photo.error_message?.startsWith("Fallback ")) return null;
+  if (photo.error_message?.includes("Fallback ")) return null;
 
   const callbackSecret = process.env.KIE_CALLBACK_SECRET;
   if (!callbackSecret) throw new Error("KIE_CALLBACK_SECRET não configurada.");
@@ -104,8 +104,28 @@ async function startFallbackImageTask({
   }
 
   let sourceImageUrl = project?.source_image_url ?? "";
+  const packSourcePhotoId = photo.error_message?.match(
+    /Pack Primeira Impressao[^;]*; source=([0-9a-f-]{36})/i,
+  )?.[1];
 
-  if (project?.source_image_path) {
+  if (packSourcePhotoId) {
+    const { data: packSourcePhoto } = await supabase
+      .from("photos")
+      .select("original_path")
+      .eq("id", packSourcePhotoId)
+      .eq("project_id", photo.project_id)
+      .maybeSingle();
+    if (packSourcePhoto?.original_path) {
+      const signedPackSource = await supabase.storage
+        .from("photo-originals")
+        .createSignedUrl(packSourcePhoto.original_path, 60 * 60 * 6);
+      if (signedPackSource.data?.signedUrl) {
+        sourceImageUrl = signedPackSource.data.signedUrl;
+      }
+    }
+  }
+
+  if (!packSourcePhotoId && project?.source_image_path) {
     const signedSource = await supabase.storage
       .from("source-images")
       .createSignedUrl(project.source_image_path, 60 * 60 * 6);
@@ -137,7 +157,7 @@ async function startFallbackImageTask({
     .update({
       kie_task_id: fallbackTaskId,
       status: "generating",
-      error_message: `Fallback ${fallbackModel} iniciado após falha da task original.`,
+      error_message: `${photo.error_message ?? ""} | Fallback ${fallbackModel} iniciado após falha da task original.`.trim(),
     })
     .eq("id", photo.id);
 
@@ -333,7 +353,12 @@ export async function POST(request: NextRequest) {
 
     await supabase
       .from("photos")
-      .update({ status: "failed", error_message: errorMessage })
+      .update({
+        status: "failed",
+        error_message: photo.error_message?.startsWith("Pack Primeira Impressao")
+          ? `${photo.error_message.split(" | ")[0]} | ${errorMessage}`
+          : errorMessage,
+      })
       .eq("id", photo.id);
     return NextResponse.json({ ok: true, taskId, state });
   }
@@ -382,7 +407,9 @@ export async function POST(request: NextRequest) {
         original_path: originalPath,
         preview_path: previewPath,
         status: "ready",
-        error_message: null,
+        error_message: photo.error_message?.startsWith("Pack Primeira Impressao")
+          ? photo.error_message
+          : null,
       })
       .eq("id", photo.id);
 

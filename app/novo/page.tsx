@@ -1,5 +1,10 @@
 import { NewShootForm } from "@/components/new-shoot-form";
 import { verifyExpressOfferToken } from "@/lib/offers";
+import { getProjectByToken } from "@/lib/projects";
+import {
+  DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
+  getFirstExtraAmountCentsFromPricingBaseAmountCents,
+} from "@/lib/pricing";
 
 export default async function NewShootPage({
   searchParams,
@@ -18,26 +23,25 @@ export default async function NewShootPage({
   const expressOffer =
     query.offer === "express" &&
     verifyExpressOfferToken(query.code, query.source);
-  const parseAmount = (value: string | undefined, fallback: number) => {
-    const normalized = Number(value?.replace(",", "."));
-    return Number.isFinite(normalized) && normalized > 0 ? normalized : fallback;
-  };
-  const parseCount = (value: string | undefined, fallback: number) => {
-    const normalized = Number(value);
-    return Number.isFinite(normalized) && normalized > 0
-      ? Math.round(normalized)
-      : fallback;
-  };
+  const sourceProject = query.source
+    ? await getProjectByToken(query.source).catch(() => null)
+    : null;
+  const sourceFirstExtraAmountCents = sourceProject?.pricing_base_amount_cents
+    ? getFirstExtraAmountCentsFromPricingBaseAmountCents({
+        pricingBaseAmountCents: Number(sourceProject.pricing_base_amount_cents),
+        includedPhotos: Number(sourceProject.included_photos ?? 1),
+      })
+    : DEFAULT_FIRST_EXTRA_AMOUNT_CENTS;
 
   return (
     <NewShootForm
       expressOffer={expressOffer}
       offerToken={expressOffer ? query.code : undefined}
       sourceToken={query.source}
-      paidAmount={parseAmount(query.paidAmount, 7.9)}
-      includedPhotos={parseCount(query.includedPhotos, 1)}
-      generationCount={parseCount(query.generationCount, 15)}
-      firstExtraAmount={parseAmount(query.firstExtraAmount, 9.9)}
+      paidAmount={Number(sourceProject?.paid_amount_cents ?? 790) / 100}
+      includedPhotos={Number(sourceProject?.included_photos ?? 1)}
+      generationCount={Number(sourceProject?.generation_count ?? 15)}
+      firstExtraAmount={sourceFirstExtraAmountCents / 100}
     />
   );
 }

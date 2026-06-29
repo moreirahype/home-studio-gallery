@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { isGalleryAdminRequest } from "@/lib/admin-session";
 import { galleryExpiresAt } from "@/lib/gallery-expiration";
 import { startProjectGeneration } from "@/lib/generation";
 import {
@@ -47,7 +48,10 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const password = String(formData.get("password") ?? "");
 
-  if (!safeCompare(password, getAdminPassword())) {
+  if (
+    !isGalleryAdminRequest(request) &&
+    !safeCompare(password, getAdminPassword())
+  ) {
     return NextResponse.json(
       { ok: false, error: "Senha inválida." },
       { status: 403 },
@@ -102,7 +106,7 @@ export async function POST(request: NextRequest) {
     generationCount: parseCount(formData.get("generationCount"), 15),
     extraPhotoPricingCents:
       galleryType === "professional" ? professionalExtraPricingJson() : null,
-    videoPriceCents: Math.round(parseMoney(formData.get("videoPrice"), 19.9) * 100),
+    videoPriceCents: Math.round(parseMoney(formData.get("videoPrice"), 9.9) * 100),
     firstImpressionPackPriceCents: Math.round(
       parseMoney(formData.get("firstImpressionPackPrice"), 14.9) * 100,
     ),

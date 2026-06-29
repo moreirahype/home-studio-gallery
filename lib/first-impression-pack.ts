@@ -82,6 +82,7 @@ export async function startFirstImpressionPack({
 
   let nextPosition = Number(currentMax?.position ?? 0) + 1;
   const createdPhotoIds: string[] = [];
+  const generationErrors: string[] = [];
 
   for (const sourcePhoto of sourcePhotos) {
     if (!sourcePhoto.original_path) continue;
@@ -94,44 +95,73 @@ export async function startFirstImpressionPack({
     }
 
     for (const packPrompt of PACK_PROMPTS) {
-      const { data: photo, error: insertError } = await supabase
+      const marker = `Pack Primeira Impressao do pedido ${orderId}; source=${sourcePhoto.id}; variant=${packPrompt.suffix}`;
+      const { data: existingPhoto } = await supabase
         .from("photos")
-        .insert({
-          project_id: projectId,
-          position: nextPosition,
-          generation_prompt: `${packPrompt.prompt}
+        .select("id, status, kie_task_id, position")
+        .eq("project_id", projectId)
+        .ilike("error_message", `${marker}%`)
+        .maybeSingle();
+      let photo = existingPhoto;
+
+      if (!photo) {
+        const { data: insertedPhoto, error: insertError } = await supabase
+          .from("photos")
+          .insert({
+            project_id: projectId,
+            position: nextPosition,
+            generation_prompt: `${packPrompt.prompt}
 
 Reference label: Foto ${String(sourcePhoto.position).padStart(2, "0")}${packPrompt.suffix} - ${packPrompt.label}.`,
-          status: "queued",
-          error_message: `Pack Primeira Impressao do pedido ${orderId}`,
-        })
-        .select("id")
-        .single();
+            status: "queued",
+            error_message: marker,
+          })
+          .select("id, status, kie_task_id, position")
+          .single();
 
-      if (insertError || !photo) {
-        throw new Error(insertError?.message ?? "Falha ao criar foto do pack.");
+        if (insertError || !insertedPhoto) {
+          generationErrors.push(
+            insertError?.message ?? "Falha ao criar foto do pack.",
+          );
+          continue;
+        }
+
+        photo = insertedPhoto;
+        nextPosition += 1;
+      } else {
+        nextPosition = Math.max(nextPosition, Number(photo.position) + 1);
       }
 
-      nextPosition += 1;
       createdPhotoIds.push(photo.id);
+      if (photo.status === "ready" || photo.status === "generating") continue;
 
-      const task = await createImageTaskWithFallback({
-        prompt: packPrompt.prompt,
-        sourceImageUrl: signed.data.signedUrl,
-        contextFinal: packPrompt.label,
-        callbackUrl: callbackUrl.toString(),
-      });
+      try {
+        const task = await createImageTaskWithFallback({
+          prompt: packPrompt.prompt,
+          sourceImageUrl: signed.data.signedUrl,
+          contextFinal: packPrompt.label,
+          callbackUrl: callbackUrl.toString(),
+        });
 
-      await supabase
-        .from("photos")
-        .update({
-          kie_task_id: task.taskId,
-          status: "generating",
-          error_message: task.fallbackUsed
-            ? `Fallback ${task.model} iniciado: ${task.primaryError}`
-            : null,
-        })
-        .eq("id", photo.id);
+        await supabase
+          .from("photos")
+          .update({
+            kie_task_id: task.taskId,
+            status: "generating",
+            error_message: task.fallbackUsed
+              ? `${marker} | Fallback ${task.model} iniciado: ${task.primaryError}`
+              : marker,
+          })
+          .eq("id", photo.id);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Falha ao iniciar foto do pack.";
+        generationErrors.push(message);
+        await supabase
+          .from("photos")
+          .update({ status: "failed", error_message: `${marker} | ${message}` })
+          .eq("id", photo.id);
+      }
     }
   }
 
@@ -140,6 +170,12 @@ Reference label: Foto ${String(sourcePhoto.position).padStart(2, "0")}${packProm
     projectId,
     photoIds: createdPhotoIds,
   });
+
+  if (generationErrors.length) {
+    throw new Error(
+      `O Pack ficou incompleto e será tentado novamente: ${generationErrors[0]}`,
+    );
+  }
 
   return { created: createdPhotoIds.length };
 }

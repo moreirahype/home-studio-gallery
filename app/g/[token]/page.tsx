@@ -1,7 +1,8 @@
 import { Gallery, type GalleryOffer } from "@/components/gallery";
 import {
+  extraPhotoPricingCentsToReais,
   normalizeGalleryType,
-  parseExtraPhotoPricingCents,
+  parseStoredExtraPhotoPricingCents,
   professionalExtraPricingJson,
 } from "@/lib/gallery-offer-config";
 import { getProjectByToken } from "@/lib/projects";
@@ -42,11 +43,12 @@ export default async function GalleryPage({
         includedPhotos: project.included_photos,
         gallerySize: project.generation_count,
         galleryType: normalizeGalleryType(project.gallery_type),
-        extraPhotoPricing:
-          parseExtraPhotoPricingCents(project.extra_photo_pricing) ??
-          (normalizeGalleryType(project.gallery_type) === "professional"
-            ? professionalExtraPricingJson()
-            : null),
+        extraPhotoPricing: extraPhotoPricingCentsToReais(
+          parseStoredExtraPhotoPricingCents(project.extra_photo_pricing) ??
+            (normalizeGalleryType(project.gallery_type) === "professional"
+              ? professionalExtraPricingJson()
+              : null),
+        ),
         videoPrice:
           (project.video_price_cents ?? null) === null
             ? Number(process.env.VIDEO_UPSELL_PRICE) || 19.9

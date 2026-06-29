@@ -43,22 +43,35 @@ export async function startVideoJob({
     throw new Error(`Falha ao preparar fotos: ${signed.error.message}`);
   }
 
-  const { data: job, error: jobError } = await supabase
-    .from("video_jobs")
-    .insert({
-      project_id: projectId,
-      order_id: orderId ?? null,
-      model: KIE_VIDEO_MODEL,
-      source_photo_ids: sources.map((photo) => photo.id),
-      status: "generating",
-    })
-    .select("id")
-    .single();
+  let job = orderId
+    ? (
+        await supabase
+          .from("video_jobs")
+          .select("id, status, output_path, task_ids")
+          .eq("order_id", orderId)
+          .maybeSingle()
+      ).data
+    : null;
 
-  if (jobError || !job) {
-    throw new Error(
-      `Falha ao criar o vídeo: ${jobError?.message ?? "registro ausente"}`,
-    );
+  if (!job) {
+    const { data: createdJob, error: jobError } = await supabase
+      .from("video_jobs")
+      .insert({
+        project_id: projectId,
+        order_id: orderId ?? null,
+        model: KIE_VIDEO_MODEL,
+        source_photo_ids: sources.map((photo) => photo.id),
+        status: "generating",
+      })
+      .select("id, status, output_path, task_ids")
+      .single();
+
+    if (jobError || !createdJob) {
+      throw new Error(
+        `Falha ao criar o vídeo: ${jobError?.message ?? "registro ausente"}`,
+      );
+    }
+    job = createdJob;
   }
 
   const callbackSecret = process.env.KIE_CALLBACK_SECRET;
@@ -66,29 +79,85 @@ export async function startVideoJob({
   const callbackUrl = new URL("/api/webhooks/kie", appUrl);
   callbackUrl.searchParams.set("secret", callbackSecret);
 
-  const taskIds: string[] = [];
+  const { data: existingClips } = await supabase
+    .from("video_clips")
+    .select("id, task_id, source_photo_id, status")
+    .eq("video_job_id", job.id);
+  const existingClipBySource = new Map(
+    (existingClips ?? []).map((clip) => [clip.source_photo_id as string, clip]),
+  );
+  const taskIds: string[] = (existingClips ?? [])
+    .map((clip) => clip.task_id as string | null)
+    .filter((taskId): taskId is string => Boolean(taskId));
+  const generationErrors: string[] = [];
 
-  for (let index = 0; index < sources.length; index += 1) {
-    const imageUrl = signed.data[index]?.signedUrl;
-    if (!imageUrl) throw new Error("URL temporária da foto não foi criada.");
-    const taskId = await createVideoTask({
-      prompt: MOVEMENT_PROMPTS[index % MOVEMENT_PROMPTS.length],
-      imageUrl,
-      callbackUrl: callbackUrl.toString(),
-    });
-    taskIds.push(taskId);
-    await supabase.from("video_clips").insert({
-      video_job_id: job.id,
-      task_id: taskId,
-      source_photo_id: sources[index].id,
-      status: "generating",
-    });
+  if (job.status === "ready" && job.output_path) {
+    return { videoJobId: job.id, taskIds: job.task_ids ?? taskIds };
   }
 
+  for (let index = 0; index < sources.length; index += 1) {
+    const source = sources[index];
+    const existingClip = existingClipBySource.get(source.id);
+    if (
+      existingClip?.status === "ready" ||
+      (existingClip?.status === "generating" && existingClip.task_id)
+    ) {
+      continue;
+    }
+
+    const imageUrl = signed.data[index]?.signedUrl;
+    if (!imageUrl) {
+      generationErrors.push("URL temporária da foto não foi criada.");
+      continue;
+    }
+
+    try {
+      const taskId = await createVideoTask({
+        prompt: MOVEMENT_PROMPTS[index % MOVEMENT_PROMPTS.length],
+        imageUrl,
+        callbackUrl: callbackUrl.toString(),
+      });
+      taskIds.push(taskId);
+      const clipWrite = existingClip
+        ? await supabase
+            .from("video_clips")
+            .update({ task_id: taskId, status: "generating", error_message: null })
+            .eq("id", existingClip.id)
+        : await supabase.from("video_clips").insert({
+            video_job_id: job.id,
+            task_id: taskId,
+            source_photo_id: source.id,
+            status: "generating",
+          });
+      if (clipWrite.error) throw new Error(clipWrite.error.message);
+    } catch (error) {
+      generationErrors.push(
+        error instanceof Error ? error.message : "Falha ao iniciar vídeo.",
+      );
+    }
+  }
+
+  const allExpectedClipsReady = sources.every(
+    (source) => existingClipBySource.get(source.id)?.status === "ready",
+  );
   await supabase
     .from("video_jobs")
-    .update({ task_ids: taskIds })
+    .update({
+      task_ids: [...new Set(taskIds)],
+      status: generationErrors.length
+        ? "failed"
+        : allExpectedClipsReady
+          ? "ready"
+          : "generating",
+      error_message: generationErrors[0] ?? null,
+    })
     .eq("id", job.id);
+
+  if (generationErrors.length) {
+    throw new Error(
+      `A geração de vídeo ficou incompleta e será tentada novamente: ${generationErrors[0]}`,
+    );
+  }
 
   return { videoJobId: job.id, taskIds };
 }

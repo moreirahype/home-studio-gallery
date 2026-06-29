@@ -150,41 +150,24 @@ export async function settleMercadoPagoPayment(paymentId: string | number) {
   const videoItem = orderItems.find((item) => item.kind === "video");
   const videoPhotoIds = videoItem?.metadata.videoPhotoIds ?? [];
   if (videoPhotoIds.length) {
-    const { data: existingVideo } = await supabase
-      .from("video_jobs")
-      .select("id")
-      .eq("order_id", order.id)
-      .maybeSingle();
-
-    if (!existingVideo) {
-      await startVideoJob({
-        projectId: order.project_id,
-        orderId: order.id,
-        photoIds: videoPhotoIds,
-        appUrl: process.env.APP_URL ?? "https://home-studio-gallery.vercel.app",
-      });
-    }
+    await startVideoJob({
+      projectId: order.project_id,
+      orderId: order.id,
+      photoIds: videoPhotoIds,
+      appUrl: process.env.APP_URL ?? "https://home-studio-gallery.vercel.app",
+    });
   }
 
   const packItem = orderItems.find((item) => item.kind === "first_impression_pack");
   const firstImpressionPackPhotoIds =
     packItem?.metadata.firstImpressionPackPhotoIds ?? [];
   if (firstImpressionPackPhotoIds.length) {
-    const { data: existingPackPhotos } = await supabase
-      .from("photos")
-      .select("id")
-      .eq("project_id", order.project_id)
-      .ilike("error_message", `%Pack Primeira Impressao do pedido ${order.id}%`)
-      .limit(1);
-
-    if (!existingPackPhotos?.length) {
-      await startFirstImpressionPack({
-        projectId: order.project_id,
-        orderId: order.id,
-        photoIds: firstImpressionPackPhotoIds,
-        appUrl: process.env.APP_URL ?? "https://home-studio-gallery.vercel.app",
-      });
-    }
+    await startFirstImpressionPack({
+      projectId: order.project_id,
+      orderId: order.id,
+      photoIds: firstImpressionPackPhotoIds,
+      appUrl: process.env.APP_URL ?? "https://home-studio-gallery.vercel.app",
+    });
   }
 
   const newShootItem = orderItems.find((item) => item.kind === "new_shoot");

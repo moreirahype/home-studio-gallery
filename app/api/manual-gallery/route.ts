@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { isGalleryAdminRequest } from "@/lib/admin-session";
+import { unauthorized } from "@/lib/http";
 import {
   GALLERY_RETENTION_DAYS,
   galleryExpiresAt,
@@ -46,6 +48,8 @@ function buildGalleryUrl(token: string, origin: string) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!isGalleryAdminRequest(request)) return unauthorized();
+
   const supabase = getSupabaseAdmin();
   const appUrl = process.env.APP_URL ?? request.nextUrl.origin;
   const search = request.nextUrl.searchParams.get("q")?.trim() ?? "";
@@ -147,6 +151,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isGalleryAdminRequest(request)) return unauthorized();
+
   const formData = await request.formData();
   const files = formData
     .getAll("photos")
@@ -193,7 +199,7 @@ export async function POST(request: NextRequest) {
     ),
     extraPhotoPricingCents:
       galleryType === "professional" ? professionalExtraPricingJson() : null,
-    videoPriceCents: Math.round(parseNonNegativeMoney(formData.get("videoPrice"), 19.9) * 100),
+    videoPriceCents: Math.round(parseNonNegativeMoney(formData.get("videoPrice"), 9.9) * 100),
     firstImpressionPackPriceCents: Math.round(
       parseNonNegativeMoney(formData.get("firstImpressionPackPrice"), 14.9) * 100,
     ),
@@ -397,6 +403,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  if (!isGalleryAdminRequest(request)) return unauthorized();
+
   const body = (await request.json().catch(() => ({}))) as {
     projectId?: string;
     customerName?: string;
@@ -457,6 +465,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!isGalleryAdminRequest(request)) return unauthorized();
+
   const body = (await request.json().catch(() => ({}))) as {
     projectId?: string;
     confirmation?: string;
