@@ -458,16 +458,26 @@ export function Gallery({
     : 0;
   const fullGalleryPricing = getPricing(offer.gallerySize);
   const fullGalleryDueNow = Math.max(0, fullGalleryPricing.total - photoCredit);
-  const showStrongSelectAllCta =
+  const showFeaturedStaticSelectAllCta =
     targetPhotoCount > 0 &&
     targetPhotoCount < offer.gallerySize &&
-    (offer.galleryType === "professional"
-      ? targetPhotoCount >= 8
-      : offer.gallerySize - targetPhotoCount <= 2);
-  const selectAllCtaLabel =
-    showStrongSelectAllCta && offer.galleryType === "professional"
-      ? `Levar todas por +${money.format(fullGalleryDueNow)}`
-      : "Quero todas";
+    offer.galleryType !== "professional" &&
+    offer.gallerySize - targetPhotoCount <= 2;
+  const showFloatingSelectAllCta =
+    offer.galleryType === "professional" &&
+    offer.gallerySize >= 8 &&
+    targetPhotoCount >= 6 &&
+    targetPhotoCount < offer.gallerySize;
+  const fullGalleryUpgradeAmount = Math.max(
+    0,
+    fullGalleryDueNow - pricing.dueNow,
+  );
+  const floatingSelectAllLabel =
+    fullGalleryUpgradeAmount < 0.005
+      ? `Leve as ${offer.gallerySize} sem pagar nada a mais`
+      : `Leve as ${offer.gallerySize} por só ${money.format(
+          fullGalleryUpgradeAmount,
+        )} a mais`;
   const firstExtraAmount =
     getFirstExtraAmountCentsFromPricingBaseAmountCents({
       pricingBaseAmountCents: getPricingBaseAmountCents(offer),
@@ -1158,6 +1168,22 @@ export function Gallery({
         </div>
       </nav>
 
+      {showFloatingSelectAllCta && (
+        <aside
+          aria-label="Oferta para liberar todas as fotos"
+          className="floating-full-gallery-offer"
+        >
+          <button onClick={selectAll} type="button">
+            <strong>{floatingSelectAllLabel}</strong>
+            <small>
+              {fullGalleryUpgradeAmount < 0.005
+                ? "Você já chegou ao melhor valor. Complete sua galeria."
+                : "Complete seu ensaio com o melhor custo por foto."}
+            </small>
+          </button>
+        </aside>
+      )}
+
       <header className="gallery-header" id="top">
         <div className="gallery-intro">
           <span className="eyebrow">
@@ -1303,17 +1329,15 @@ export function Gallery({
           </div>
           <button
             className={`select-all-cta ${
-              showStrongSelectAllCta ? "featured" : ""
+              showFeaturedStaticSelectAllCta ? "featured" : ""
             }`}
             onClick={selectAll}
             type="button"
           >
-            <span>{selectAllCtaLabel}</span>
-            {showStrongSelectAllCta && (
+            <span>Quero todas</span>
+            {showFeaturedStaticSelectAllCta && (
               <small>
-                {offer.galleryType === "professional"
-                  ? "8, 9 ou 10 fotos saem pelo mesmo adicional."
-                  : "Complete sua galeria com o melhor valor."}
+                Complete sua galeria com o melhor valor.
               </small>
             )}
           </button>
