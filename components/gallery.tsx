@@ -456,6 +456,18 @@ export function Gallery({
   const nextDealAdditional = nextPrice
     ? Math.max(0, nextPrice.total - photoCredit) - pricing.dueNow
     : 0;
+  const fullGalleryPricing = getPricing(offer.gallerySize);
+  const fullGalleryDueNow = Math.max(0, fullGalleryPricing.total - photoCredit);
+  const showStrongSelectAllCta =
+    targetPhotoCount > 0 &&
+    targetPhotoCount < offer.gallerySize &&
+    (offer.galleryType === "professional"
+      ? targetPhotoCount >= 8
+      : offer.gallerySize - targetPhotoCount <= 2);
+  const selectAllCtaLabel =
+    showStrongSelectAllCta && offer.galleryType === "professional"
+      ? `Levar todas por +${money.format(fullGalleryDueNow)}`
+      : "Quero todas";
   const firstExtraAmount =
     getFirstExtraAmountCentsFromPricingBaseAmountCents({
       pricingBaseAmountCents: getPricingBaseAmountCents(offer),
@@ -1289,8 +1301,21 @@ export function Gallery({
               </p>
             )}
           </div>
-          <button className="text-button" onClick={selectAll} type="button">
-            Quero todas
+          <button
+            className={`select-all-cta ${
+              showStrongSelectAllCta ? "featured" : ""
+            }`}
+            onClick={selectAll}
+            type="button"
+          >
+            <span>{selectAllCtaLabel}</span>
+            {showStrongSelectAllCta && (
+              <small>
+                {offer.galleryType === "professional"
+                  ? "8, 9 ou 10 fotos saem pelo mesmo adicional."
+                  : "Complete sua galeria com o melhor valor."}
+              </small>
+            )}
           </button>
         </div>
 
@@ -1931,11 +1956,14 @@ export function Gallery({
                     <strong aria-hidden="true">▶</strong>
                   </div>
                   <div className="video-benefits">
-                    <span>
-                      {videoAdded
-                        ? `${videoPhotoIds.length} ${videoPhotoIds.length === 1 ? "vídeo curto" : "vídeos curtos"}`
-                        : "1 vídeo curto por padrão"}
-                    </span>
+                    {videoAdded && (
+                      <span>
+                        {videoPhotoIds.length}{" "}
+                        {videoPhotoIds.length === 1
+                          ? "vídeo curto"
+                          : "vídeos curtos"}
+                      </span>
+                    )}
                     <span>Transforme foto parada em conteúdo com movimento</span>
                     <span>Ideal para chamar atenção no status, story e Reels</span>
                   </div>

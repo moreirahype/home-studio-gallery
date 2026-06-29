@@ -263,6 +263,56 @@ p {
   line-height: 1.45;
 }
 
+.select-all-cta {
+  display: inline-flex;
+  min-width: 132px;
+  min-height: 42px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 9px 16px;
+  border: 1px solid rgb(163 67 46 / 24%);
+  border-radius: 999px;
+  background: #fffaf4;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.select-all-cta:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.select-all-cta.featured {
+  min-width: min(100%, 278px);
+  padding: 12px 19px;
+  border-color: transparent;
+  background:
+    radial-gradient(circle at 90% 0, rgb(255 255 255 / 18%), transparent 42%),
+    linear-gradient(135deg, #b84f37, #7f2f20);
+  color: white;
+  box-shadow:
+    0 14px 30px rgb(163 67 46 / 22%),
+    inset 0 0 0 1px rgb(255 255 255 / 16%);
+}
+
+.select-all-cta small {
+  max-width: 220px;
+  color: inherit;
+  font-size: 0.63rem;
+  font-weight: 650;
+  line-height: 1.25;
+  opacity: 0.78;
+}
+
 .milestone-track {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
