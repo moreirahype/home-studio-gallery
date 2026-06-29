@@ -1801,14 +1801,14 @@ export function Gallery({
                           +3 variações extras das melhores fotos.
                         </span>
                         <span>
-                          1 Versão Autoridade - para passar mais confiança.
+                          1 Versão Autoridade — para passar mais confiança.
                         </span>
                         <span>
-                          1 Versão Simpatia - para parecer mais acessível
+                          1 Versão Simpatia — para parecer mais acessível
                           quando a ocasião pede.
                         </span>
                         <span>
-                          1 Versão Premium - para elevar ainda mais sua imagem
+                          1 Versão Premium — para elevar ainda mais sua imagem
                           profissional em certos ambientes.
                         </span>
                       </div>
@@ -1865,14 +1865,14 @@ export function Gallery({
                           <strong>{money.format(firstImpressionPackPrice)}</strong>
                         </div>
                         <button
-                          className="text-button muted"
+                          className="addon-choice-action primary"
                           onClick={() => setFirstImpressionPackPhotoIds(selected)}
                           type="button"
                         >
                           Aplicar Pack em todas as fotos selecionadas
                         </button>
                         <button
-                          className="text-button muted"
+                          className="addon-choice-action secondary"
                           onClick={() =>
                             setFirstImpressionPackPickerOpen((current) => !current)
                           }
@@ -1956,6 +1956,7 @@ export function Gallery({
                     <strong aria-hidden="true">▶</strong>
                   </div>
                   <div className="video-benefits">
+                    <strong>Pack de Vídeos</strong>
                     {videoAdded && (
                       <span>
                         {videoPhotoIds.length}{" "}
@@ -1997,14 +1998,14 @@ export function Gallery({
                       <strong>{money.format(videoPrice)}</strong>
                     </div>
                     <button
-                      className="text-button muted"
+                      className="addon-choice-action primary"
                       onClick={() => setVideoPhotoIds(selected)}
                       type="button"
                     >
                       Transformar todas as fotos selecionadas em vídeo
                     </button>
                     <button
-                      className="text-button muted"
+                      className="addon-choice-action secondary"
                       onClick={() => setVideoPickerOpen((current) => !current)}
                       type="button"
                     >
