@@ -344,6 +344,10 @@ export function Gallery({
   const [videoAdded, setVideoAdded] = useState(false);
   const [firstImpressionPackAdded, setFirstImpressionPackAdded] =
     useState(false);
+  const [firstImpressionPackPhotoIds, setFirstImpressionPackPhotoIds] =
+    useState<string[]>([]);
+  const [firstImpressionPackPickerOpen, setFirstImpressionPackPickerOpen] =
+    useState(false);
   const [videoPhotoIds, setVideoPhotoIds] = useState<string[]>([]);
   const [videoPickerOpen, setVideoPickerOpen] = useState(false);
   const [pixReady, setPixReady] = useState(false);
@@ -391,6 +395,17 @@ export function Gallery({
       .map((photoId) => photos.find((photo) => photo.id === photoId))
       .filter((photo): photo is (typeof photos)[number] => Boolean(photo));
   }, [photos, videoPhotoIds]);
+  const defaultFirstImpressionPackPhotoIds = firstImpressionPackPhotoIds.length
+    ? firstImpressionPackPhotoIds
+    : selected.slice(0, 1);
+  const effectiveFirstImpressionPackPhotoIds = firstImpressionPackAdded
+    ? defaultFirstImpressionPackPhotoIds
+    : [];
+  const firstImpressionPackPhotos = useMemo(() => {
+    return defaultFirstImpressionPackPhotoIds
+      .map((photoId) => photos.find((photo) => photo.id === photoId))
+      .filter((photo): photo is (typeof photos)[number] => Boolean(photo));
+  }, [defaultFirstImpressionPackPhotoIds, photos]);
 
   function getPricing(count: number) {
     const totalCents = getTotalPhotoAmountCents(offer, count);
@@ -466,7 +481,8 @@ export function Gallery({
     selected.length > 0 && pricing.dueNow === 0;
   const firstImpressionPackPrice =
     offer.galleryType === "professional" && firstImpressionPackAdded
-    ? selected.length * offer.firstImpressionPackPrice
+    ? effectiveFirstImpressionPackPhotoIds.length *
+      offer.firstImpressionPackPrice
     : 0;
   const videoPrice = videoAdded
     ? getVideoPrice(videoPhotoIds.length || 1, offer.videoPrice)
@@ -599,6 +615,8 @@ export function Gallery({
     setPixReady(false);
     setVideoAdded(false);
     setFirstImpressionPackAdded(false);
+    setFirstImpressionPackPhotoIds(selected.slice(0, 1));
+    setFirstImpressionPackPickerOpen(false);
     setVideoPhotoIds(selected.slice(0, 1));
     setVideoPickerOpen(false);
     setCheckoutError("");
@@ -752,6 +770,18 @@ export function Gallery({
 
   function toggleVideoPhoto(id: string) {
     setVideoPhotoIds((current) => {
+      if (current.includes(id)) {
+        return current.length === 1
+          ? current
+          : current.filter((photoId) => photoId !== id);
+      }
+
+      return [...current, id];
+    });
+  }
+
+  function toggleFirstImpressionPackPhoto(id: string) {
+    setFirstImpressionPackPhotoIds((current) => {
       if (current.includes(id)) {
         return current.length === 1
           ? current
@@ -959,7 +989,7 @@ export function Gallery({
           galleryToken: token,
           photoIds: selected,
           firstImpressionPackAdded,
-          firstImpressionPackPhotoIds: firstImpressionPackAdded ? selected : [],
+          firstImpressionPackPhotoIds: effectiveFirstImpressionPackPhotoIds,
           videoAdded,
           videoPhotoIds,
         }),
@@ -1717,12 +1747,45 @@ export function Gallery({
                 {isProfessionalGallery && (
                   <>
                     <div className="video-offer-preview pack-offer-preview">
+                      <div
+                        aria-label="Prévia das fotos usadas no Pack Primeira Impressão"
+                        className={`video-photo-strip pack-photo-strip count-${Math.min(firstImpressionPackPhotos.length, 3)}`}
+                      >
+                        {firstImpressionPackPhotos.map((photo, index) => {
+                          const tone =
+                            "tone" in photo && typeof photo.tone === "number"
+                              ? photo.tone
+                              : 0;
+
+                          return (
+                            <span
+                              key={`${photo.id}-${index}`}
+                              style={{
+                                background: photo.previewUrl
+                                  ? `center / cover no-repeat url("${photo.previewUrl}")`
+                                  : `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
+                              }}
+                            />
+                          );
+                        })}
+                        <strong aria-hidden="true">+3</strong>
+                      </div>
                       <div className="video-benefits">
                         <strong>Pack Primeira Impressão</strong>
-                        <span>+3 versões extras por foto escolhida</span>
-                        <span>Autoridade para passar confiança</span>
-                        <span>Simpatia para parecer mais acessível</span>
-                        <span>Premium para elevar sua imagem profissional</span>
+                        <span>
+                          +3 variações extras das melhores fotos.
+                        </span>
+                        <span>
+                          1 Versão Autoridade - para passar mais confiança.
+                        </span>
+                        <span>
+                          1 Versão Simpatia - para parecer mais acessível
+                          quando a ocasião pede.
+                        </span>
+                        <span>
+                          1 Versão Premium - para elevar ainda mais sua imagem
+                          profissional em certos ambientes.
+                        </span>
                       </div>
                     </div>
                     <button
@@ -1730,9 +1793,14 @@ export function Gallery({
                       className={`addon-card pack-addon ${
                         firstImpressionPackAdded ? "selected" : ""
                       }`}
-                      onClick={() =>
-                        setFirstImpressionPackAdded((current) => !current)
-                      }
+                      onClick={() => {
+                        setFirstImpressionPackAdded((current) => {
+                          if (!current && !firstImpressionPackPhotoIds.length) {
+                            setFirstImpressionPackPhotoIds(selected.slice(0, 1));
+                          }
+                          return !current;
+                        });
+                      }}
                       type="button"
                     >
                       <span className="addon-check">
@@ -1742,16 +1810,16 @@ export function Gallery({
                         <strong>
                           {firstImpressionPackAdded
                             ? "Pack Primeira Impressão adicionado"
-                            : "Quero parecer mais profissional"}
+                            : "Quero o Pack Primeira Impressão"}
                         </strong>
                         <small>
                           {firstImpressionPackAdded
-                            ? `${selected.length} ${
-                                selected.length === 1
+                            ? `${effectiveFirstImpressionPackPhotoIds.length} ${
+                                effectiveFirstImpressionPackPhotoIds.length === 1
                                   ? "foto escolhida"
                                   : "fotos escolhidas"
                               } recebendo +3 variações cada`
-                            : `Multiplique cada foto escolhida em 3 versões de impacto por ${money.format(
+                            : `Escolha suas melhores fotos e receba 3 versões extras de impacto por ${money.format(
                                 offer.firstImpressionPackPrice,
                               )} por foto.`}
                         </small>
@@ -1760,6 +1828,82 @@ export function Gallery({
                         {firstImpressionPackAdded ? "REMOVER" : "ADICIONAR"}
                       </span>
                     </button>
+                    {firstImpressionPackAdded && selected.length > 1 && (
+                      <div className="video-photo-choice">
+                        <div className="modal-total">
+                          <span>
+                            {effectiveFirstImpressionPackPhotoIds.length}{" "}
+                            {effectiveFirstImpressionPackPhotoIds.length === 1
+                              ? "foto no Pack"
+                              : "fotos no Pack"}
+                          </span>
+                          <strong>{money.format(firstImpressionPackPrice)}</strong>
+                        </div>
+                        <button
+                          className="text-button muted"
+                          onClick={() => setFirstImpressionPackPhotoIds(selected)}
+                          type="button"
+                        >
+                          Aplicar Pack em todas as fotos selecionadas
+                        </button>
+                        <button
+                          className="text-button muted"
+                          onClick={() =>
+                            setFirstImpressionPackPickerOpen((current) => !current)
+                          }
+                          type="button"
+                        >
+                          {firstImpressionPackPickerOpen
+                            ? "Concluir escolha"
+                            : "Escolher quais fotos recebem o Pack"}
+                        </button>
+                        {firstImpressionPackPickerOpen && (
+                          <>
+                            <small>
+                              Já deixamos 1 foto marcada. Toque nas outras fotos
+                              para criar as versões Autoridade, Simpatia e Premium.
+                            </small>
+                            <div className="video-picker-grid pack-picker-grid">
+                              {selected.map((photoId) => {
+                                const photo = photos.find(
+                                  (item) => item.id === photoId,
+                                );
+                                if (!photo) return null;
+                                const active =
+                                  effectiveFirstImpressionPackPhotoIds.includes(
+                                    photoId,
+                                  );
+                                const tone =
+                                  "tone" in photo &&
+                                  typeof photo.tone === "number"
+                                    ? photo.tone
+                                    : 0;
+
+                                return (
+                                  <button
+                                    aria-label={`${active ? "Remover" : "Usar"} foto ${photo.number} no Pack Primeira Impressão`}
+                                    aria-pressed={active}
+                                    className={active ? "selected" : ""}
+                                    key={photo.id}
+                                    onClick={() =>
+                                      toggleFirstImpressionPackPhoto(photo.id)
+                                    }
+                                    style={{
+                                      background: photo.previewUrl
+                                        ? `center / cover no-repeat url("${photo.previewUrl}")`
+                                        : `linear-gradient(145deg, hsl(${tone} 34% 25%), hsl(${tone + 42} 46% 68%))`,
+                                    }}
+                                    type="button"
+                                  >
+                                    <span>{active ? "✓" : "+"}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
                 <div className="video-offer-preview">
@@ -1891,7 +2035,11 @@ export function Gallery({
                           ? "Fotos já liberadas"
                           : "Fotos escolhidas já incluídas",
                       firstImpressionPackAdded && firstImpressionPackPrice > 0
-                        ? `Pack Primeira Impressão: ${money.format(
+                        ? `${effectiveFirstImpressionPackPhotoIds.length} ${
+                            effectiveFirstImpressionPackPhotoIds.length === 1
+                              ? "Pack"
+                              : "Packs"
+                          } Primeira Impressão: ${money.format(
                             firstImpressionPackPrice,
                           )}`
                         : null,

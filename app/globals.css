@@ -970,6 +970,33 @@ p {
   font-weight: 900;
 }
 
+.pack-offer-preview {
+  grid-template-columns: 118px minmax(0, 1fr);
+  padding: 18px;
+  border: 1px solid rgb(163 67 46 / 10%);
+  background:
+    radial-gradient(circle at 92% 0, rgb(163 67 46 / 10%), transparent 40%),
+    linear-gradient(135deg, #f8f2ea, #f2ece4);
+}
+
+.pack-offer-preview .video-benefits {
+  gap: 9px;
+}
+
+.pack-offer-preview .video-benefits strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+  line-height: 1.08;
+}
+
+.pack-offer-preview .video-benefits span {
+  font-size: 0.72rem;
+}
+
+.pack-picker-grid > button.selected {
+  border-color: var(--addon-accent);
+}
+
 .addon-card:hover {
   transform: translateY(-1px);
 }
