@@ -458,15 +458,13 @@ export function Gallery({
     : 0;
   const fullGalleryPricing = getPricing(offer.gallerySize);
   const fullGalleryDueNow = Math.max(0, fullGalleryPricing.total - photoCredit);
-  const showFeaturedStaticSelectAllCta =
-    targetPhotoCount > 0 &&
-    targetPhotoCount < offer.gallerySize &&
-    offer.galleryType !== "professional" &&
-    offer.gallerySize - targetPhotoCount <= 2;
+  const floatingOfferThreshold = Math.max(
+    offer.includedPhotos + 1,
+    Math.ceil(offer.gallerySize * 0.6),
+  );
   const showFloatingSelectAllCta =
-    offer.galleryType === "professional" &&
-    offer.gallerySize >= 8 &&
-    targetPhotoCount >= 6 &&
+    offer.gallerySize >= 5 &&
+    targetPhotoCount >= floatingOfferThreshold &&
     targetPhotoCount < offer.gallerySize;
   const fullGalleryUpgradeAmount = Math.max(
     0,
@@ -1328,18 +1326,11 @@ export function Gallery({
             )}
           </div>
           <button
-            className={`select-all-cta ${
-              showFeaturedStaticSelectAllCta ? "featured" : ""
-            }`}
+            className="select-all-cta"
             onClick={selectAll}
             type="button"
           >
             <span>Quero todas</span>
-            {showFeaturedStaticSelectAllCta && (
-              <small>
-                Complete sua galeria com o melhor valor.
-              </small>
-            )}
           </button>
         </div>
 

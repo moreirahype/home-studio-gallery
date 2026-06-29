@@ -239,32 +239,18 @@ export function AutoGalleryForm() {
           </label>
 
           <div className="manual-grid">
-            <fieldset className="gallery-type-field">
-              <legend>Tipo de galeria</legend>
-              <input name="galleryType" type="hidden" value={galleryType} />
-              <div aria-label="Tipo de galeria" className="gallery-type-switch" role="radiogroup">
-                <button
-                  aria-checked={galleryType === "universal"}
-                  className={galleryType === "universal" ? "active" : ""}
-                  onClick={() => setGalleryType("universal")}
-                  role="radio"
-                  type="button"
-                >
-                  <span>Universal</span>
-                  <small>Ensaios em geral</small>
-                </button>
-                <button
-                  aria-checked={galleryType === "professional"}
-                  className={galleryType === "professional" ? "active" : ""}
-                  onClick={() => setGalleryType("professional")}
-                  role="radio"
-                  type="button"
-                >
-                  <span>Profissional</span>
-                  <small>Fotos para carreira</small>
-                </button>
-              </div>
-            </fieldset>
+            <label className="gallery-type-field">
+              Tipo de galeria
+              <select
+                className="gallery-type-select"
+                name="galleryType"
+                onChange={(event) => setGalleryType(event.target.value)}
+                value={galleryType}
+              >
+                <option value="universal">Universal — ensaios em geral</option>
+                <option value="professional">Profissional — fotos para carreira</option>
+              </select>
+            </label>
             <label>
               Produto
               <select
