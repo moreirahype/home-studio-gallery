@@ -1834,12 +1834,12 @@ export function Gallery({
                         firstImpressionPackAdded ? "selected" : ""
                       }`}
                       onClick={() => {
-                        setFirstImpressionPackAdded((current) => {
-                          if (!current && !firstImpressionPackPhotoIds.length) {
-                            setFirstImpressionPackPhotoIds(selected.slice(0, 1));
-                          }
-                          return !current;
-                        });
+                        if (firstImpressionPackAdded) return;
+
+                        if (!firstImpressionPackPhotoIds.length) {
+                          setFirstImpressionPackPhotoIds(selected.slice(0, 1));
+                        }
+                        setFirstImpressionPackAdded(true);
                       }}
                       type="button"
                     >
@@ -1864,7 +1864,15 @@ export function Gallery({
                               )} por foto.`}
                         </small>
                       </span>
-                      <span className="addon-action">
+                      <span
+                        className="addon-action"
+                        onClick={(event) => {
+                          if (!firstImpressionPackAdded) return;
+                          event.stopPropagation();
+                          setFirstImpressionPackAdded(false);
+                        }}
+                        role={firstImpressionPackAdded ? "button" : undefined}
+                      >
                         {firstImpressionPackAdded ? "REMOVER" : "ADICIONAR"}
                       </span>
                     </button>
@@ -1879,13 +1887,16 @@ export function Gallery({
                           </span>
                           <strong>{money.format(firstImpressionPackPrice)}</strong>
                         </div>
-                        <button
-                          className="addon-choice-action primary"
-                          onClick={() => setFirstImpressionPackPhotoIds(selected)}
-                          type="button"
-                        >
-                          Aplicar Pack em todas as fotos selecionadas
-                        </button>
+                        {effectiveFirstImpressionPackPhotoIds.length <
+                          selected.length && (
+                          <button
+                            className="addon-choice-action primary"
+                            onClick={() => setFirstImpressionPackPhotoIds(selected)}
+                            type="button"
+                          >
+                            Aplicar Pack em todas as fotos selecionadas
+                          </button>
+                        )}
                         <button
                           className="addon-choice-action secondary"
                           onClick={() =>
@@ -1987,7 +1998,10 @@ export function Gallery({
                 <button
                   aria-pressed={videoAdded}
                   className={`addon-card ${videoAdded ? "selected" : ""}`}
-                  onClick={() => setVideoAdded((current) => !current)}
+                  onClick={() => {
+                    if (videoAdded) return;
+                    setVideoAdded(true);
+                  }}
                   type="button"
                 >
                   <span className="addon-check">{videoAdded ? "✓" : "+"}</span>
@@ -1999,7 +2013,15 @@ export function Gallery({
                         : "Dê movimento à foto e deixe o resultado mais chamativo"}
                     </small>
                   </span>
-                  <span className="addon-action">
+                  <span
+                    className="addon-action"
+                    onClick={(event) => {
+                      if (!videoAdded) return;
+                      event.stopPropagation();
+                      setVideoAdded(false);
+                    }}
+                    role={videoAdded ? "button" : undefined}
+                  >
                     {videoAdded ? "REMOVER" : "ADICIONAR"}
                   </span>
                 </button>
@@ -2012,13 +2034,15 @@ export function Gallery({
                       </span>
                       <strong>{money.format(videoPrice)}</strong>
                     </div>
-                    <button
-                      className="addon-choice-action primary"
-                      onClick={() => setVideoPhotoIds(selected)}
-                      type="button"
-                    >
-                      Transformar todas as fotos selecionadas em vídeo
-                    </button>
+                    {videoPhotoIds.length < selected.length && (
+                      <button
+                        className="addon-choice-action primary"
+                        onClick={() => setVideoPhotoIds(selected)}
+                        type="button"
+                      >
+                        Transformar todas as fotos selecionadas em vídeo
+                      </button>
+                    )}
                     <button
                       className="addon-choice-action secondary"
                       onClick={() => setVideoPickerOpen((current) => !current)}
