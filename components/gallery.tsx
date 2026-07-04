@@ -314,6 +314,50 @@ function AddIcon() {
   );
 }
 
+const oneClickUpsellStyles = [
+  {
+    id: "same",
+    title: "Mesmo estilo",
+    description: "Repete a pegada que já funcionou, sem você enviar nada de novo.",
+    theme: "Mesmo estilo do ensaio atual",
+  },
+  {
+    id: "professional",
+    title: "Profissional",
+    description: "Perfil, WhatsApp, LinkedIn e imagem de autoridade.",
+    theme:
+      "Ensaio profissional premium para perfil, WhatsApp, LinkedIn e posicionamento de autoridade",
+  },
+  {
+    id: "luxury",
+    title: "Luxo",
+    description: "Mais impacto, presença cara e visual impossível de ignorar.",
+    theme:
+      "Ensaio luxuoso, sofisticado, premium, com estética cara e presença marcante",
+  },
+  {
+    id: "birthday",
+    title: "Aniversário",
+    description: "Balões, brilho, confete e clima de comemoração.",
+    theme:
+      "Ensaio de aniversário com balões elegantes, confetes, brilho, comemoração e visual fotográfico premium",
+  },
+  {
+    id: "social",
+    title: "Redes sociais",
+    description: "Fotos mais chamativas para status, story e feed.",
+    theme:
+      "Ensaio moderno e chamativo para redes sociais, status, stories e feed, com visual atual e impactante",
+  },
+  {
+    id: "editorial",
+    title: "Editorial",
+    description: "Cara de campanha, revista e foto de capa.",
+    theme:
+      "Ensaio editorial com estética de revista, composição de campanha, styling premium e fotografia de capa",
+  },
+] as const;
+
 export function Gallery({
   token,
   offer: offerInput,
@@ -389,6 +433,21 @@ export function Gallery({
     qrCode?: string;
     qrCodeBase64?: string;
     ticketUrl?: string;
+  } | null>(null);
+  const [upsellCreatingStyle, setUpsellCreatingStyle] = useState<string | null>(
+    null,
+  );
+  const [upsellCheckingPayment, setUpsellCheckingPayment] = useState(false);
+  const [upsellPixCopied, setUpsellPixCopied] = useState(false);
+  const [upsellError, setUpsellError] = useState("");
+  const [upsellPayment, setUpsellPayment] = useState<{
+    orderId: string;
+    paymentId: string;
+    galleryToken: string;
+    galleryUrl: string;
+    amount: number;
+    qrCode?: string;
+    qrCodeBase64?: string;
   } | null>(null);
   const videoPhotos = useMemo(() => {
     return videoPhotoIds
@@ -481,13 +540,6 @@ export function Gallery({
       pricingBaseAmountCents: getPricingBaseAmountCents(offer),
       includedPhotos: offer.includedPhotos,
     }) / 100;
-  const newShootUrl = `/novo?source=${encodeURIComponent(
-    token,
-  )}&paidAmount=${offer.newShootPrice.toFixed(
-    2,
-  )}&includedPhotos=${offer.includedPhotos}&generationCount=${offer.gallerySize}&firstExtraAmount=${firstExtraAmount.toFixed(
-    2,
-  )}`;
   const hasUnlockedPurchases =
     effectiveUnlockedPhotoIds.length > 0 ||
     photoCredit > offer.paidAmount + 0.005;
@@ -658,6 +710,117 @@ export function Gallery({
         "Não foi possível copiar automaticamente. Toque e segure o código Pix para copiar.",
       );
     }
+  }
+
+  async function copyUpsellPixCode() {
+    if (!upsellPayment?.qrCode) return;
+    try {
+      await navigator.clipboard.writeText(upsellPayment.qrCode);
+      setUpsellError("");
+      setUpsellPixCopied(true);
+      window.setTimeout(() => setUpsellPixCopied(false), 3500);
+    } catch {
+      setUpsellError(
+        "Não foi possível copiar automaticamente. Toque e segure o código Pix para copiar.",
+      );
+    }
+  }
+
+  async function createOneClickUpsell(style: (typeof oneClickUpsellStyles)[number]) {
+    if (token === "demo") {
+      setUpsellError("O upsell de 1 clique não roda na galeria demonstrativa.");
+      return;
+    }
+
+    setUpsellCreatingStyle(style.id);
+    setUpsellError("");
+    setUpsellPixCopied(false);
+
+    const formData = new FormData();
+    formData.set("sourceToken", token);
+    formData.set("theme", style.theme);
+    formData.set("offer", "upsell");
+    formData.set("paidAmount", offer.newShootPrice.toFixed(2));
+    formData.set("includedPhotos", String(offer.includedPhotos));
+    formData.set("generationCount", String(offer.gallerySize));
+    formData.set("firstExtraAmount", firstExtraAmount.toFixed(2));
+
+    const response = await fetch("/api/repeat-shoots", {
+      method: "POST",
+      body: formData,
+    });
+    const result = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      orderId?: string;
+      paymentId?: string;
+      galleryToken?: string;
+      galleryUrl?: string;
+      amount?: number;
+      qrCode?: string;
+      qrCodeBase64?: string;
+    };
+    setUpsellCreatingStyle(null);
+
+    if (
+      !response.ok ||
+      !result.ok ||
+      !result.orderId ||
+      !result.paymentId ||
+      !result.galleryToken ||
+      !result.galleryUrl
+    ) {
+      setUpsellError(result.error ?? "Não foi possível gerar o Pix do novo ensaio.");
+      return;
+    }
+
+    setUpsellPayment({
+      orderId: result.orderId,
+      paymentId: result.paymentId,
+      galleryToken: result.galleryToken,
+      galleryUrl: result.galleryUrl,
+      amount: result.amount ?? offer.newShootPrice,
+      qrCode: result.qrCode,
+      qrCodeBase64: result.qrCodeBase64,
+    });
+  }
+
+  async function checkUpsellPayment() {
+    if (!upsellPayment) return;
+
+    setUpsellCheckingPayment(true);
+    setUpsellError("");
+    const response = await fetch("/api/checkout/status", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        galleryToken: upsellPayment.galleryToken,
+        orderId: upsellPayment.orderId,
+      }),
+    });
+    const result = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      paid?: boolean;
+      error?: string;
+    };
+    setUpsellCheckingPayment(false);
+
+    if (!response.ok || !result.ok) {
+      setUpsellError(result.error ?? "Não foi possível conferir o pagamento.");
+      return;
+    }
+
+    if (!result.paid) {
+      setUpsellError("Ainda não encontrei o pagamento. Tente novamente em alguns segundos.");
+      return;
+    }
+
+    trackBrowserPurchase({
+      paymentId: upsellPayment.paymentId,
+      orderId: upsellPayment.orderId,
+      value: upsellPayment.amount,
+    });
+    window.location.href = upsellPayment.galleryUrl;
   }
 
   async function savePhotoToDevice(download: PhotoDownload) {
@@ -1134,6 +1297,48 @@ export function Gallery({
     // The checkout snapshot must remain stable while this Pix is pending.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pixPayment, pixReady, testPaymentApproved, token]);
+
+  useEffect(() => {
+    if (!upsellPayment || token === "demo") return;
+
+    let stopped = false;
+    let paymentHandled = false;
+
+    async function pollUpsellPayment() {
+      if (stopped || paymentHandled || !upsellPayment) return;
+
+      const response = await fetch("/api/checkout/status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryToken: upsellPayment.galleryToken,
+          orderId: upsellPayment.orderId,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        paid?: boolean;
+      };
+
+      if (!stopped && response.ok && result.ok && result.paid) {
+        paymentHandled = true;
+        trackBrowserPurchase({
+          paymentId: upsellPayment.paymentId,
+          orderId: upsellPayment.orderId,
+          value: upsellPayment.amount,
+        });
+        window.location.href = upsellPayment.galleryUrl;
+      }
+    }
+
+    void pollUpsellPayment();
+    const interval = window.setInterval(() => void pollUpsellPayment(), 5000);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [token, upsellPayment]);
 
   const isProfessionalGallery = offer.galleryType === "professional";
   const includedLabel =
@@ -1680,26 +1885,88 @@ export function Gallery({
                   Continuar vendo minha galeria
                 </button>
                 <div className="post-purchase-offer">
-                  <span>CRIAR OUTRO ENSAIO</span>
+                  <span>UPSELL DE 1 CLIQUE</span>
                   <strong>
-                    Quer testar outro tema ou outra foto? {offer.gallerySize} novas opções e {offer.includedPhotos}{" "}
-                    {offer.includedPhotos === 1 ? "foto incluída" : "fotos incluídas"} por {money.format(offer.newShootPrice)}
+                    Gere outro ensaio agora usando a mesma foto que você já enviou.
                   </strong>
                   <small>
-                    É o mesmo modelo da entrada: você escolhe a foto de
-                    referência, descreve o novo tema e recebe outra galeria com
-                    desconto progressivo nas fotos extras.
+                    Sem reenviar foto. Sem escrever prompt. Escolha um estilo,
+                    pague no Pix e uma nova galeria com {offer.gallerySize} fotos
+                    começa a ser criada automaticamente.
                   </small>
-                  <button
-                    className="primary-button modal-primary"
-                    onClick={() => {
-                      setCheckoutOpen(false);
-                      window.location.href = newShootUrl;
-                    }}
-                    type="button"
-                  >
-                    Criar novo ensaio por {money.format(offer.newShootPrice)}
-                  </button>
+                  {!upsellPayment ? (
+                    <>
+                      <div className="one-click-upsell-grid">
+                        {oneClickUpsellStyles.map((style) => (
+                          <button
+                            className="one-click-upsell-card"
+                            disabled={Boolean(upsellCreatingStyle)}
+                            key={style.id}
+                            onClick={() => void createOneClickUpsell(style)}
+                            type="button"
+                          >
+                            <span>{style.title}</span>
+                            <strong>{money.format(offer.newShootPrice)}</strong>
+                            <small>{style.description}</small>
+                            <em>
+                              {upsellCreatingStyle === style.id
+                                ? "Gerando Pix..."
+                                : "Gerar com 1 clique"}
+                            </em>
+                          </button>
+                        ))}
+                      </div>
+                      <small className="upsell-footnote">
+                        Você mantém as fotos deste ensaio e ganha uma nova
+                        chance de comprar outras imagens na próxima galeria.
+                      </small>
+                    </>
+                  ) : (
+                    <div className="one-click-upsell-pix">
+                      <span className="modal-badge warning">Pix do novo ensaio</span>
+                      <strong>{money.format(upsellPayment.amount)}</strong>
+                      <small>
+                        Pague no app do banco. Assim que aprovar, a nova galeria
+                        abre sozinha aqui.
+                      </small>
+                      {upsellPayment.qrCodeBase64 && (
+                        <img
+                          alt="QR Code Pix"
+                          className="pix-qr-image"
+                          src={`data:image/png;base64,${upsellPayment.qrCodeBase64}`}
+                        />
+                      )}
+                      {upsellPayment.qrCode && (
+                        <button
+                          className={`copy-pix-button ${upsellPixCopied ? "copied" : ""}`}
+                          onClick={copyUpsellPixCode}
+                          type="button"
+                        >
+                          {upsellPixCopied
+                            ? "Pix copiado! Abra seu banco"
+                            : "Copiar Pix Copia e Cola"}
+                        </button>
+                      )}
+                      <button
+                        className="primary-button modal-primary"
+                        disabled={upsellCheckingPayment}
+                        onClick={() => void checkUpsellPayment()}
+                        type="button"
+                      >
+                        {upsellCheckingPayment
+                          ? "Conferindo..."
+                          : "Já paguei, criar minha nova galeria"}
+                      </button>
+                      <button
+                        className="text-button muted"
+                        onClick={() => setUpsellPayment(null)}
+                        type="button"
+                      >
+                        Voltar aos estilos
+                      </button>
+                    </div>
+                  )}
+                  {upsellError && <p className="form-error">{upsellError}</p>}
                   <button
                     className="text-button muted"
                     onClick={() => setCheckoutOpen(false)}

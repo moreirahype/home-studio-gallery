@@ -1346,6 +1346,100 @@ p {
   justify-self: center;
 }
 
+.one-click-upsell-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.one-click-upsell-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgb(163 67 46 / 20%);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 88% 10%, rgb(163 67 46 / 12%), transparent 34%),
+    #fffaf5;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.one-click-upsell-card:hover:not(:disabled) {
+  border-color: rgb(163 67 46 / 52%);
+  box-shadow: 0 16px 36px rgb(54 39 29 / 12%);
+  transform: translateY(-2px);
+}
+
+.one-click-upsell-card:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.one-click-upsell-card span {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.one-click-upsell-card strong {
+  font-family: var(--font-display), serif;
+  font-size: 1.7rem;
+  line-height: 0.95;
+}
+
+.one-click-upsell-card small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.one-click-upsell-card em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #a3432e, #7f2f20);
+  color: #fffaf4;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.upsell-footnote {
+  display: block;
+  margin-top: 4px;
+}
+
+.one-click-upsell-pix {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px;
+  border: 1px solid rgb(163 67 46 / 18%);
+  border-radius: 22px;
+  background: #fffaf5;
+}
+
+.one-click-upsell-pix > strong {
+  font-family: var(--font-display), serif;
+  font-size: clamp(2.2rem, 8vw, 3.8rem);
+  line-height: 0.9;
+}
+
 .download-list {
   display: grid;
   gap: 8px;
@@ -2957,6 +3051,10 @@ p {
 
   .post-purchase-offer {
     padding: 17px;
+  }
+
+  .one-click-upsell-grid {
+    grid-template-columns: 1fr;
   }
 
   .manual-release-box > div {
