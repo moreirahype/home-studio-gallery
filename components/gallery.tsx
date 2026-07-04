@@ -318,41 +318,41 @@ const oneClickUpsellStyles = [
   {
     id: "same",
     title: "Mesmo estilo",
-    description: "Repete a pegada que já funcionou, sem você enviar nada de novo.",
+    description: "Mais uma galeria na mesma pegada que já deu certo.",
     theme: "Mesmo estilo do ensaio atual",
   },
   {
     id: "professional",
     title: "Profissional",
-    description: "Perfil, WhatsApp, LinkedIn e imagem de autoridade.",
+    description: "Autoridade rápida para perfil, WhatsApp e redes sociais.",
     theme:
       "Ensaio profissional premium para perfil, WhatsApp, LinkedIn e posicionamento de autoridade",
   },
   {
     id: "luxury",
     title: "Luxo",
-    description: "Mais impacto, presença cara e visual impossível de ignorar.",
+    description: "Mais presença, impacto e visual impossível de ignorar.",
     theme:
       "Ensaio luxuoso, sofisticado, premium, com estética cara e presença marcante",
   },
   {
     id: "birthday",
     title: "Aniversário",
-    description: "Balões, brilho, confete e clima de comemoração.",
+    description: "Uma nova rodada com brilho, balões e clima de comemoração.",
     theme:
       "Ensaio de aniversário com balões elegantes, confetes, brilho, comemoração e visual fotográfico premium",
   },
   {
     id: "social",
     title: "Redes sociais",
-    description: "Fotos mais chamativas para status, story e feed.",
+    description: "Fotos mais chamativas para story, status e feed.",
     theme:
       "Ensaio moderno e chamativo para redes sociais, status, stories e feed, com visual atual e impactante",
   },
   {
     id: "editorial",
     title: "Editorial",
-    description: "Cara de campanha, revista e foto de capa.",
+    description: "Visual de capa, campanha e foto com cara de revista.",
     theme:
       "Ensaio editorial com estética de revista, composição de campanha, styling premium e fotografia de capa",
   },
@@ -540,6 +540,11 @@ export function Gallery({
       pricingBaseAmountCents: getPricingBaseAmountCents(offer),
       includedPhotos: offer.includedPhotos,
     }) / 100;
+  const oneClickUpsellPrice = Math.min(14.9, offer.newShootPrice);
+  const oneClickUpsellDiscount = Math.max(
+    0,
+    offer.newShootPrice - oneClickUpsellPrice,
+  );
   const hasUnlockedPurchases =
     effectiveUnlockedPhotoIds.length > 0 ||
     photoCredit > offer.paidAmount + 0.005;
@@ -740,7 +745,7 @@ export function Gallery({
     formData.set("sourceToken", token);
     formData.set("theme", style.theme);
     formData.set("offer", "upsell");
-    formData.set("paidAmount", offer.newShootPrice.toFixed(2));
+    formData.set("paidAmount", oneClickUpsellPrice.toFixed(2));
     formData.set("includedPhotos", String(offer.includedPhotos));
     formData.set("generationCount", String(offer.gallerySize));
     formData.set("firstExtraAmount", firstExtraAmount.toFixed(2));
@@ -779,7 +784,7 @@ export function Gallery({
       paymentId: result.paymentId,
       galleryToken: result.galleryToken,
       galleryUrl: result.galleryUrl,
-      amount: result.amount ?? offer.newShootPrice,
+      amount: result.amount ?? oneClickUpsellPrice,
       qrCode: result.qrCode,
       qrCodeBase64: result.qrCodeBase64,
     });
@@ -1885,14 +1890,18 @@ export function Gallery({
                   Continuar vendo minha galeria
                 </button>
                 <div className="post-purchase-offer">
-                  <span>UPSELL DE 1 CLIQUE</span>
+                  <span>OFERTA RELÂMPAGO DE 1 CLIQUE</span>
                   <strong>
-                    Gere outro ensaio agora usando a mesma foto que você já enviou.
+                    Novo ensaio em 1 clique por {money.format(oneClickUpsellPrice)}
                   </strong>
                   <small>
-                    Sem reenviar foto. Sem escrever prompt. Escolha um estilo,
-                    pague no Pix e uma nova galeria com {offer.gallerySize} fotos
-                    começa a ser criada automaticamente.
+                    Sua foto já está carregada. Escolha um estilo abaixo, pague
+                    no Pix e uma nova galeria com {offer.gallerySize} fotos
+                    começa automaticamente, sem enviar nada de novo.
+                  </small>
+                  <small className="one-click-upsell-urgency">
+                    Preço especial desta tela. Se sair agora, o novo ensaio volta
+                    ao valor normal.
                   </small>
                   {!upsellPayment ? (
                     <>
@@ -1906,19 +1915,25 @@ export function Gallery({
                             type="button"
                           >
                             <span>{style.title}</span>
-                            <strong>{money.format(offer.newShootPrice)}</strong>
+                            {oneClickUpsellDiscount > 0.005 && (
+                              <small className="one-click-upsell-anchor">
+                                De {money.format(offer.newShootPrice)} por
+                              </small>
+                            )}
+                            <strong>{money.format(oneClickUpsellPrice)}</strong>
                             <small>{style.description}</small>
                             <em>
                               {upsellCreatingStyle === style.id
                                 ? "Gerando Pix..."
-                                : "Gerar com 1 clique"}
+                                : "Gerar em 1 clique"}
                             </em>
                           </button>
                         ))}
                       </div>
                       <small className="upsell-footnote">
-                        Você mantém as fotos deste ensaio e ganha uma nova
-                        chance de comprar outras imagens na próxima galeria.
+                        Desconto aplicado porque vamos reaproveitar a foto que
+                        você já enviou. Decisão rápida, galeria nova, mais chance
+                        de achar outras fotos perfeitas.
                       </small>
                     </>
                   ) : (
@@ -1926,8 +1941,8 @@ export function Gallery({
                       <span className="modal-badge warning">Pix do novo ensaio</span>
                       <strong>{money.format(upsellPayment.amount)}</strong>
                       <small>
-                        Pague no app do banco. Assim que aprovar, a nova galeria
-                        abre sozinha aqui.
+                        Pague no app do banco. Assim que aprovar, sua nova galeria
+                        começa a ser criada e abre sozinha aqui.
                       </small>
                       {upsellPayment.qrCodeBase64 && (
                         <img

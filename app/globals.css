@@ -1397,6 +1397,13 @@ p {
   line-height: 0.95;
 }
 
+.one-click-upsell-anchor {
+  color: rgb(122 96 74 / 72%) !important;
+  font-size: 0.68rem !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .one-click-upsell-card small {
   color: var(--muted);
   font-size: 0.76rem;
@@ -1421,6 +1428,22 @@ p {
 .upsell-footnote {
   display: block;
   margin-top: 4px;
+}
+
+.one-click-upsell-urgency {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgb(163 67 46 / 20%);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgb(163 67 46 / 10%), rgb(255 246 235 / 92%));
+  color: #8a3525 !important;
+  font-size: 0.76rem !important;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
 }
 
 .one-click-upsell-pix {
