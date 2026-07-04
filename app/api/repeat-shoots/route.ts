@@ -123,8 +123,10 @@ export async function POST(request: NextRequest) {
     customerName = sourceProject?.customer_name || customerName;
     customerPhone = sourceProject?.phone ?? null;
     galleryAttendant =
-      sourceProject?.bi_attendant_name ||
-      `Galeria ${(Number(sourceProject?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
+      isFlash
+        ? "Remarketing"
+        : sourceProject?.bi_attendant_name ||
+          `Galeria ${(Number(sourceProject?.paid_amount_cents ?? 0) / 100).toFixed(2)}`;
     productName = sourceProject?.product_name || productName;
     galleryType = normalizeGalleryType(sourceProject?.gallery_type);
     extraPhotoPricingCents = parseStoredExtraPhotoPricingCents(
