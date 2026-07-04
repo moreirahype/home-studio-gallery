@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createPixPayment } from "@/lib/mercado-pago";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { verifyExpressOfferToken } from "@/lib/offers";
+import { readFlashOfferToken, verifyExpressOfferToken } from "@/lib/offers";
 import {
   normalizeGalleryType,
   parseStoredExtraPhotoPricingCents,
@@ -25,7 +25,7 @@ const fieldsSchema = z.object({
   theme: z.string().min(2),
   occasion: z.string().max(240).optional(),
   styleNotes: z.string().max(1000).optional(),
-  offer: z.enum(["standard", "express"]).default("standard"),
+  offer: z.enum(["standard", "express", "flash"]).default("standard"),
   offerToken: z.string().optional(),
   paidAmount: z.string().optional(),
   includedPhotos: z.string().optional(),
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const isExpress = parsed.data.offer === "express";
+  const isFlash = parsed.data.offer === "flash";
   if (
     isExpress &&
     !verifyExpressOfferToken(
@@ -85,6 +86,15 @@ export async function POST(request: NextRequest) {
   ) {
     return NextResponse.json(
       { ok: false, error: "Esta oferta especial expirou." },
+      { status: 403 },
+    );
+  }
+  const flashOffer = isFlash
+    ? readFlashOfferToken(parsed.data.offerToken, parsed.data.sourceToken)
+    : null;
+  if (isFlash && !flashOffer) {
+    return NextResponse.json(
+      { ok: false, error: "Esta promoção relâmpago expirou." },
       { status: 403 },
     );
   }
@@ -144,7 +154,9 @@ export async function POST(request: NextRequest) {
         photoCount,
         Math.max(0, Number(sourceProject.included_photos ?? 1)),
       );
-      paidAmountCents = Number(sourceProject.paid_amount_cents ?? 790);
+      paidAmountCents = flashOffer
+        ? flashOffer.paidAmountCents
+        : Number(sourceProject.paid_amount_cents ?? 790);
     }
   }
 

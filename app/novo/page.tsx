@@ -1,5 +1,5 @@
 import { NewShootForm } from "@/components/new-shoot-form";
-import { verifyExpressOfferToken } from "@/lib/offers";
+import { readFlashOfferToken, verifyExpressOfferToken } from "@/lib/offers";
 import { getProjectByToken } from "@/lib/projects";
 import {
   DEFAULT_FIRST_EXTRA_AMOUNT_CENTS,
@@ -23,6 +23,10 @@ export default async function NewShootPage({
   const expressOffer =
     query.offer === "express" &&
     verifyExpressOfferToken(query.code, query.source);
+  const flashOffer =
+    query.offer === "flash"
+      ? readFlashOfferToken(query.code, query.source)
+      : null;
   const sourceProject = query.source
     ? await getProjectByToken(query.source).catch(() => null)
     : null;
@@ -37,8 +41,15 @@ export default async function NewShootPage({
     <NewShootForm
       expressOffer={expressOffer}
       offerToken={expressOffer ? query.code : undefined}
+      flashOffer={Boolean(flashOffer)}
+      flashOfferToken={flashOffer ? query.code : undefined}
+      flashExpiresAt={flashOffer?.expiresAt}
       sourceToken={query.source}
-      paidAmount={Number(sourceProject?.paid_amount_cents ?? 790) / 100}
+      paidAmount={
+        flashOffer
+          ? flashOffer.paidAmountCents / 100
+          : Number(sourceProject?.paid_amount_cents ?? 790) / 100
+      }
       includedPhotos={Number(sourceProject?.included_photos ?? 1)}
       generationCount={Number(sourceProject?.generation_count ?? 15)}
       firstExtraAmount={sourceFirstExtraAmountCents / 100}

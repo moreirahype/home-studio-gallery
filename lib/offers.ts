@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const EXPRESS_OFFER_TTL_SECONDS = 30 * 60;
+const FLASH_OFFER_TTL_SECONDS = 48 * 60 * 60;
 
 function getOfferSecret() {
   const secret =
@@ -58,5 +59,76 @@ export function verifyExpressOfferToken(
     );
   } catch {
     return false;
+  }
+}
+
+export type FlashOfferPayload = {
+  sourceToken: string;
+  paidAmountCents: number;
+  expiresAt: number;
+};
+
+export function createFlashOfferToken({
+  sourceToken,
+  paidAmountCents,
+  expiresAt,
+}: {
+  sourceToken: string;
+  paidAmountCents: number;
+  expiresAt?: number;
+}) {
+  const payload = Buffer.from(
+    JSON.stringify({
+      sourceToken,
+      paidAmountCents,
+      expiresAt:
+        expiresAt ?? Math.floor(Date.now() / 1000) + FLASH_OFFER_TTL_SECONDS,
+    }),
+  ).toString("base64url");
+
+  return `${payload}.${sign(payload)}`;
+}
+
+export function readFlashOfferToken(
+  token: string | undefined,
+  sourceToken: string | undefined,
+): FlashOfferPayload | null {
+  if (!token || !sourceToken) return null;
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return null;
+
+  const expected = sign(payload);
+  const receivedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (
+    receivedBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(receivedBuffer, expectedBuffer)
+  ) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    ) as Partial<FlashOfferPayload>;
+
+    if (
+      parsed.sourceToken !== sourceToken ||
+      typeof parsed.paidAmountCents !== "number" ||
+      !Number.isFinite(parsed.paidAmountCents) ||
+      parsed.paidAmountCents <= 0 ||
+      typeof parsed.expiresAt !== "number" ||
+      parsed.expiresAt < Math.floor(Date.now() / 1000)
+    ) {
+      return null;
+    }
+
+    return {
+      sourceToken: parsed.sourceToken,
+      paidAmountCents: Math.round(parsed.paidAmountCents),
+      expiresAt: parsed.expiresAt,
+    };
+  } catch {
+    return null;
   }
 }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unauthorized } from "@/lib/http";
 import { startProjectGeneration } from "@/lib/generation";
 import { getKieImageModel } from "@/lib/kie";
+import { createFlashOfferToken } from "@/lib/offers";
 import { buildGenerationPrompts } from "@/lib/prompt-builder";
 import { safeCompare } from "@/lib/security";
 import { validatePublicImageUrl } from "@/lib/source-image";
@@ -44,6 +45,49 @@ function mergeContexts(initialContext?: string, finalContext?: string) {
 
 function galleryMessage(galleryUrl: string) {
   return `Seu ensaio ficou pronto. Acesse sua galeria aqui:\n\n${galleryUrl}\n\nNão precisa enviar comprovante no WhatsApp. As liberações acontecem automaticamente pela própria galeria.`;
+}
+
+function readMoneyEnv(name: string, fallbackCents: number) {
+  const raw = process.env[name];
+  if (!raw) return fallbackCents;
+  const amount = Number(raw.replace(",", "."));
+  return Number.isFinite(amount) && amount > 0
+    ? Math.round(amount * 100)
+    : fallbackCents;
+}
+
+function readHoursEnv(name: string, fallbackHours: number) {
+  const raw = Number(process.env[name]);
+  return Number.isFinite(raw) && raw > 0 ? raw : fallbackHours;
+}
+
+function createRemarketingNewShootUrl({
+  appUrl,
+  sourceToken,
+}: {
+  appUrl: string;
+  sourceToken: string;
+}) {
+  const paidAmountCents = readMoneyEnv("REMARKETING_NEW_SHOOT_AMOUNT", 1490);
+  const delayHours = readHoursEnv("REMARKETING_PROMO_DELAY_HOURS", 24);
+  const ttlHours = readHoursEnv("REMARKETING_PROMO_TTL_HOURS", 24);
+  const expiresAt =
+    Math.floor(Date.now() / 1000) + Math.round((delayHours + ttlHours) * 3600);
+  const code = createFlashOfferToken({
+    sourceToken,
+    paidAmountCents,
+    expiresAt,
+  });
+  const url = new URL("/novo", appUrl);
+  url.searchParams.set("source", sourceToken);
+  url.searchParams.set("offer", "flash");
+  url.searchParams.set("code", code);
+
+  return {
+    url: url.toString(),
+    amount: paidAmountCents / 100,
+    expiresAt: new Date(expiresAt * 1000).toISOString(),
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -193,12 +237,22 @@ export async function POST(request: NextRequest) {
         "paidAmount",
         formatReaisFromCents(Number(existingProject.paid_amount_cents ?? 790)),
       );
-      reusedNewShootUrl.searchParams.set("includedPhotos", "1");
-      reusedNewShootUrl.searchParams.set("generationCount", "15");
+      reusedNewShootUrl.searchParams.set(
+        "includedPhotos",
+        String(existingProject.included_photos ?? 1),
+      );
+      reusedNewShootUrl.searchParams.set(
+        "generationCount",
+        String(existingProject.generation_count ?? 15),
+      );
       reusedNewShootUrl.searchParams.set(
         "firstExtraAmount",
         formatReaisFromCents(reusedFirstExtraAmountCents),
       );
+      const reusedRemarketingNewShoot = createRemarketingNewShootUrl({
+        appUrl,
+        sourceToken: existingProject.gallery_token,
+      });
 
       const reusedGalleryUrl = new URL(
         `/g/${existingProject.gallery_token}`,
@@ -214,6 +268,9 @@ export async function POST(request: NextRequest) {
         galleryLink: reusedGalleryUrl,
         galleryMessage: galleryMessage(reusedGalleryUrl),
         newShootUrl: reusedNewShootUrl.toString(),
+        remarketingNewShootUrl: reusedRemarketingNewShoot.url,
+        remarketingNewShootAmount: reusedRemarketingNewShoot.amount,
+        remarketingNewShootExpiresAt: reusedRemarketingNewShoot.expiresAt,
         includedPhotos: existingProject.included_photos,
         generationStarted: false,
         generationTasks: 0,
@@ -370,6 +427,10 @@ export async function POST(request: NextRequest) {
     "firstExtraAmount",
     formatReaisFromCents(firstExtraAmountCents ?? DEFAULT_FIRST_EXTRA_AMOUNT_CENTS),
   );
+  const remarketingNewShoot = createRemarketingNewShootUrl({
+    appUrl,
+    sourceToken: galleryToken,
+  });
 
   if (isTestMode) {
     galleryUrl.searchParams.set("test", "1");
@@ -558,6 +619,9 @@ export async function POST(request: NextRequest) {
     galleryLink: galleryUrl.toString(),
     galleryMessage: galleryMessage(galleryUrl.toString()),
     newShootUrl: newShootUrl.toString(),
+    remarketingNewShootUrl: remarketingNewShoot.url,
+    remarketingNewShootAmount: remarketingNewShoot.amount,
+    remarketingNewShootExpiresAt: remarketingNewShoot.expiresAt,
     testMode: isTestMode,
     includedPhotos,
     paidAmount: paidAmountCents / 100,

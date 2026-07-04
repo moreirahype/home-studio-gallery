@@ -23,6 +23,17 @@ const themes = [
   "Aniversário",
 ];
 
+function formatCountdown(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
+}
+
 async function optimizeReference(file: File) {
   if (file.size <= 2.5 * 1024 * 1024) return file;
 
@@ -47,6 +58,9 @@ export function NewShootForm({
   sourceToken,
   expressOffer = false,
   offerToken,
+  flashOffer = false,
+  flashOfferToken,
+  flashExpiresAt,
   paidAmount = 7.9,
   includedPhotos: configuredIncludedPhotos = 1,
   generationCount = 15,
@@ -55,6 +69,9 @@ export function NewShootForm({
   sourceToken?: string;
   expressOffer?: boolean;
   offerToken?: string;
+  flashOffer?: boolean;
+  flashOfferToken?: string;
+  flashExpiresAt?: number;
   paidAmount?: number;
   includedPhotos?: number;
   generationCount?: number;
@@ -63,6 +80,7 @@ export function NewShootForm({
   const photoCount = expressOffer ? 5 : generationCount;
   const includedPhotos = expressOffer ? 1 : configuredIncludedPhotos;
   const price = expressOffer ? 4.9 : paidAmount;
+  const offerKind = expressOffer ? "express" : flashOffer ? "flash" : "standard";
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [theme, setTheme] = useState("");
   const [occasion, setOccasion] = useState("");
@@ -75,6 +93,9 @@ export function NewShootForm({
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [error, setError] = useState("");
+  const [flashTimeLeft, setFlashTimeLeft] = useState(() =>
+    flashExpiresAt ? flashExpiresAt * 1000 - Date.now() : 0,
+  );
   const [pixPayment, setPixPayment] = useState<{
     orderId: string;
     paymentId: string;
@@ -96,9 +117,24 @@ export function NewShootForm({
         .join(", "),
     [occasion, style, theme],
   );
+  const flashExpired = flashOffer && flashTimeLeft <= 0;
+  const countdownLabel = formatCountdown(flashTimeLeft);
+
+  useEffect(() => {
+    if (!flashOffer || !flashExpiresAt) return;
+    const expiresAt = flashExpiresAt;
+
+    function tick() {
+      setFlashTimeLeft(expiresAt * 1000 - Date.now());
+    }
+
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [flashExpiresAt, flashOffer]);
 
   async function submit() {
-    if (!imageFile || !theme) return;
+    if (!imageFile || !theme || flashExpired) return;
     setSubmitting(true);
     setError("");
 
@@ -118,12 +154,14 @@ export function NewShootForm({
     formData.set("theme", theme);
     formData.set("occasion", occasion);
     formData.set("styleNotes", style);
-    formData.set("offer", expressOffer ? "express" : "standard");
+    formData.set("offer", offerKind);
     formData.set("paidAmount", price.toFixed(2));
     formData.set("includedPhotos", String(includedPhotos));
     formData.set("generationCount", String(photoCount));
     formData.set("firstExtraAmount", firstExtraAmount.toFixed(2));
-    if (offerToken) formData.set("offerToken", offerToken);
+    if (offerToken || flashOfferToken) {
+      formData.set("offerToken", offerToken ?? flashOfferToken ?? "");
+    }
     if (sourceToken) formData.set("sourceToken", sourceToken);
 
     const response = await fetch("/api/repeat-shoots", {
@@ -343,6 +381,25 @@ export function NewShootForm({
         <span className="nav-meta">Novo ensaio</span>
       </nav>
 
+      {flashOffer && (
+        <section className="flash-offer-banner">
+          <div>
+            <span>Promoção relâmpago</span>
+            <strong>
+              Novo ensaio liberado por {money.format(price)}
+            </strong>
+            <p>
+              Só para quem já criou uma galeria. Use outro tema, outra roupa ou
+              outra foto antes que a condição expire.
+            </p>
+          </div>
+          <div className="flash-countdown">
+            <span>{flashExpired ? "Oferta encerrada" : "Termina em"}</span>
+            <strong>{flashExpired ? "00:00:00" : countdownLabel}</strong>
+          </div>
+        </section>
+      )}
+
       <header className="new-shoot-hero">
         <span className="eyebrow">
           {photoCount} OPÇÕES E {includedPhotos}{" "}
@@ -442,11 +499,15 @@ export function NewShootForm({
 
         <button
           className="primary-button new-shoot-submit"
-          disabled={!imageName || !theme || submitting}
+          disabled={!imageName || !theme || submitting || flashExpired}
           onClick={submit}
           type="button"
         >
-          {submitting ? "Preparando..." : "Continuar para o pagamento"}
+          {flashExpired
+            ? "Promoção encerrada"
+            : submitting
+              ? "Preparando..."
+              : "Continuar para o pagamento"}
         </button>
         {error && <p className="form-error">{error}</p>}
       </section>
