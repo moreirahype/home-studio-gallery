@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getGalleryAdminPassword } from "@/lib/admin-session";
 import { unauthorized } from "@/lib/http";
 import { safeCompare } from "@/lib/security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -8,24 +9,29 @@ import { startVideoJob } from "@/lib/video";
 const requestSchema = z.object({
   galleryToken: z.string().min(8),
   photoIds: z.array(z.string().min(1)).min(1).max(20),
+  manualPassword: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
-  if (
-    !safeCompare(
-      request.headers.get("x-webhook-secret"),
-      process.env.GENERATION_SECRET ?? process.env.ZAPDATA_WEBHOOK_SECRET,
-    )
-  ) {
-    return unauthorized();
-  }
-
   const parsed = requestSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: "Pedido de vídeo inválido." },
       { status: 400 },
     );
+  }
+
+  const webhookSecretOk = safeCompare(
+    request.headers.get("x-webhook-secret"),
+    process.env.GENERATION_SECRET ?? process.env.ZAPDATA_WEBHOOK_SECRET,
+  );
+  const adminPasswordOk = safeCompare(
+    parsed.data.manualPassword ?? null,
+    getGalleryAdminPassword() ?? undefined,
+  );
+
+  if (!webhookSecretOk && !adminPasswordOk) {
+    return unauthorized();
   }
 
   const supabase = getSupabaseAdmin();

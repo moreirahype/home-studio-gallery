@@ -425,6 +425,7 @@ export function Gallery({
   const [manualPassword, setManualPassword] = useState("");
   const [manualReleasing, setManualReleasing] = useState(false);
   const [manualBlocking, setManualBlocking] = useState(false);
+  const [manualVideoGenerating, setManualVideoGenerating] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [pixPayment, setPixPayment] = useState<{
     orderId: string;
@@ -1138,6 +1139,64 @@ export function Gallery({
       setCheckoutError("Não foi possível bloquear as fotos. Tente novamente.");
     } finally {
       setManualBlocking(false);
+    }
+  }
+
+  async function generateManualVideos() {
+    if (token === "demo") return;
+
+    if (!selected.length) {
+      setCheckoutError("Selecione pelo menos uma foto para transformar em vídeo.");
+      return;
+    }
+
+    if (!manualPassword.trim()) {
+      setCheckoutError("Digite a senha para gerar vídeo manualmente.");
+      return;
+    }
+
+    setManualVideoGenerating(true);
+    setCheckoutError("");
+
+    try {
+      const response = await fetch("/api/generation/video", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          galleryToken: token,
+          photoIds: selected,
+          manualPassword: manualPassword.trim(),
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !result.ok) {
+        setCheckoutError(result.error ?? "Não foi possível iniciar os vídeos.");
+        return;
+      }
+
+      setVideoAccess((current) => ({
+        status: "generating",
+        clips: current?.clips ?? [],
+        url: current?.url ?? null,
+        error: null,
+      }));
+      setCheckoutError(
+        selected.length === 1
+          ? "Vídeo manual iniciado. Ele aparecerá em Suas compras quando ficar pronto."
+          : "Vídeos manuais iniciados. Eles aparecerão em Suas compras quando ficarem prontos.",
+      );
+      setSelected([]);
+      setManualPassword("");
+      await refreshAccess();
+      router.refresh();
+    } catch {
+      setCheckoutError("Não foi possível iniciar os vídeos. Tente novamente.");
+    } finally {
+      setManualVideoGenerating(false);
     }
   }
 
@@ -2439,7 +2498,7 @@ export function Gallery({
         {manualReleaseOpen && (
           <div className="manual-release-box">
             <p>
-              Selecione as fotos na galeria, digite a senha e libere sem Pix.
+              Selecione as fotos na galeria, digite a senha e use as ações de admin.
             </p>
             <div>
               <input
@@ -2454,6 +2513,7 @@ export function Gallery({
                 disabled={
                   manualReleasing ||
                   manualBlocking ||
+                  manualVideoGenerating ||
                   releasing ||
                   creatingPix
                 }
@@ -2467,6 +2527,7 @@ export function Gallery({
                 disabled={
                   manualReleasing ||
                   manualBlocking ||
+                  manualVideoGenerating ||
                   releasing ||
                   creatingPix
                 }
@@ -2474,6 +2535,22 @@ export function Gallery({
                 type="button"
               >
                 {manualBlocking ? "Bloqueando..." : "Bloquear com senha"}
+              </button>
+              <button
+                className="secondary-button"
+                disabled={
+                  manualReleasing ||
+                  manualBlocking ||
+                  manualVideoGenerating ||
+                  releasing ||
+                  creatingPix
+                }
+                onClick={() => void generateManualVideos()}
+                type="button"
+              >
+                {manualVideoGenerating
+                  ? "Gerando vídeos..."
+                  : "Fotos em vídeo manual"}
               </button>
             </div>
             {checkoutError && <p className="form-error">{checkoutError}</p>}
